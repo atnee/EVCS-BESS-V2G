@@ -1,6 +1,7 @@
 # EVCS–BESS–V2G
 
 Base colaborativa de pesquisa para Ayrton (EVCS), Kenia (BESS) e Cesar (V2G).
+**Novo na equipe? / New to the team? / ¿Nuevo en el equipo? → [ONBOARDING.md](ONBOARDING.md)**
 **S0–S4 utilizam o IEEE123 com pandapower trifásico. A representação contém aproximações explícitas; a equivalência numérica ao caso IEEE de referência ainda não foi validada.**
 
 ## Começar
@@ -71,4 +72,4 @@ EVCS e BESS estão inicialmente na barra 67, como hipótese de estudo. Curva di�
 O backend sintético permanece para testes analíticos. XLSX é um contrato preliminar e não aceita automaticamente formatos arbitrários da concessionária.
 As heurísticas não resolvem a alocação/dimensionamento ótimo. Violações elétricas são reportadas, não corrigidas. Custos são hipóteses em USD, sem tarifa real de Honduras. A licença está pendente de escolha dos autores.
 
-Não foi criado repositório remoto, realizado push nem alterada qualquer configuração de GitHub. Leia o guia para iniciar as branches localmente e publicar quando autorizado.
+Repositório: https://github.com/atnee/EVCS-BESS-V2G. CODEOWNERS e proteção da `main` ainda não foram configurados.

@@ -42,17 +42,8 @@ Na execução integrada, infraestrutura EVCS e demanda atendida são entradas do
 
 Antes de entregar: executar testes do próprio módulo e `python -m pytest tests/test_module_independence.py -q`. A integração final deve passar pela suíte completa e pelo fluxo IEEE123.
 
-## Iniciar localmente
-Extraia o ZIP e abra a pasta EVCS-BESS-V2G. Se ainda não houver um repositório Git:
-```bash
-git init -b main
-git add .
-git commit -m "Initial research framework"
-git branch feature/evcs-ayrton
-git branch feature/bess-kenia
-git branch feature/v2g-cesar
-```
-Não foram criados remotos nem executado push nesta entrega. Para publicar posteriormente, criar o repositório na conta autorizada, conferir os arquivos staged, adicionar o remote correto e enviar as branches. Cada colaborador clona sua própria cópia.
+## Iniciar
+O repositório está em https://github.com/atnee/EVCS-BESS-V2G, com `main` e as três branches. Cada colaborador clona sua própria cópia e trabalha na sua branch; os comandos de instalação estão em [ONBOARDING.md](../ONBOARDING.md).
 
 ## Ciclo diário (exemplo Ayrton)
 ```bash
@@ -64,7 +55,7 @@ git add src/evcs tests/test_evcs.py
 git diff --cached
 git commit -m "Describe EVCS change"
 ```
-Quando o remoto estiver configurado e autorizado, publicar a branch e abrir PR para main. Descrever problema, alteração, evidências e impacto nas interfaces. Para Kenia/Cesar substituir branch e pasta.
+Publicar a branch com `git push` e abrir PR para main. Descrever problema, alteração, evidências e impacto nas interfaces. Para Kenia/Cesar substituir branch e pasta.
 
 ## Conflitos
 Antes de integrar, salvar alterações em commit. Em conflito, abrir os arquivos sinalizados por `git status`, escolher conscientemente a versão correta (ou combinar), remover marcadores, rodar testes, `git add` e `git commit`. Para desistir da integração: `git merge --abort`. Não resolver conflitos em interfaces compartilhadas sem os três revisarem. Não usar force-push como rotina.
