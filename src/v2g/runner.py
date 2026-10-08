@@ -6,7 +6,8 @@ import pandas as pd
 from core.schemas import TimeGrid, read_parameters
 from core.assets import Battery, Station
 from core.artifacts import export_profile_bundle
-from v2g.model import Vehicle, schedule
+from v2g.model import Vehicle
+from v2g.strategies import get_strategy
 
 
 def vehicles_from_config(config):
@@ -35,9 +36,9 @@ def run(config_dir="configs"):
     config = read_parameters(Path(config_dir)/"v2g.yaml")
     grid = TimeGrid(**config["time"])
     fixture = config["standalone"]
-    return schedule(Station(**fixture["station"]),grid,vehicles_from_config(config),
-                    fixture["independent_evcs_kw"],fixture["independent_ids"],
-                    discharge_mask(config,grid),enable_v2g=True)
+    return get_strategy(config.get("strategy","heuristic"))(
+        Station(**fixture["station"]),grid,vehicles_from_config(config),
+        fixture["independent_evcs_kw"],fixture["independent_ids"],discharge_mask(config,grid),True)
 
 
 def run_integrated(config_dir, grid, evcs_profile, enable_v2g=True):
@@ -45,9 +46,9 @@ def run_integrated(config_dir, grid, evcs_profile, enable_v2g=True):
     config = read_parameters(Path(config_dir)/"v2g.yaml")
     if TimeGrid(**config["time"]) != grid:
         raise ValueError("Integrated EVCS/BESS/V2G time grids must match")
-    profile = schedule(Station(**evcs_profile.metadata["station"]),grid,vehicles_from_config(config),
-                       -evcs_profile.total_injection(),evcs_profile.vehicle_ids,
-                       discharge_mask=discharge_mask(config,grid),enable_v2g=enable_v2g)
+    profile = get_strategy(config.get("strategy","heuristic"))(
+        Station(**evcs_profile.metadata["station"]),grid,vehicles_from_config(config),
+        -evcs_profile.total_injection(),evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g)
     profile.metadata["kpis"] = dict(v2g_delivered_kwh=profile.metadata["v2g_delivered_kwh"])
     return profile,output_tables(profile)
 

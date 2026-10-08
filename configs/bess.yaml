@@ -1,4 +1,6 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
+# Algorithm from src/bess/strategies.py (STRATEGIES). Use 'template' to start your own.
+strategy: peak_shave
 battery:
   capacity_kwh: 120.0
   power_kw: 40.0

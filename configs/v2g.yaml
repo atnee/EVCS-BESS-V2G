@@ -1,4 +1,6 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
+# Algorithm from src/v2g/strategies.py (STRATEGIES). Use 'template' to start your own.
+strategy: heuristic
 vehicles:
 - id: fleet-0
   arrival: 8

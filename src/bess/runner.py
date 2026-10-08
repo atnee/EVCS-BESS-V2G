@@ -6,7 +6,7 @@ import pandas as pd
 from core.schemas import TimeGrid, read_parameters, make_profile
 from core.assets import Battery
 from core.artifacts import export_profile_bundle
-from bess.dispatch import peak_shave
+from bess.strategies import get_strategy
 
 
 def profile_from_dispatch(dispatch, grid, connection):
@@ -21,13 +21,17 @@ def output_tables(profile, demand_kw):
             "soc":pd.DataFrame({"boundary":np.arange(profile.grid.steps+1),"soc":profile.metadata["soc"]})}
 
 
+def dispatch_from_config(config, battery, demand, grid):
+    return get_strategy(config.get("strategy","peak_shave"))(battery,demand,config,grid.dt_h)
+
+
 def run(config_dir="configs"):
     config = read_parameters(Path(config_dir)/"bess.yaml")
     grid = TimeGrid(**config["time"])
     demand = np.asarray(config["standalone_demand_kw"],float)
     if demand.shape != (grid.steps,):
         raise ValueError("Standalone BESS demand must match its time grid")
-    dispatch = peak_shave(Battery(**config["battery"]),demand,config["target_kw"],grid.dt_h)
+    dispatch = dispatch_from_config(config,Battery(**config["battery"]),demand,grid)
     return profile_from_dispatch(dispatch,grid,config["connection"]),demand
 
 
@@ -40,7 +44,7 @@ def run_integrated(config_dir, grid, demand_kw):
     if battery.currency != "USD":
         raise ValueError("Demo costs require USD; currency conversion is not automatic")
     demand = np.asarray(demand_kw,float)
-    dispatch = peak_shave(battery,demand,config["target_kw"],grid.dt_h)
+    dispatch = dispatch_from_config(config,battery,demand,grid)
     profile = profile_from_dispatch(dispatch,grid,config["connection"])
     throughput = float(np.abs(dispatch.injection_kw).sum()*grid.dt_h)
     cycles = float((np.maximum(-dispatch.injection_kw,0).sum()*battery.eta_charge+

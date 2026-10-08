@@ -6,12 +6,17 @@ from core.schemas import TimeGrid, read_parameters
 from core.assets import Station
 from core.artifacts import export_profile_bundle
 from evcs.model import demand_profile
+from evcs.strategies import get_strategy
+
+
+def station_profile(config, station, grid):
+    demand = get_strategy(config.get("strategy","fixed"))(station,grid,config)
+    return demand_profile(station,grid,demand,vehicle_ids=("independent-demand-group",))
 
 
 def run(config_dir="configs"):
     config = read_parameters(Path(config_dir)/"evcs.yaml")
-    return demand_profile(Station(**config["station"]),TimeGrid(**config["time"]),
-                          config["independent_demand_kw"],vehicle_ids=("independent-demand-group",))
+    return station_profile(config,Station(**config["station"]),TimeGrid(**config["time"]))
 
 
 def run_integrated(config_dir, grid):
@@ -22,7 +27,7 @@ def run_integrated(config_dir, grid):
     station = Station(**config["station"])
     if station.currency != "USD":
         raise ValueError("Demo costs require USD; currency conversion is not automatic")
-    profile = demand_profile(station,grid,config["independent_demand_kw"],vehicle_ids=("independent-demand-group",))
+    profile = station_profile(config,station,grid)
     # Station travels inside the profile so V2G never reads evcs.yaml.
     profile.metadata.update(station=asdict(station),
         kpis=dict(evcs_requested_kwh=profile.metadata["requested_kwh"],evcs_served_kwh=profile.metadata["served_kwh"],
