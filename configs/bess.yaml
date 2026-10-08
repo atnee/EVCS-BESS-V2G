@@ -1,0 +1,45 @@
+# Standalone inputs are fixed fixtures, not live outputs of other teams.
+battery:
+  capacity_kwh: 120.0
+  power_kw: 40.0
+  soc_initial: 0.7
+  soc_min: 0.1
+  soc_max: 0.9
+  eta_charge: 0.95
+  eta_discharge: 0.95
+  capex: 50000.0
+  degradation_per_kwh: 0.03
+  currency: USD
+target_kw: 3450.0
+time:
+  start: '2026-01-01T00:00:00-06:00'
+  steps: 24
+  dt_h: 1.0
+connection:
+  bus: '67'
+  phases: ABC
+standalone_demand_kw:
+- 2094.0
+- 2024.2
+- 1954.4
+- 1919.5
+- 1954.4
+- 2094.0
+- 2268.5
+- 2512.8
+- 2722.2
+- 2792.0
+- 2861.8
+- 2896.7
+- 2861.8
+- 2792.0
+- 2861.8
+- 3001.4
+- 3210.8
+- 3420.2
+- 3490.0
+- 3420.2
+- 3210.8
+- 2861.8
+- 2512.8
+- 2268.5

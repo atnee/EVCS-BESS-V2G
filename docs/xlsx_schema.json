@@ -1,0 +1,79 @@
+{
+  "buses": [
+    "id",
+    "phases",
+    "vn_ln_v",
+    "x",
+    "y"
+  ],
+  "lines": [
+    "id",
+    "from_bus",
+    "to_bus",
+    "phases",
+    "r_ohm",
+    "x_ohm",
+    "ampacity_a"
+  ],
+  "substations": [
+    "id",
+    "bus",
+    "vn_ln_v"
+  ],
+  "loads": [
+    "id",
+    "bus",
+    "phase",
+    "p_kw",
+    "q_kvar",
+    "model"
+  ],
+  "load_profiles": [
+    "time",
+    "bus",
+    "phase",
+    "p_kw",
+    "q_kvar"
+  ],
+  "transformers": [
+    "id",
+    "from_bus",
+    "to_bus",
+    "phases",
+    "sn_kva",
+    "vn_hv_kv",
+    "vn_lv_kv",
+    "vector_group",
+    "vk_pct",
+    "vkr_pct"
+  ],
+  "regulators": [
+    "id",
+    "from_bus",
+    "to_bus",
+    "phases",
+    "tap_pu",
+    "setpoint_pu"
+  ],
+  "capacitors": [
+    "id",
+    "bus",
+    "phases",
+    "q_kvar",
+    "status"
+  ],
+  "switches": [
+    "id",
+    "from_bus",
+    "to_bus",
+    "phases",
+    "closed"
+  ],
+  "generation": [
+    "id",
+    "bus",
+    "phase",
+    "p_kw",
+    "q_kvar"
+  ]
+}

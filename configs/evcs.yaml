@@ -1,0 +1,39 @@
+time:
+  start: '2026-01-01T00:00:00-06:00'
+  steps: 24
+  dt_h: 1.0
+station:
+  id: EVCS-1
+  bus: '67'
+  phases: ABC
+  chargers: 8
+  charger_kw: 11.0
+  connection_kw: 88.0
+  capex: 40000.0
+  currency: USD
+  bidirectional: true
+independent_demand_kw:
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 44.0
+- 44.0
+- 44.0
+- 44.0
+- 44.0
+- 10.0
+- 10.0
+- 10.0

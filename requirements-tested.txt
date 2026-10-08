@@ -1,0 +1,8 @@
+# IEEE123 versions exercised on Windows / Python 3.13.5.
+numpy==2.3.3
+pandas==2.3.3
+PyYAML==6.0.3
+openpyxl==3.1.5
+matplotlib==3.10.7
+pandapower==3.4.0
+pytest==9.1.1

@@ -1,0 +1,8 @@
+# Substituir os marcadores por usernames reais e descomentar antes de exigir revisão.
+# /src/evcs/ @USERNAME_AYRTON
+# /src/bess/ @USERNAME_KENIA
+# /src/v2g/ @USERNAME_CESAR
+# /src/core/ @USERNAME_AYRTON @USERNAME_KENIA @USERNAME_CESAR
+# /src/network/ @USERNAME_AYRTON @USERNAME_KENIA @USERNAME_CESAR
+# /src/integration/ @USERNAME_AYRTON @USERNAME_KENIA @USERNAME_CESAR
+# CODEOWNERS sugere responsáveis; sozinho não exige aprovação dos três.

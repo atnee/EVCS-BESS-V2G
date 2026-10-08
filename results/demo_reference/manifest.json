@@ -1,0 +1,13 @@
+{
+  "python": "3.12.14",
+  "seed": 0,
+  "stochastic": false,
+  "network": "SYNTHETIC-4, NOT IEEE123",
+  "solver": "independent-phase radial PQ",
+  "config_sha256": {
+    "ieee123.yaml": "7649ba24f9689dd7e7184462e8cae4c8cd571b2291cd3517b7d326d29ea5d9b3",
+    "bess.yaml": "94f37baf0e2ea658a8685c8bcc53fc696228d493eaa29343bed894254721fa84",
+    "v2g.yaml": "230143958a03bf4b94ead87095c781ddb26f6d1d86293c17e51951d88df319df",
+    "evcs.yaml": "34e91fb116be60439c2e679c99db25589b54818e2bc739cf043c67e30de241ce"
+  }
+}

@@ -1,0 +1,86 @@
+# Standalone inputs are fixed fixtures, not live outputs of other teams.
+vehicles:
+- id: fleet-0
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.8
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+- id: fleet-1
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.8
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+- id: fleet-2
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.3
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+time:
+  start: '2026-01-01T00:00:00-06:00'
+  steps: 24
+  dt_h: 1.0
+discharge_window_h:
+- 17
+- 21
+standalone:
+  station:
+    id: EVCS-1
+    bus: '67'
+    phases: ABC
+    chargers: 8
+    charger_kw: 11.0
+    connection_kw: 88.0
+    capex: 40000.0
+    currency: USD
+    bidirectional: true
+  independent_evcs_kw:
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 10.0
+  - 10.0
+  - 10.0
+  independent_ids:
+  - independent-demand-group

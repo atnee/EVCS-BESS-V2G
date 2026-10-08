@@ -1,0 +1,8 @@
+network: ieee123
+status: implemented_pandapower_sequence_approximation
+source: https://github.com/tshort/OpenDSS/tree/5005c668a72d20775f4c2d060feebb2866ba1d38/Distrib/IEEETestCases/123Bus
+allow_balanced_substitution: false
+solver: pandapower.runpp_3ph
+# Assumed daily shape, not an IEEE reference measurement. Use all 1.0 for nominal case.
+load_multipliers: [0.60, 0.58, 0.56, 0.55, 0.56, 0.60, 0.65, 0.72, 0.78, 0.80, 0.82, 0.83, 0.82, 0.80, 0.82, 0.86, 0.92, 0.98, 1.00, 0.98, 0.92, 0.82, 0.72, 0.65]
+# Asset locations are owned by evcs.yaml (station) and bess.yaml (connection).
