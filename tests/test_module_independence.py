@@ -90,13 +90,16 @@ import_module(module+'.runner').export(root,Path(root)/'out')
             with self.assertRaisesRegex(ValueError,"time grids must match"): integrated_grid(root)
 
     def test_integration_uses_only_run_integrated(self):
-        """Modules may refactor freely; integration only depends on <module>.runner.run_integrated."""
+        """Modules may refactor freely; integration only depends on their declared public contracts:
+        <module>.runner.run_integrated, plus the EVCS planning API used by the siting screening."""
         import ast
+        contracts = {f"{m}.runner": {"run_integrated"} for m in MODULES}
+        contracts["evcs.planning"] = {"from_config","charging_needs","hourly_demand","greedy_coverage"}
         for path in (ROOT/"src/integration").glob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node,ast.Import):
                     self.assertFalse([a.name for a in node.names if a.name.split(".")[0] in MODULES],path.name)
                 if isinstance(node,ast.ImportFrom) and (node.module or "").split(".")[0] in MODULES:
                     with self.subTest(file=path.name,module=node.module):
-                        self.assertEqual(node.module.split(".")[1:],["runner"])
-                        self.assertEqual([a.name for a in node.names],["run_integrated"])
+                        self.assertIn(node.module,contracts)
+                        self.assertLessEqual({a.name for a in node.names},contracts[node.module])

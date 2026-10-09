@@ -11,6 +11,8 @@
 | Cesar (V2G) | `python -m v2g` | `configs/v2g.yaml` | `results/modules/v2g/` |
 | Integration / Integración / Integração | `python -m integration.coordinator --output results/ieee123` | `configs/*.yaml` | `results/ieee123/` |
 | S0 baseline / caso base | `python -m integration.s0_study --output results/s0` | `configs/ieee123.yaml` | `results/s0/` |
+| EVCS siting screening / triagem | `python -m integration.evcs_screening` (~9 min) | `configs/evcs.yaml` (`planning:`) | `results/evcs_screening/` |
+| S1 with screened stations / S1 com estações da triagem | `python -m integration.s1_study --evs 300 2000` | `configs/evcs.yaml` | `results/s1/evs_<n>/` |
 
 ### Quick start / Inicio rápido / Começar
 ```bash
