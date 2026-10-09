@@ -10,6 +10,7 @@
 | Kenia (BESS) | `python -m bess` | `configs/bess.yaml` | `results/modules/bess/` |
 | Cesar (V2G) | `python -m v2g` | `configs/v2g.yaml` | `results/modules/v2g/` |
 | Integration / Integración / Integração | `python -m integration.coordinator --output results/ieee123` | `configs/*.yaml` | `results/ieee123/` |
+| S0 baseline / caso base | `python -m integration.s0_study --output results/s0` | `configs/ieee123.yaml` | `results/s0/` |
 
 ### Quick start / Inicio rápido / Começar
 ```bash
@@ -62,7 +63,7 @@ Python 3.12 recommended. Run the commands above from the project root so `config
 The fleet has the same starting energy in S1–S4. Each asset is aggregated only once. Independent demand uses chargers at the same station without duplicating fleet vehicles.
 
 ### Key files
-- `notebooks/00_network_baseline.ipynb`: IEEE123 in pandapower.
+- `notebooks/00_network_baseline.ipynb`: S0 study — how the feeder works, NetworkX topology, line R/X/L/C and voltage profile.
 - `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: individual work.
 - `notebooks/04_integrated_analysis.ipynb`: comparison.
 - `configs/*.yaml`: parameters and assumptions.
@@ -121,7 +122,7 @@ Se recomienda Python 3.12. Ejecuta los comandos de arriba en la raíz del proyec
 La flota tiene la misma energía inicial en S1–S4. Cada activo se agrega una sola vez. La demanda independiente usa cargadores de la misma estación, sin duplicar los vehículos de la flota.
 
 ### Archivos principales
-- `notebooks/00_network_baseline.ipynb`: IEEE123 en pandapower.
+- `notebooks/00_network_baseline.ipynb`: estudio S0 — cómo funciona el alimentador, topología con NetworkX, R/X/L/C de las líneas y perfil de tensión.
 - `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabajo individual.
 - `notebooks/04_integrated_analysis.ipynb`: comparación.
 - `configs/*.yaml`: parámetros e hipótesis.
@@ -180,7 +181,7 @@ Python 3.12 recomendado. Execute os comandos acima na raiz do projeto para que `
 A frota tem a mesma energia de partida em S1–S4. Cada ativo é agregado uma única vez. A demanda independente usa carregadores da mesma estação, sem duplicar os veículos da frota.
 
 ### Arquivos para começar
-- `notebooks/00_network_baseline.ipynb`: IEEE123 em pandapower.
+- `notebooks/00_network_baseline.ipynb`: estudo S0 — como o alimentador funciona, topologia com NetworkX, R/X/L/C das linhas e perfil de tensão.
 - `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabalho individual.
 - `notebooks/04_integrated_analysis.ipynb`: comparação.
 - `configs/*.yaml`: parâmetros e hipóteses.
