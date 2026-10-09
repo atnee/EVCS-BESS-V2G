@@ -239,7 +239,7 @@ def build():
                                          reason="reference case starts above 1.05 pu near the substation; base case S0 must respect ANSI range A")],
                                 regulator_taps="nominal-load taps of the emulated RegControl (no published reference); the solver moves them per snapshot",
                                 coordinates_copied_from_nearest_bus=missing,
-                                sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(SOURCE.iterdir())}))
+                                sha256={p.name:hashlib.sha256(p.read_bytes().replace(b"\r\n",b"\n")).hexdigest() for p in sorted(SOURCE.iterdir())}))
     TARGET.parent.mkdir(parents=True,exist_ok=True)
     TARGET.write_text(json.dumps(data,indent=1)+"\n",encoding="utf-8")
     data["regulators"] = regulate(TARGET)

@@ -57385,21 +57385,21 @@
    "regxfmr_190-8593"
   ],
   "sha256": {
-   "Buscoords.dss": "0d498228515ac92e410653b127bd554b909746bd5f48352fa58976cc104a405e",
-   "Capacitors.dss": "cc05836176a6715b121619079eb6cef96e77468a3368c8ed44815f2e9d684dcf",
-   "CapControls.DSS": "562818b4d905f391e88ed58efcd54150d4296d6cfb355f8abac32c969a290348",
-   "License.txt": "72e6cb08d3397a969f7763d87ae46bea03f2246a4a996524d0df19285a422560",
-   "LineCodes2.DSS": "3fec9199a41696a758eaff7065f86a89477f70898b1bee3295de9c74f154121a",
-   "Lines.dss": "1e7cbf7934db304eaae2f60403bb456431d2c846951ca0b50e57a6a3a1d6851b",
-   "Loads.dss": "4d5b68a8095bbee59a95ba08255f34b74fcf3d89c0e413df2fc669648fb2d18f",
+   "Buscoords.dss": "f4b8355531b75b5bf275ee0532a2fcd712092c03a54b05cfad78a5923f9e2aa8",
+   "Capacitors.dss": "c5f776934c10a4db2165bfd194df23ffc4f0a4a8fb33c23ac4c377adb418b690",
+   "CapControls.DSS": "bcf80c4657bd9e08a399167b95bfb28974cbc03d26e0fed734a5fbbe305d9c8f",
+   "License.txt": "6d8c69aff6f68b35e959048802bcc793189aafe5ee6f28f30b09ba88ceda37d9",
+   "LineCodes2.DSS": "06bf30e0a363b2dcf6b62d664fc7353978bd8c935e5d9b95678794613fa592d5",
+   "Lines.dss": "e75b89b07c504464a0bfd9770c66d59af2c07c80d7ce7f481fad2d39c1d38e1f",
+   "Loads.dss": "a0f272e48bed15dbf9b2b40abb57825ee65b757b08ab6fe455691bdefc8d7e69",
    "LoadXfmrCodes.dss": "213a3c0478b33a4cb95d82d40e076d1c1ec19b22033e4aa03e6dcdd8b92fa8f9",
-   "LoadXfmrs.dss": "bcb0d10caab6e53d5b5b18b669ebd83f67f79135a478c3079f78a2fdd943122a",
-   "Master.dss": "025c722add02b24b3f2e80188d63e1b2261a62874530ae3f9116f91f0541d5e4",
-   "Regulators.dss": "041f353f55076feaaf751bbb20551226f8727ddfbdfc5101cf1b1f222da38617",
-   "Run_8500Node.dss": "6f7049134ab22835173d0b1a5be6f0f8d270be55643c594afcf9e458d6fe1b52",
-   "Transformers.dss": "cab397f65f5de08c4d82cf794c03c432b404cd5db7db37ff827869db8344b708",
-   "Triplex_Linecodes.dss": "7dfbfc23e19d8930c9e5ac3302bd9e8e9d52aee9c333e3fc80422f15752a886d",
-   "Triplex_Lines.DSS": "abf45521bc05a7f9d5c3fa4c94c4f24f7ea9bc984e7086b303ae4a143d77971d"
+   "LoadXfmrs.dss": "8f9b8745ed8c10af6c708302a357dbbbc36f92c0e203ed1926416d7663d75d1e",
+   "Master.dss": "40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c",
+   "Regulators.dss": "d33c4d8ace0659f31969692ce4f62cb093fe74ec0304ed57fc9e09e96f7ac1f4",
+   "Run_8500Node.dss": "3893fddf6ec99bbebe73874b0893361f0661482c502d3794108edf8df26bf92a",
+   "Transformers.dss": "45662031edfe78d624bd127407dfff9836bf44c61674bb6850e8c516d587f58d",
+   "Triplex_Linecodes.dss": "72e4ed6ce8e8aa59e22042f2ae830186375f8e713002915e9eed830e83ae216a",
+   "Triplex_Lines.DSS": "070f65ed7c9f93a46a72ba5b921d0fafccca61cf0562851cd7225b3e80d13f81"
   }
  }
 }

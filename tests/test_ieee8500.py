@@ -32,7 +32,7 @@ class TestIEEE8500(unittest.TestCase):
         self.assertTrue(all(b["xy"] for b in d["buses"]))
         root = Path(__file__).resolve().parents[1]/"data/ieee8500/source"
         for name,digest in d["provenance"]["sha256"].items():
-            self.assertEqual(hashlib.sha256((root/name).read_bytes()).hexdigest(),digest)
+            self.assertEqual(hashlib.sha256((root/name).read_bytes().replace(b"\r\n",b"\n")).hexdigest(),digest)
 
     def test_study_adjustments_are_explicit(self):
         d = self.data

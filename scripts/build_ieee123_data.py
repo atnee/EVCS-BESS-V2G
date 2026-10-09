@@ -93,7 +93,7 @@ def build():
                                  vn_lv_kv=.48,connection="Dd0",vkr_percent=1.27,x_percent=2.72),
                 provenance=dict(url="https://github.com/tshort/OpenDSS/tree/"+COMMIT+"/Distrib/IEEETestCases/123Bus",
                                 commit=COMMIT, retrieved="2026-10-08", length_unit="1000 ft = 0.3048 km",
-                                sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(SOURCE.iterdir())}))
+                                sha256={p.name:hashlib.sha256(p.read_bytes().replace(b"\r\n",b"\n")).hexdigest() for p in sorted(SOURCE.iterdir())}))
     target=ROOT/"src/network/data/ieee123.json"
     target.parent.mkdir(parents=True,exist_ok=True)
     target.write_text(json.dumps(data,indent=2)+"\n", encoding="utf-8")

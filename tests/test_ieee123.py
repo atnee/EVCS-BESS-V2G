@@ -28,7 +28,7 @@ class TestIEEE123(unittest.TestCase):
         self.assertEqual(sum(x["closed"] for x in d["switches"]),6)
         root = Path(__file__).resolve().parents[1]/"data/ieee123/source"
         for name,digest in d["provenance"]["sha256"].items():
-            self.assertEqual(hashlib.sha256((root/name).read_bytes()).hexdigest(),digest)
+            self.assertEqual(hashlib.sha256((root/name).read_bytes().replace(b"\r\n",b"\n")).hexdigest(),digest)
         n = create_pandapower_network(self.network)
         self.assertEqual(len(n.trafo),5)
         self.assertEqual(n.asymmetric_load.type.eq("delta").sum(),7)
