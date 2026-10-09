@@ -10,9 +10,24 @@
 | Kenia (BESS) | `python -m bess` | `configs/bess.yaml` | `results/modules/bess/` |
 | Cesar (V2G) | `python -m v2g` | `configs/v2g.yaml` | `results/modules/v2g/` |
 | Integration / Integración / Integração | `python -m integration.coordinator --output results/ieee123` | `configs/*.yaml` | `results/ieee123/` |
-| S0 baseline (IEEE 8500) / caso base | `python -m integration.s0_study --output results/s0` (`--feeder ieee123` for the old feeder) | `configs/ieee8500.yaml` | `results/s0/` |
-| EVCS siting screening / triagem | `python -m integration.evcs_screening` (`--resweep`; IEEE 8500 ~1.5 h) | `configs/evcs.yaml` (`planning:`, `network:`) | `results/evcs_screening/` |
-| S1 intraday (15 min) / S1 intradiário | `python -m integration.s1_study --evs 2000 5000` | `configs/evcs.yaml` (`planning:`) | `results/s1/evs_<n>/` |
+| EVCS — S0 base case (IEEE 8500) / caso base | `python -m integration.s0_study` | `configs/ieee8500.yaml` | `results/ieee8500/s0/` |
+| EVCS — siting screening / triagem | `python -m integration.evcs_screening` (1st run ~1.5 h) | `configs/evcs.yaml` (`planning:`) | `results/ieee8500/evcs_screening/` |
+| EVCS — S1 intraday (15 min) / S1 intradiário | `python -m integration.s1_study` | `configs/evcs.yaml` (`planning:`) | `results/ieee8500/s1/` |
+
+### Where to find what / Dónde encontrar / Onde encontrar
+
+```
+configs/      parameters (YAML) — one file per module + one per feeder (ieee123, ieee8500)
+src/          code: evcs/ bess/ v2g/ (one per owner) · network/ (feeders, power flow) · integration/ (studies, coordinator) · core/
+data/         feeder source data (ieee123/, ieee8500/ — see each README) · honduras/ templates
+notebooks/    01 EVCS (Ayrton) · 02 BESS (Kenia) · 03 V2G (Cesar) · 04 integration
+results/      generated outputs, not in Git — map in results/README.md
+docs/         methodology, team guide, docs/evcs/figures (figures shown in src/evcs/README.md)
+scripts/      rebuild the feeder JSON from data/<feeder>/source
+tests/        pytest
+```
+
+EVCS documentation and results: **[src/evcs/README.md](src/evcs/README.md)** · outputs: [results/README.md](results/README.md).
 
 ### Quick start / Inicio rápido / Começar
 ```bash

@@ -1,7 +1,7 @@
 """EVCS siting screening: network hosting capacity x fleet sessions x coverage, for DC hubs and AC eletropostos.
 
-python -m integration.evcs_screening                # reuses results/evcs_screening/hosting_capacity.csv
-python -m integration.evcs_screening --resweep      # recomputes the hosting sweep (~9 min)
+python -m integration.evcs_screening                # -> results/<planning.network>/evcs_screening/
+python -m integration.evcs_screening --resweep      # recomputes the hosting sweep (IEEE 8500 ~1.5 h)
 Peak snapshot (load multiplier 1.0). A screening baseline for the optimization, not its result.
 """
 from pathlib import Path
@@ -172,11 +172,17 @@ def plot_coverage(result, evs, ax=None):
                       f"{evs} carros → {row.hubs} hub(s) + {row.eletropostos} eletroposto(s) — {status}",result["demand"])
 
 
-def export_screening(output="results/evcs_screening", config_dir="configs", fleets=FLEETS, resweep=False):
+def study_dir(config_dir="configs", study="evcs_screening"):
+    """Default output folder of an EVCS study: results/<planning.network>/<study>."""
+    network = read_parameters(Path(config_dir)/"evcs.yaml")["planning"].get("network","ieee123")
+    return Path("results")/network/study
+
+
+def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=False):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    output = Path(output); output.mkdir(parents=True,exist_ok=True)
+    output = Path(output or study_dir(config_dir)); output.mkdir(parents=True,exist_ok=True)
     result = run_screening(config_dir,fleets,None if resweep else output/"hosting_capacity.csv")
     result["candidates"].to_csv(output/"hosting_capacity.csv",index=False)
     result["fleets"].to_csv(output/"fleet_scenarios.csv",index=False)
@@ -199,7 +205,7 @@ def export_screening(output="results/evcs_screening", config_dir="configs", flee
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output",default="results/evcs_screening")
+    parser.add_argument("--output",help="default: results/<planning.network>/evcs_screening")
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--resweep",action="store_true",help="recompute the hosting sweep instead of reusing the CSV")
     args = parser.parse_args()

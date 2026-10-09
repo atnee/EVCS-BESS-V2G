@@ -102,10 +102,10 @@ Tudo em Python (pandapower); não precisa de OpenDSS. Na raiz do repositório:
 
 ```powershell
 $env:PYTHONPATH="src"          # Linux/macOS: export PYTHONPATH=src
-python -m integration.s0_study --output results/s0                                    # caso base S0 (~2 min)
-python -m integration.evcs_screening --output results/ieee8500/evcs_screening         # triagem: 1ª vez ~1,5 h
-python -m integration.s1_study --output results/ieee8500/s1 --screening results/ieee8500/evcs_screening   # S1, ~6 min por frota
-python -m integration.s1_study --output results/ieee8500/s1 --intraday-only           # só redesenha a figura intradiária
+python -m integration.s0_study                    # caso base S0 (~2 min)            -> results/ieee8500/s0/
+python -m integration.evcs_screening              # triagem (1ª vez ~1,5 h)          -> results/ieee8500/evcs_screening/
+python -m integration.s1_study                    # S1, ~6 min por frota             -> results/ieee8500/s1/
+python -m integration.s1_study --intraday-only    # só redesenha a figura intradiária
 python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.py -q
 ```
 
@@ -116,9 +116,11 @@ python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.p
 
 ### Saídas
 
+Sem `--output`, cada estudo grava em `results/<planning.network>/<estudo>/`. Mapa completo em [`results/README.md`](../../results/README.md).
+
 | Pasta / arquivo | Conteúdo |
 |---|---|
-| `results/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`, tabelas de linhas, barras e inventário |
+| `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`, tabelas de linhas, barras e inventário |
 | `results/ieee8500/evcs_screening/` | `hosting_capacity.csv` e `hosting_map.png` (capacidade por barra), `fleet_scenarios.csv`, `coverage_<n>_evs.png` |
 | `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
 | `results/ieee8500/s1/s0_intraday.csv`, `evs_<n>/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |

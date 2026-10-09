@@ -1,7 +1,7 @@
 """S0 baseline study: feeder without DER — topology, line parameters and voltage profile.
 
-python -m integration.s0_study --output results/s0                      # IEEE 8500 (base case of the studies)
-python -m integration.s0_study --feeder ieee123 --output results/s0_ieee123
+python -m integration.s0_study                      # IEEE 8500 (base case of the studies) -> results/ieee8500/s0/
+python -m integration.s0_study --feeder ieee123     # -> results/ieee123/s0/
 """
 from pathlib import Path
 import argparse
@@ -303,11 +303,12 @@ def summary(study):
             "graph": {k: v for k,v in graph_metrics(study["graph"]).items() if k != "main_path"}}
 
 
-def export_s0(output="results/s0", config_dir="configs", feeder="ieee123"):
+def export_s0(output=None, config_dir="configs", feeder="ieee8500"):
+    """Writes to `output` (default results/<feeder>/s0)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    output = Path(output); output.mkdir(parents=True,exist_ok=True)
+    output = Path(output or Path("results")/feeder/"s0"); output.mkdir(parents=True,exist_ok=True)
     study = run_s0(config_dir,feeder=feeder)
     data = study["network"].equipment["feeder_data"][0]
     peak = voltages_at(study,study["peak"]).pivot_table(index="bus",columns="phase",values="v_pu")
@@ -332,7 +333,7 @@ def export_s0(output="results/s0", config_dir="configs", feeder="ieee123"):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output",default="results/s0")
+    parser.add_argument("--output",help="default: results/<feeder>/s0")
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--feeder",default="ieee8500",help="ieee8500 (default) or ieee123")
     args = parser.parse_args()

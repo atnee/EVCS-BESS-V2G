@@ -4,7 +4,8 @@ intraday power flow (planning.resolution_min, 15 min by default) compared with S
 python -m integration.s1_study                     # fleets: every fleet of the screening (sensitivity 2000-5000)
 python -m integration.s1_study --evs 2000 5000
 python -m integration.s1_study --intraday-only      # redraw intraday_sensitivity.png from saved results
-Needs results/evcs_screening/fleet_scenarios.csv (python -m integration.evcs_screening).
+Reads results/<planning.network>/evcs_screening/ (python -m integration.evcs_screening) and writes
+results/<planning.network>/s1/.
 """
 from pathlib import Path
 import argparse
@@ -17,7 +18,7 @@ from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid
-from integration.evcs_screening import plot_sites, TYPE_STYLE
+from integration.evcs_screening import plot_sites, TYPE_STYLE, study_dir
 from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily, marker_scale,
                                   _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
 
@@ -30,8 +31,9 @@ def load_fleets(screening_dir):
     return fleets.set_index("evs")
 
 
-def run_s1(evs, config_dir="configs", screening_dir="results/evcs_screening", s0=None, sites=None):
+def run_s1(evs, config_dir="configs", screening_dir=None, s0=None, sites=None):
     params = with_fleet(from_config(read_parameters(Path(config_dir)/"evcs.yaml")),evs)
+    screening_dir = screening_dir or study_dir(config_dir)
     sites = load_fleets(screening_dir).loc[int(evs)].sites if sites is None else sites
     res = params.resolution_min
     s0 = run_s0(config_dir,res,params.network) if s0 is None else s0
@@ -174,7 +176,7 @@ def base_overloads(flow):
 FLEET_COLORS = ["#9ec5f4","#5598e6","#2a6cc0","#123f7a","#0b2447"]  # light → dark = more cars
 
 
-def plot_intraday_sensitivity(output="results/s1"):
+def plot_intraday_sensitivity(output):
     """Intraday curves of every fleet in `output` (evs_<n>/) against the base case S0 (s0_intraday.csv):
     station demand, substation power, minimum voltage and highest line loading, 15 min."""
     import matplotlib.pyplot as plt
@@ -209,7 +211,7 @@ def plot_intraday_sensitivity(output="results/s1"):
     return fig
 
 
-def export_intraday_sensitivity(output="results/s1"):
+def export_intraday_sensitivity(output):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -317,10 +319,13 @@ def summary(s1):
             "max_line_loading_peak_pct": float(b[b.element_type=="line"].loading_pct.max())}
 
 
-def export_s1(output="results/s1", config_dir="configs", screening_dir="results/evcs_screening", fleets=None):
+def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None):
+    """Writes to `output` (default results/<planning.network>/s1)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    output = output or study_dir(config_dir,"s1")
+    screening_dir = screening_dir or study_dir(config_dir)
     table = load_fleets(screening_dir)
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     if not fleets:
@@ -363,15 +368,15 @@ def export_s1(output="results/s1", config_dir="configs", screening_dir="results/
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output",default="results/s1")
+    parser.add_argument("--output",help="default: results/<planning.network>/s1")
     parser.add_argument("--configs",default="configs")
-    parser.add_argument("--screening",default="results/evcs_screening")
+    parser.add_argument("--screening",help="default: results/<planning.network>/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
     parser.add_argument("--intraday-only",action="store_true",
                         help="only redraw intraday_sensitivity.png from the files already in --output")
     args = parser.parse_args()
     if args.intraday_only:
-        export_intraday_sensitivity(args.output)
+        export_intraday_sensitivity(args.output or study_dir(args.configs,"s1"))
         return
     print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
 

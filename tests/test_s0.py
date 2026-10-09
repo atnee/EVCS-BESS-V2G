@@ -46,11 +46,11 @@ class TestS0Study(unittest.TestCase):
             for name in ("evcs","bess","v2g"):
                 path = configs/f"{name}.yaml"; data = yaml.safe_load(path.read_text())
                 data["time"]["steps"] = 2; path.write_text(yaml.safe_dump(data))
-            path = configs/"ieee123.yaml"; data = yaml.safe_load(path.read_text())
+            path = configs/"ieee8500.yaml"; data = yaml.safe_load(path.read_text())  # S0 default feeder
             data["load_multipliers"] = [.55,1.]; path.write_text(yaml.safe_dump(data))
             summary = export_s0(Path(tmp)/"s0",configs)
             self.assertTrue(.95 < summary["peak_vmin_pu"] < 1.)
             self.assertGreater(summary["peak_losses_kw"],0)
             for name in ("topology","voltage_map","voltage_profile","daily","linecodes"):
                 self.assertTrue((Path(tmp)/"s0"/f"{name}.png").stat().st_size > 10_000)
-            self.assertEqual(json.loads((Path(tmp)/"s0"/"summary.json").read_text())["graph"]["buses"],130)
+            self.assertEqual(json.loads((Path(tmp)/"s0"/"summary.json").read_text())["graph"]["buses"],2521)
