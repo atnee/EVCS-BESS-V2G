@@ -132,7 +132,7 @@ def plot_profile_comparison(s1):
     for limit in (.95,1.05):
         ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
     ax.set_xlabel("distância elétrica da subestação (km)",color=MUTED); ax.set_ylabel("tensão (pu)",color=MUTED)
-    ax.legend(frameon=False,fontsize=9,loc="upper center",ncol=2)
+    ax.legend(frameon=False,fontsize=9,loc="lower right",ncol=2)
     return fig
 
 
