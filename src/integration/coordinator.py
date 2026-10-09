@@ -49,7 +49,7 @@ def run_scenarios(config_dir="configs"):
     # EVCS demand is identical in S1-S4; validating it here also checks the station bus early.
     ev = run_evcs(config_dir,grid)
     ev[0].validate(network)
-    nominal_kw = sum(l["p_kw"] for l in network.equipment["ieee123_data"][0]["loads"])
+    nominal_kw = sum(l["p_kw"] for l in network.equipment["feeder_data"][0]["loads"])
     solver = PandapowerSolver(multipliers)
     records, details = [], {}
     for name,(use_ev,use_bess,use_v2g) in SCENARIOS.items():
@@ -118,8 +118,8 @@ def export_results(output="results/demo", config_dir="configs"):
               "limitations":details["S0"]["flow"]["limitations"],
               "injections_scope":"additional DER only; original realized loads in *_native_loads.csv",
               "module_outputs":"modules/{evcs,bess,v2g}/{S0,S1,S2,S3,S4}/profile.csv",
-              "dataset_provenance":details["S0"]["network"].equipment["ieee123_data"][0]["provenance"],
-              "dataset_sha256":hashlib.sha256(json.dumps(details["S0"]["network"].equipment["ieee123_data"][0],sort_keys=True).encode()).hexdigest(),
+              "dataset_provenance":details["S0"]["network"].equipment["feeder_data"][0]["provenance"],
+              "dataset_sha256":hashlib.sha256(json.dumps(details["S0"]["network"].equipment["feeder_data"][0],sort_keys=True).encode()).hexdigest(),
               "config_sha256":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(config_dir).glob("*.yaml")}}
     (output/"manifest.json").write_text(json.dumps(manifest,indent=2))
     return summary

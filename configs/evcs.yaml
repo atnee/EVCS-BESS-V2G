@@ -42,12 +42,14 @@ independent_demand_kw:
 # Planning assumptions for siting/sizing (src/evcs/planning.py, src/evcs/README.md).
 # Placeholders until Honduras data replaces them; the screening also sweeps `evs`.
 planning:
+  network: ieee8500         # feeder of the EVCS studies (S0/screening/S1): ieee123 or ieee8500
+  candidate_spacing_m: 250  # screening candidates: three-phase buses at least this far apart (0 = all)
   seed: 42                  # same seed -> same sessions (reproducible)
   resolution_min: 15        # intraday power-flow step (minutes); sessions are simulated per minute
   charger_efficiency: 0.95  # grid power = charging power / efficiency
   sizing_quantile: 0.95     # chargers = 95th percentile of unconstrained simultaneous sessions
   fleet:
-    evs: 1000               # electric cars in the feeder area
+    evs: 2000               # electric cars in the feeder area (base case; sensitivity 2000-5000)
     battery_kwh: 60.0       # average usable battery
     battery_std_kwh: 15.0   # spread of battery sizes
     daily_km: 35.0          # km per car per day (urban use)

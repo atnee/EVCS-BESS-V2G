@@ -1,6 +1,7 @@
-"""S0 baseline study: IEEE123 without DER — topology, line parameters and voltage profile.
+"""S0 baseline study: feeder without DER — topology, line parameters and voltage profile.
 
-python -m integration.s0_study --output results/s0
+python -m integration.s0_study --output results/s0                      # IEEE 8500 (base case of the studies)
+python -m integration.s0_study --feeder ieee123 --output results/s0_ieee123
 """
 from pathlib import Path
 import argparse
@@ -10,7 +11,7 @@ import numpy as np
 import pandas as pd
 from core.schemas import make_profile, read_parameters
 from integration.scenarios import integrated_grid
-from network.ieee123_loader import load_ieee123
+from network.feeder_loader import load_feeder
 from network.pandapower_solver import PandapowerSolver
 from network.topology import (feeder_graph, bus_table, graph_metrics, line_table, linecode_table,
                               electrical_inventory)
@@ -24,9 +25,9 @@ EQUIPMENT = {"regulator": "#eb6834", "transformer": "#4a3aa7", "capacitor": "#2a
 V_LIMITS = (.95, 1.05)  # ANSI C84.1 range A
 
 
-def load_curve(config_dir, steps):
-    """ieee123.yaml hourly multipliers at `steps` per day: linear between hour centres, periodic."""
-    hourly = np.asarray(read_parameters(Path(config_dir)/"ieee123.yaml").get("load_multipliers",[1.]*24),float)
+def load_curve(config_dir, steps, feeder="ieee123"):
+    """<feeder>.yaml hourly multipliers at `steps` per day: linear between hour centres, periodic."""
+    hourly = np.asarray(read_parameters(Path(config_dir)/f"{feeder}.yaml").get("load_multipliers",[1.]*24),float)
     if steps == len(hourly):
         return hourly
     if len(hourly) != 24:
@@ -34,26 +35,26 @@ def load_curve(config_dir, steps):
     return np.interp((np.arange(steps)+.5)*24/steps,np.arange(24)+.5,hourly,period=24)
 
 
-def run_s0(config_dir="configs", resolution_min=None):
-    """Daily S0 power flow (IEEE123 loads only, no DER) with the ieee123.yaml load curve.
+def run_s0(config_dir="configs", resolution_min=None, feeder="ieee123"):
+    """Daily S0 power flow (feeder loads only, no DER) with the <feeder>.yaml load curve.
     resolution_min=None keeps the integration grid; e.g. 15 gives 96 intraday steps."""
     grid = integrated_grid(config_dir)
     if resolution_min:
         grid = dataclasses.replace(grid,steps=1440//resolution_min,dt_h=resolution_min/60)
-    multipliers = load_curve(config_dir,grid.steps)
-    network = load_ieee123()
+    multipliers = load_curve(config_dir,grid.steps,feeder)
+    network = load_feeder(feeder)
     no_der = make_profile(grid,"no-DER",network.slack_bus,"ABC",np.zeros(grid.steps))
     flow = PandapowerSolver(multipliers).solve(network,no_der)
-    graph = feeder_graph(network.equipment["ieee123_data"][0])
+    graph = feeder_graph(network.equipment["feeder_data"][0])
     buses = bus_table(graph)
     hours = flow["source"].time
     peak, valley = int(flow["source"].p_kw.idxmax()), int(flow["source"].p_kw.idxmin())
     return dict(flow=flow,graph=graph,buses=buses,network=network,multipliers=multipliers,
-                peak=hours[peak],valley=hours[valley])
+                peak=hours[peak],valley=hours[valley],feeder=feeder)
 
 
 def feeder_voltages(study):
-    """Voltages without the ideal source bus, which is fixed at 1.0 pu upstream of reg1."""
+    """Voltages without the ideal source bus (fixed voltage upstream of the first regulator/transformer)."""
     v = study["flow"]["voltages"]
     return v[v.bus != study["network"].slack_bus]
 
@@ -77,40 +78,56 @@ def _style(ax, title=None):
         ax.set_title(title,loc="left",fontsize=11,color=INK)
 
 
+def marker_scale(graph):
+    """1 on the IEEE123; smaller markers on feeders with many buses (IEEE8500: ~0.25)."""
+    return float(min(1.,np.sqrt(150/max(graph.number_of_nodes(),1))))
+
+
 def _edges(ax, graph, pos, emphasis=True):
     """Lines drawn by phase count; equipment and switches on top."""
+    from matplotlib.collections import LineCollection
+    k = marker_scale(graph)
+    groups = {}
     for u,v,d in graph.edges(data=True):
-        (x0,y0),(x1,y1) = pos[u],pos[v]
         if d["kind"] == "line":
-            width,color = {3:(2.6,"#3a3936"),2:(1.6,MUTED),1:(.9,"#8a8984")}[len(d["phases"])] if emphasis else (.8,"#b9b8b3")
-            ax.plot([x0,x1],[y0,y1],color=color,lw=width,solid_capstyle="round",zorder=1)
+            style = {3:(2.6,"#3a3936"),2:(1.6,MUTED),1:(.9,"#8a8984")}[len(d["phases"])] if emphasis else (.8,"#b9b8b3")
+            groups.setdefault((max(style[0]*k,.5),style[1],"-",1),[]).append([pos[u],pos[v]])
         elif d["kind"] == "switch":
-            ax.plot([x0,x1],[y0,y1],color=INK,lw=1.4,ls="-" if d["closed"] else (0,(2,2)),zorder=2)
+            groups.setdefault((1.4*max(k,.5),INK,"-" if d["closed"] else (0,(2,2)),2),[]).append([pos[u],pos[v]])
         elif emphasis:
             # Regulators/transformer have zero length: both terminals share coordinates.
+            (x0,y0),(x1,y1) = pos[u],pos[v]
             ax.scatter((x0+x1)/2,(y0+y1)/2,marker={"regulator":"s","transformer":"D"}[d["kind"]],s=95,
                        color=EQUIPMENT[d["kind"]],edgecolor=SURFACE,linewidth=1.5,zorder=4)
+    for (width,color,style,z),segments in groups.items():
+        ax.add_collection(LineCollection(segments,linewidths=width,colors=color,linestyles=style,capstyle="round",zorder=z))
+    ax.autoscale_view()
 
 
-def plot_topology(study, highlight=("67",), ax=None):
-    """Feeder drawn at the IEEE bus coordinates with NetworkX graph data."""
+def plot_topology(study, highlight=None, ax=None):
+    """Feeder drawn at the IEEE bus coordinates with NetworkX graph data.
+    highlight: buses to circle (default: bus 67, the EVCS/BESS bus of the IEEE123 integration)."""
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     graph, buses = study["graph"], study["buses"].set_index("bus")
     pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
     ax = ax or plt.subplots(figsize=(11,8.5),layout="constrained")[1]
-    _style(ax,"IEEE123 — topologia (NetworkX, coordenadas originais)")
+    k = marker_scale(graph)
+    highlight = [b for b in (("67",) if highlight is None else highlight) if b in graph] if graph.graph["name"] == "IEEE 123" or highlight else []
+    _style(ax,f'{graph.graph["name"]} — topologia (NetworkX, coordenadas originais)')
     _edges(ax,graph,pos)
     xy = np.array([pos[n] for n in graph])
-    ax.scatter(xy[:,0],xy[:,1],s=10,color=INK,zorder=3,linewidths=0)
+    ax.scatter(xy[:,0],xy[:,1],s=10*k,color=INK,zorder=3,linewidths=0)
     source = graph.graph["source"]
     ax.scatter(*pos[source],marker="*",s=260,color=INK,zorder=5)
     caps = buses[buses.capacitor_kvar > 0]
     ax.scatter(caps.x,caps.y,marker="v",s=90,color=EQUIPMENT["capacitor"],edgecolor=SURFACE,linewidth=1.5,zorder=5)
-    labels = {source: "150 subestação 4,16 kV"}
+    kv = lambda value: f"{value:g}".replace(".",",")
+    labels = {source: f'{source} subestação {kv(graph.nodes[source]["vn_kv"])} kV'}
+    transformer = next((d for *_,d in graph.edges(data=True) if d["kind"]=="transformer"),{})
     for u,v,d in graph.edges(data=True):
         if d["kind"] in ("regulator","transformer") or (d["kind"]=="switch" and not d["closed"]):
-            text = {"regulator": d["id"], "transformer": f'{d["id"]} {d.get("kv","")} kV',
+            text = {"regulator": d["id"], "transformer": f'{d["id"]} {d.get("kv","").replace(".0/","/")} kV',
                     "switch": f'{d["id"]} aberta'}[d["kind"]]
             labels[v] = text
     for bus in caps.index:
@@ -120,7 +137,16 @@ def plot_topology(study, highlight=("67",), ax=None):
         labels[bus] = f"{bus} (EVCS/BESS)"
     # Manual offsets where IEEE coordinates crowd the labels.
     offsets = {"610": (8,-16), "88": (-78,6), "94": (-70,-4), "92": (8,-14), "90": (8,4)}
+    # Labels closer than 1.5 % of the drawing (substation, transformer and regulator terminals) share one box.
+    tol = .015*float(np.ptp(xy,axis=0).max())
+    merged = []
     for bus,text in labels.items():
+        near = next((m for m in merged if np.hypot(*(np.asarray(pos[m[0]])-pos[bus])) <= tol),None)
+        if near:
+            near[1] += "\n"+text
+        else:
+            merged.append([bus,text])
+    for bus,text in merged:
         ax.annotate(text,pos[bus],xytext=offsets.get(bus,(6,6)),textcoords="offset points",fontsize=8,color=INK,zorder=7,
                     bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
     ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
@@ -130,7 +156,8 @@ def plot_topology(study, highlight=("67",), ax=None):
                Line2D([],[],color=INK,lw=1.4,label="chave fechada"),
                Line2D([],[],color=INK,lw=1.4,ls=(0,(2,2)),label="chave aberta"),
                Line2D([],[],marker="s",ls="",color=EQUIPMENT["regulator"],ms=9,label="regulador de tensão"),
-               Line2D([],[],marker="D",ls="",color=EQUIPMENT["transformer"],ms=8,label="transformador 4,16/0,48 kV"),
+               Line2D([],[],marker="D",ls="",color=EQUIPMENT["transformer"],ms=8,
+                      label=f'transformador {"/".join(kv(float(x)) for x in transformer.get("kv","").split("/"))} kV'),
                Line2D([],[],marker="v",ls="",color=EQUIPMENT["capacitor"],ms=9,label="banco de capacitores"),
                Line2D([],[],marker="*",ls="",color=INK,ms=13,label="subestação (fonte)")]
     ax.legend(handles=handles,loc="lower left",fontsize=8,frameon=False,ncol=3)
@@ -151,7 +178,8 @@ def plot_voltage_map(study, time=None, ax=None):
     cmap = LinearSegmentedColormap.from_list("v",["#e34948","#f0efec","#2a78d6"])
     norm = TwoSlopeNorm(vcenter=1.,vmin=min(V_LIMITS[0],vmin.min()),vmax=max(V_LIMITS[1],vmin.max()))
     xy = np.array([pos[b] for b in vmin.index])
-    points = ax.scatter(xy[:,0],xy[:,1],c=vmin.to_numpy(),cmap=cmap,norm=norm,s=46,edgecolor=MUTED,linewidth=.6,zorder=3)
+    k = marker_scale(graph)
+    points = ax.scatter(xy[:,0],xy[:,1],c=vmin.to_numpy(),cmap=cmap,norm=norm,s=46*k,edgecolor=MUTED,linewidth=.6*k,zorder=3)
     bar = plt.colorbar(points,ax=ax,shrink=.6,pad=.01)
     bar.set_label("V mín. entre fases (pu)",color=MUTED); bar.ax.tick_params(colors=MUTED,labelsize=8)
     for bus in (vmin.idxmin(),vmin.idxmax()):
@@ -169,17 +197,22 @@ def plot_voltage_profile(study, times=None):
     fig,axes = plt.subplots(1,len(times),figsize=(6.5*len(times),4.8),sharey=True,layout="constrained")
     axes = np.atleast_1d(axes)
     mult = dict(zip(study["flow"]["source"].time,study["multipliers"]))
+    from matplotlib.collections import LineCollection
+    k = marker_scale(study["graph"])
     for ax,time in zip(axes,times):
         _style(ax,f"{time:%H:%M} — carga {mult[time]:.0%} da nominal")
         v = voltages_at(study,time).set_index(["bus","phase"])
         for phase,style in PHASE_STYLE.items():
             part = v.xs(phase,level="phase")
-            for bus,row in part.iterrows():
-                if pd.notna(row.parent) and (row.parent,phase) in v.index:
-                    ax.plot([v.at[(row.parent,phase),"distance_km"],row.distance_km],
-                            [v.at[(row.parent,phase),"v_pu"],row.v_pu],color=style["color"],lw=1.2,alpha=.85)
-            ax.scatter(part.distance_km,part.v_pu,s=18,color=style["color"],marker=style["marker"],
-                       edgecolor=SURFACE,linewidth=.5,zorder=3)
+            parents = [(p,phase) in v.index for p in part.parent]
+            child = part[parents]
+            parent = v.loc[[(p,phase) for p in child.parent]]
+            segments = np.stack([np.column_stack([parent.distance_km,parent.v_pu]),
+                                 np.column_stack([child.distance_km,child.v_pu])],axis=1)
+            ax.add_collection(LineCollection(segments,colors=style["color"],linewidths=1.2*max(k,.6),alpha=.85))
+            ax.scatter(part.distance_km,part.v_pu,s=18*k,color=style["color"],marker=style["marker"],
+                       edgecolor=SURFACE,linewidth=.5*k,zorder=3)
+        ax.autoscale_view()
         for limit in V_LIMITS:
             ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
             ax.annotate(f"limite {limit:.2f} pu",(1,limit),xycoords=("axes fraction","data"),xytext=(-2,3),
@@ -187,8 +220,7 @@ def plot_voltage_profile(study, times=None):
         # Vertical steps are regulator boosts (zero length, so same distance).
         for u,w,d in study["graph"].edges(data=True):
             if d["kind"] == "regulator" and len(d["phases"]) == 3:
-                lv = w if w.endswith("r") else u
-                at = v.xs(lv,level="bus")
+                at = v.xs(d["lv_bus"],level="bus")
                 ax.annotate(d["id"],(at.distance_km.iloc[0],at.v_pu.max()),xytext=(4,6),textcoords="offset points",
                             fontsize=8,color=INK,bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
         ax.set_xlabel("distância elétrica da subestação (km)",color=MUTED)
@@ -227,22 +259,25 @@ def plot_daily(study):
     return fig
 
 
-def plot_linecodes(table=None):
-    """Positive-sequence R, X (and L = X/ω) and C per IEEE configuration."""
+def plot_linecodes(table=None, top=15):
+    """Positive-sequence R, X (and L = X/ω) and C per IEEE configuration (the `top` longest in use)."""
     import matplotlib.pyplot as plt
     table = linecode_table() if table is None else table
+    if len(table) > top:
+        table = table.nlargest(top,"total_km").reset_index(drop=True)
     fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.2),layout="constrained")
     x = np.arange(len(table))
     names = [f"{c}\n{p}φ" for c,p in zip(table.linecode,table.phases)]
     _style(ax1,"Impedância de sequência positiva por configuração")
     ax1.bar(x-.2,table.r1_ohm_km,.38,color="#2a78d6",label="R1 (Ω/km)")
     ax1.bar(x+.2,table.x1_ohm_km,.38,color="#eb6834",label="X1 (Ω/km)")
-    ax1.set_xticks(x,names); ax1.set_ylabel("Ω/km",color=MUTED); ax1.legend(frameon=False,fontsize=9)
+    rotation = dict(rotation=60,ha="right",fontsize=7) if max(map(len,table.linecode)) > 6 else {}
+    ax1.set_xticks(x,names,**rotation); ax1.set_ylabel("Ω/km",color=MUTED); ax1.legend(frameon=False,fontsize=9)
     _style(ax2,"Capacitância de sequência positiva")
     ax2.bar(x,table.c1_nf_km,.6,color="#2a78d6")
     for i,c in enumerate(table.c1_nf_km):
         ax2.annotate(f"{c:.0f}",(i,c),xytext=(0,3),textcoords="offset points",ha="center",fontsize=8,color=INK)
-    ax2.set_xticks(x,names); ax2.set_ylabel("C1 (nF/km)",color=MUTED)
+    ax2.set_xticks(x,names,**rotation); ax2.set_ylabel("C1 (nF/km)",color=MUTED)
     return fig
 
 
@@ -268,13 +303,13 @@ def summary(study):
             "graph": {k: v for k,v in graph_metrics(study["graph"]).items() if k != "main_path"}}
 
 
-def export_s0(output="results/s0", config_dir="configs"):
+def export_s0(output="results/s0", config_dir="configs", feeder="ieee123"):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     output = Path(output); output.mkdir(parents=True,exist_ok=True)
-    study = run_s0(config_dir)
-    data = study["network"].equipment["ieee123_data"][0]
+    study = run_s0(config_dir,feeder=feeder)
+    data = study["network"].equipment["feeder_data"][0]
     peak = voltages_at(study,study["peak"]).pivot_table(index="bus",columns="phase",values="v_pu")
     peak.columns = [f"v_{p.lower()}_pu_peak" for p in peak.columns]
     study["buses"].merge(peak,left_on="bus",right_index=True,how="left").to_csv(output/"buses.csv",index=False)
@@ -299,8 +334,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--output",default="results/s0")
     parser.add_argument("--configs",default="configs")
+    parser.add_argument("--feeder",default="ieee8500",help="ieee8500 (default) or ieee123")
     args = parser.parse_args()
-    print(json.dumps(export_s0(args.output,args.configs),indent=2,default=str))
+    print(json.dumps(export_s0(args.output,args.configs,args.feeder),indent=2,default=str))
 
 
 if __name__ == "__main__":

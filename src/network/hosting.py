@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import pandapower as pp
-from network.ieee123_loader import load_ieee123, create_pandapower_network
+from network.feeder_loader import load_feeder, create_pandapower_network
 from network.pandapower_solver import solve_snapshot, POWER_COLUMNS
 
 
@@ -18,29 +18,36 @@ class HostingStudy:
     pre-existing (their ampacity is an assumption) and only reported, not used as a criterion.
     """
 
-    def __init__(self, network=None, multiplier=1.0, v_min=.95, line_limit_pct=100., equipment_limit_pct=100., pf=1.0):
-        self.network = load_ieee123() if network is None else network
+    def __init__(self, network=None, multiplier=1.0, v_min=.95, line_limit_pct=100., equipment_limit_pct=100., pf=1.0,
+                 feeder="ieee123", tolerance_mw=1e-8):
+        self.network = load_feeder(feeder) if network is None else network
+        self.tolerance_mw = tolerance_mw
         self.net = create_pandapower_network(self.network)
         self.v_min, self.line_limit, self.equipment_limit = v_min, line_limit_pct, equipment_limit_pct
         self.q_ratio = float(np.tan(np.arccos(pf)))
         self.nominal = self.net.asymmetric_load[POWER_COLUMNS].copy()
-        loads = len(self.network.equipment["ieee123_data"][0]["loads"])
+        loads = len(self.network.equipment["feeder_data"][0]["loads"])
         self.nominal.loc[self.nominal.index[:loads]] *= multiplier  # capacitors stay nominal
-        self.probe = pp.create_asymmetric_load(self.net,self.net.ieee123_bus_lookup[self.network.slack_bus],
+        self.probe = pp.create_asymmetric_load(self.net,self.net.bus_lookup[self.network.slack_bus],
                                                name="probe",type="wye")
         self.bus_mask = _phase_mask(self.net.bus)
         self.line_mask = _phase_mask(self.net.line)
         self.trafo_mask = _phase_mask(self.net.trafo)
         self.base = self.evaluate(None,0.)
+        # Regulators (where controlled) start every probe from the base-case taps, so results
+        # do not depend on the order of evaluations.
+        self.taps = self.net.trafo.tap_pos.copy()
         self.preexisting = sorted(self.base["overloaded_lines"])
 
     def _solve(self, bus, kw):
         if bus is not None:
-            self.net.asymmetric_load.at[self.probe,"bus"] = self.net.ieee123_bus_lookup[bus]
+            self.net.asymmetric_load.at[self.probe,"bus"] = self.net.bus_lookup[bus]
         for ph in "abc":
             self.net.asymmetric_load.at[self.probe,f"p_{ph}_mw"] = kw/3000
             self.net.asymmetric_load.at[self.probe,f"q_{ph}_mvar"] = kw*self.q_ratio/3000
-        solve_snapshot(self.net,self.nominal)
+        if hasattr(self,"taps"):
+            self.net.trafo["tap_pos"] = self.taps
+        solve_snapshot(self.net,self.nominal,tolerance_mw=self.tolerance_mw,warm=True)
 
     def evaluate(self, bus, kw):
         try:
@@ -89,7 +96,7 @@ class HostingStudy:
         """Simultaneous check of several stations {bus: kw} (individual capacities do not add up)."""
         extra = []
         for bus,kw in placements.items():
-            idx = pp.create_asymmetric_load(self.net,self.net.ieee123_bus_lookup[bus],name=f"station:{bus}",type="wye",
+            idx = pp.create_asymmetric_load(self.net,self.net.bus_lookup[bus],name=f"station:{bus}",type="wye",
                 **{f"p_{p}_mw": kw/3000 for p in "abc"},**{f"q_{p}_mvar": kw*self.q_ratio/3000 for p in "abc"})
             extra.append(idx)
         try:

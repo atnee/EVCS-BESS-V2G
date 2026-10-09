@@ -21,7 +21,6 @@
 - `docs/methodology.md`
 - `docs/validation.md`
 - `docs/xlsx_schema.json`
-- `notebooks/00_network_baseline.ipynb`
 - `notebooks/01_evcs_ayrton.ipynb`
 - `notebooks/02_bess_kenia.ipynb`
 - `notebooks/03_v2g_cesar.ipynb`

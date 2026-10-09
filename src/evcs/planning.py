@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 
-FT_TO_M = .3048  # IEEE123 bus coordinates are in feet
+FT_TO_M = .3048  # IEEE123 and IEEE8500 bus coordinates are in feet
 MINUTES = 1440
 
 
@@ -75,11 +75,14 @@ class PlanningParameters:
     resolution_min: int = 15
     charger_efficiency: float = .95
     sizing_quantile: float = .95                # chargers = this quantile of unconstrained concurrency
+    network: str = "ieee123"                    # feeder of the EVCS studies (network.feeder_loader.FEEDERS)
+    candidate_spacing_m: float = 0.             # screening candidates at least this far apart (0 = all)
 
     def __post_init__(self):
         if abs(sum(t.share for t in self.types.values())-1) > 1e-9:
             raise ValueError("Station type shares must add up to 1")
-        if MINUTES % self.resolution_min or not 0 < self.charger_efficiency <= 1 or not 0 < self.sizing_quantile <= 1:
+        if (MINUTES % self.resolution_min or not 0 < self.charger_efficiency <= 1 or not 0 < self.sizing_quantile <= 1
+                or self.candidate_spacing_m < 0):
             raise ValueError("Invalid resolution/efficiency/quantile")
 
     def car_limit(self, key):
@@ -189,6 +192,21 @@ def distances_m(xy_a, xy_b):
     """Straight-line distance matrix between two lists of IEEE (x, y) coordinates, in metres."""
     a, b = np.asarray(xy_a,float)*FT_TO_M, np.asarray(xy_b,float)*FT_TO_M
     return np.hypot(a[:,None,0]-b[None,:,0],a[:,None,1]-b[None,:,1])
+
+
+def thin_candidates(candidates, demand, spacing_m):
+    """Keep candidates at least `spacing_m` apart, preferring those with more demand within that
+    distance; spacing 0 keeps all. Limits the hosting sweep on large feeders."""
+    if spacing_m <= 0 or candidates.empty:
+        return candidates.reset_index(drop=True)
+    xy = candidates[["x","y"]]
+    score = (distances_m(xy,demand[["x","y"]]) <= spacing_m).astype(float)@demand.weight.to_numpy(float)
+    spacing = distances_m(xy,xy)
+    kept = []
+    for i in np.argsort(-score,kind="stable"):
+        if all(spacing[i,j] >= spacing_m for j in kept):
+            kept.append(i)
+    return candidates.iloc[sorted(kept)].reset_index(drop=True)
 
 
 def greedy_coverage(candidates, demand, radius_m, spacing_m, stations, station_kw, taken=()):

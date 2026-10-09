@@ -1,0 +1,7 @@
+network: ieee8500
+status: implemented_pandapower_sequence_approximation
+source: https://github.com/tshort/OpenDSS/tree/5005c668a72d20775f4c2d060feebb2866ba1d38/Distrib/IEEETestCases/8500-Node
+# Medium-voltage reduction of the balanced load case (scripts/build_ieee8500_data.py).
+solver: pandapower.runpp_3ph
+# Same assumed daily shape as ieee123.yaml (not an IEEE reference measurement); 1.0 = nominal 10.8 MW.
+load_multipliers: [0.60, 0.58, 0.56, 0.55, 0.56, 0.60, 0.65, 0.72, 0.78, 0.80, 0.82, 0.83, 0.82, 0.80, 0.82, 0.86, 0.92, 0.98, 1.00, 0.98, 0.92, 0.82, 0.72, 0.65]

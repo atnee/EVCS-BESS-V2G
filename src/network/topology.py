@@ -1,25 +1,26 @@
-"""IEEE123 topology (NetworkX), line parameters and electrical inventory; no power flow."""
+"""Feeder topology (NetworkX), line parameters and electrical inventory; no power flow.
+Functions take the normalized dataset (network.feeder_loader.read_feeder_data); default IEEE123."""
 import numpy as np
 import pandas as pd
 import networkx as nx
-from network.ieee123_loader import read_ieee123_data
+from network.feeder_loader import read_feeder_data, unit_km
 
-KFT_PER_KM = 1/.3048  # source matrices are per 1000 ft
 LOAD_MODELS = {1: "PQ (constant power)", 2: "Z (constant impedance)", 5: "I (constant current)"}
 
 
-def _matrix_stats(m):
-    m = np.asarray(m,float)*KFT_PER_KM
+def _matrix_stats(m, per_km=1/.3048):
+    m = np.asarray(m,float)*per_km
     mutual = (m.sum()-np.trace(m))/(len(m)*(len(m)-1)) if len(m) > 1 else 0.
     return float(np.diag(m).mean()),float(mutual)
 
 
-def sequence_parameters(code):
+def sequence_parameters(code, per_km=1/.3048):
     """Per-km sequence values exactly as create_pandapower_network builds them.
-    One/two-phase codes are uncoupled there, so their mutual terms are dropped."""
+    One/two-phase codes are uncoupled there, so their mutual terms are dropped.
+    per_km: 1 / length unit of the matrices in km (IEEE123: per 1000 ft)."""
     out = {}
     for key,symbol in (("rmatrix","r"),("xmatrix","x"),("cmatrix","c")):
-        self_value,mutual = _matrix_stats(code[key])
+        self_value,mutual = _matrix_stats(code[key],per_km)
         mutual = mutual if len(code[key]) == 3 else 0.
         out[f"{symbol}1"] = self_value-mutual
         out[f"{symbol}0"] = self_value+2*mutual
@@ -28,15 +29,16 @@ def sequence_parameters(code):
 
 def linecode_table(data=None):
     """One row per IEEE linecode: raw self/mutual terms, inductance, capacitance and sequence values."""
-    data = read_ieee123_data() if data is None else data
+    data = read_feeder_data() if data is None else data
     omega = 2*np.pi*data["frequency_hz"]
+    per_km = 1/unit_km(data)
     usage = pd.DataFrame(data["lines"]).groupby("linecode").length_km.agg(["count","sum"])
     rows = []
     for name,code in data["linecodes"].items():
-        r_self,r_mut = _matrix_stats(code["rmatrix"])
-        x_self,x_mut = _matrix_stats(code["xmatrix"])
-        c_self,c_mut = _matrix_stats(code["cmatrix"])
-        seq = sequence_parameters(code)
+        r_self,r_mut = _matrix_stats(code["rmatrix"],per_km)
+        x_self,x_mut = _matrix_stats(code["xmatrix"],per_km)
+        c_self,c_mut = _matrix_stats(code["cmatrix"],per_km)
+        seq = sequence_parameters(code,per_km)
         rows.append(dict(linecode=name,phases=len(code["rmatrix"]),
             lines=int(usage["count"].get(name,0)),total_km=float(usage["sum"].get(name,0.)),
             r_self_ohm_km=r_self,r_mutual_ohm_km=r_mut,x_self_ohm_km=x_self,x_mutual_ohm_km=x_mut,
@@ -50,11 +52,12 @@ def linecode_table(data=None):
 
 def line_table(data=None):
     """One row per line: length, linecode and total positive/zero-sequence impedance and inductance."""
-    data = read_ieee123_data() if data is None else data
+    data = read_feeder_data() if data is None else data
     omega = 2*np.pi*data["frequency_hz"]
+    per_km = 1/unit_km(data)
     rows = []
     for line in data["lines"]:
-        seq = sequence_parameters(data["linecodes"][line["linecode"]])
+        seq = sequence_parameters(data["linecodes"][line["linecode"]],per_km)
         km = line["length_km"]
         rows.append(dict(line=line["id"],from_bus=line["from_bus"],to_bus=line["to_bus"],phases=line["phases"],
             linecode=line["linecode"],length_km=km,r1_ohm_km=seq["r1"],x1_ohm_km=seq["x1"],
@@ -67,12 +70,12 @@ def line_table(data=None):
 def feeder_graph(data=None):
     """Undirected NetworkX graph of every bus and two-terminal element, open switches included.
     Edge attribute `kind`: line, switch, regulator or transformer; `closed` marks energized edges."""
-    data = read_ieee123_data() if data is None else data
+    data = read_feeder_data() if data is None else data
     loads = pd.DataFrame(data["loads"]).groupby("bus")[["p_kw","q_kvar"]].sum()
     caps = pd.DataFrame(data["capacitors"]).groupby("bus").q_kvar.sum()
     g = nx.Graph(name=data["name"],source=data["source_bus"],frequency_hz=data["frequency_hz"])
     for b in data["buses"]:
-        g.add_node(b["id"],phases=b["phases"],vn_kv=b["vn_kv"],xy=tuple(b["xy"]),
+        g.add_node(b["id"],phases=b["phases"],vn_kv=b["vn_kv"],xy=tuple(b["xy"]) if b["xy"] else (np.nan,np.nan),
                    load_kw=float(loads.p_kw.get(b["id"],0.)),load_kvar=float(loads.q_kvar.get(b["id"],0.)),
                    capacitor_kvar=float(caps.get(b["id"],0.)))
     lines = line_table(data).set_index("line")
@@ -83,7 +86,7 @@ def feeder_graph(data=None):
         g.add_edge(s["from_bus"],s["to_bus"],kind="switch",id=s["id"],phases=s["phases"],closed=s["closed"],length_km=0.)
     for r in data["regulators"]:
         g.add_edge(r["from_bus"],r["to_bus"],kind="regulator",id=r["id"],phases=r["phases"],closed=True,
-                   length_km=0.,taps=r["taps"],ratio=[1+.00625*t for t in r["taps"]])
+                   length_km=0.,taps=r["taps"],ratio=[1+.00625*t for t in r["taps"]],lv_bus=r["to_bus"])
     t = data["transformer"]
     g.add_edge(t["from_bus"],t["to_bus"],kind="transformer",id=t["id"],phases="ABC",closed=True,length_km=0.,
                kv=f'{t["vn_hv_kv"]}/{t["vn_lv_kv"]}',sn_kva=t["sn_mva"]*1e3)
@@ -128,7 +131,7 @@ def graph_metrics(graph):
 
 def electrical_inventory(data=None):
     """Tables describing the electrical configuration: sources, regulators, transformer, capacitors, loads."""
-    data = read_ieee123_data() if data is None else data
+    data = read_feeder_data() if data is None else data
     loads = pd.DataFrame(data["loads"])
     loads["model_name"] = loads.model.map(LOAD_MODELS)
     load_summary = loads.groupby(["connection","model_name"]).agg(count=("id","size"),p_kw=("p_kw","sum"),
@@ -148,5 +151,5 @@ def electrical_inventory(data=None):
             "transformer": transformer, "capacitors": pd.DataFrame(data["capacitors"]),
             "switches": pd.DataFrame(data["switches"]),
             "totals": pd.Series({"frequency_hz": data["frequency_hz"], "source_bus": data["source_bus"],
-                                 "nominal_kv": 4.16, "load_kw": loads.p_kw.sum(), "load_kvar": loads.q_kvar.sum(),
+                                 "nominal_kv": float(pd.Series([b["vn_kv"] for b in data["buses"]]).mode()[0]), "load_kw": loads.p_kw.sum(), "load_kvar": loads.q_kvar.sum(),
                                  "capacitor_kvar": sum(c["q_kvar"] for c in data["capacitors"])})}

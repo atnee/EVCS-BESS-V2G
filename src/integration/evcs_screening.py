@@ -11,25 +11,28 @@ import json
 import numpy as np
 import pandas as pd
 from core.schemas import read_parameters
-from evcs.planning import from_config, with_fleet, generate_sessions, size_sites, simulate, resample, greedy_coverage
+from evcs.planning import (from_config, with_fleet, generate_sessions, size_sites, simulate, resample, greedy_coverage,
+                           thin_candidates)
 from network.hosting import HostingStudy
 from network.topology import feeder_graph, bus_table
 from integration.s0_study import _style, _edges, INK, MUTED, SURFACE
 
-FLEETS = (100, 300, 600, 1000, 2000, 3000)
+FLEETS = (2000, 3000, 4000, 5000)   # sensitivity range (cars in the feeder area)
 TYPE_STYLE = {"dc": dict(color="#4a3aa7",marker="H",label="hub DC"),
               "ac": dict(color="#eb6834",marker="P",label="eletroposto AC")}
 
 
-def candidate_table(network, buses):
-    """Three-phase 4.16 kV buses except the source: where a three-phase station can connect."""
-    c = buses[(buses.phases=="ABC") & (buses.vn_kv==4.16) & (buses.bus!=network.slack_bus)]
-    return c.reset_index(drop=True)
+def candidate_table(network, buses, demand=None, spacing_m=0.):
+    """Three-phase buses at the feeder voltage (the most common bus voltage), except the source:
+    where a three-phase station can connect; thinned to `spacing_m` on large feeders."""
+    mv = buses.vn_kv.mode()[0]
+    c = buses[(buses.phases=="ABC") & (buses.vn_kv==mv) & (buses.bus!=network.slack_bus)]
+    return thin_candidates(c,demand,spacing_m) if demand is not None else c.reset_index(drop=True)
 
 
 def hosting_sweep(study, candidates, max_kw=3000., tol_kw=10.):
     full = study.sweep(candidates.bus,max_kw,tol_kw)
-    voltage_only = HostingStudy(study.network,line_limit_pct=np.inf,equipment_limit_pct=np.inf).sweep(candidates.bus,max_kw*2,tol_kw*5)
+    voltage_only = HostingStudy(study.network,line_limit_pct=np.inf,equipment_limit_pct=np.inf,tolerance_mw=study.tolerance_mw).sweep(candidates.bus,max_kw*2,tol_kw*5)
     return candidates.merge(full,on="bus").merge(
         voltage_only.rename(columns={"hosting_kw":"voltage_only_kw","binding":"voltage_binding",
                                      "v_min_at_capacity":"voltage_v_min"}),on="bus")
@@ -53,16 +56,18 @@ def place_fleet(params, candidates, demand):
 
 def run_screening(config_dir="configs", fleets=FLEETS, hosting_csv=None, max_kw=3000., tol_kw=10.):
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
-    study = HostingStudy()
-    graph = feeder_graph(study.network.equipment["ieee123_data"][0])
+    # 10 W outer-loop tolerance: hosting limits are searched to tol_kw anyway.
+    study = HostingStudy(feeder=params.network,tolerance_mw=1e-5)
+    graph = feeder_graph(study.network.equipment["feeder_data"][0])
     buses = bus_table(graph)
-    candidates = candidate_table(study.network,buses)
-    if hosting_csv and Path(hosting_csv).exists():
-        candidates = pd.read_csv(hosting_csv,dtype={"bus":str})
-    else:
-        candidates = hosting_sweep(study,candidates,max_kw,tol_kw)
     # Demand proxy: cars live where the load is.
     demand = buses[buses.load_kw > 0][["bus","x","y"]].assign(weight=buses.load_kw[buses.load_kw > 0])
+    candidates = candidate_table(study.network,buses,demand,params.candidate_spacing_m)
+    saved = pd.read_csv(hosting_csv,dtype={"bus":str}) if hosting_csv and Path(hosting_csv).exists() else None
+    if saved is not None and set(saved.bus) == set(candidates.bus):
+        candidates = saved
+    else:  # no sweep saved for this feeder/candidate set
+        candidates = hosting_sweep(study,candidates,max_kw,tol_kw)
     rows = []
     for evs in fleets:
         p = with_fleet(params,evs)

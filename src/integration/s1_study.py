@@ -1,8 +1,9 @@
 """S1 study: hubs and eletropostos from the screening, minute-level charging sessions and an
 intraday power flow (planning.resolution_min, 15 min by default) compared with S0 at the same resolution.
 
-python -m integration.s1_study                     # fleets: evcs.yaml fleet.evs + largest accepted by the screening
-python -m integration.s1_study --evs 1000 2000
+python -m integration.s1_study                     # fleets: every fleet of the screening (sensitivity 2000-5000)
+python -m integration.s1_study --evs 2000 5000
+python -m integration.s1_study --intraday-only      # redraw intraday_sensitivity.png from saved results
 Needs results/evcs_screening/fleet_scenarios.csv (python -m integration.evcs_screening).
 """
 from pathlib import Path
@@ -17,7 +18,7 @@ from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid
 from integration.evcs_screening import plot_sites, TYPE_STYLE
-from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily,
+from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily, marker_scale,
                                   _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
 
 S0_GRAY, S1_RED = "#b9b8b3", "#d03b3b"
@@ -33,7 +34,7 @@ def run_s1(evs, config_dir="configs", screening_dir="results/evcs_screening", s0
     params = with_fleet(from_config(read_parameters(Path(config_dir)/"evcs.yaml")),evs)
     sites = load_fleets(screening_dir).loc[int(evs)].sites if sites is None else sites
     res = params.resolution_min
-    s0 = run_s0(config_dir,res) if s0 is None else s0
+    s0 = run_s0(config_dir,res,params.network) if s0 is None else s0
     sessions,power = simulate(params,sites)
     network = s0["network"]
     grid = dataclasses.replace(integrated_grid(config_dir),steps=1440//res,dt_h=res/60)
@@ -148,6 +149,75 @@ def plot_intraday_voltage(s1):
     return fig
 
 
+def intraday_table(flow, slack, exclude=()):
+    """Per step: substation P, minimum feeder voltage, highest line loading (lines in `exclude`,
+    the base-case overloads, left out), highest regulator/transformer loading and regulator taps."""
+    v = flow["voltages"]
+    b = flow["branches"]
+    b = b[b.physical_phase]
+    lines = b[(b.element_type=="line") & ~b.line.isin(list(exclude))].groupby("time").loading_pct.max()
+    equipment = b[b.element_type=="trafo"].groupby("time").loading_pct.max()
+    source = flow["source"].set_index("time")
+    table = pd.DataFrame({"p_kw": source.p_kw,"v_min_pu": v[v.bus!=slack].groupby("time").v_pu.min(),
+                          "line_max_pct": lines,"equipment_max_pct": equipment})
+    taps = source.filter(like="tap_")
+    return table.join(taps).reset_index()
+
+
+def base_overloads(flow):
+    """Lines above 100 % at some step of the base case (reported, not attributed to the stations)."""
+    b = flow["branches"]
+    b = b[b.physical_phase & (b.element_type=="line")]
+    return sorted(b[b.loading_pct > 100].line.unique())
+
+
+FLEET_COLORS = ["#9ec5f4","#5598e6","#2a6cc0","#123f7a","#0b2447"]  # light → dark = more cars
+
+
+def plot_intraday_sensitivity(output="results/s1"):
+    """Intraday curves of every fleet in `output` (evs_<n>/) against the base case S0 (s0_intraday.csv):
+    station demand, substation power, minimum voltage and highest line loading, 15 min."""
+    import matplotlib.pyplot as plt
+    output = Path(output)
+    s0 = pd.read_csv(output/"s0_intraday.csv")
+    fleets = sorted(int(d.name.split("_")[1]) for d in output.glob("evs_*") if (d/"intraday.csv").exists())
+    steps = len(s0)
+    hours = np.arange(steps)*24/steps
+    fig,axes = plt.subplots(4,1,figsize=(13,13),layout="constrained",sharex=True,height_ratios=(2,2,2,2))
+    titles = ["Demanda total das estações (15 min)","Potência ativa na subestação (15 min)",
+              "Tensão mínima do alimentador (15 min)","Maior carregamento de linha (15 min, sem sobrecargas do caso base)"]
+    for ax,title in zip(axes,titles):
+        _style(ax,title)
+    for key,ax in (("p_kw",axes[1]),("v_min_pu",axes[2]),("line_max_pct",axes[3])):
+        ax.step(hours,s0[key],where="post",color=S0_GRAY,lw=2.6,label="S0 (caso base)")
+    for evs,color in zip(fleets,FLEET_COLORS[-len(fleets):] if len(fleets) <= len(FLEET_COLORS) else FLEET_COLORS*9):
+        d = output/f"evs_{evs}"
+        table = pd.read_csv(d/"intraday.csv")
+        stations = pd.read_csv(next(d.glob("station_power_*min.csv"))).drop(columns="hour").sum(axis=1)
+        label = f"{evs} carros"
+        axes[0].step(np.arange(len(stations))*24/len(stations),stations,where="post",color=color,lw=1.8,label=label)
+        for key,ax in (("p_kw",axes[1]),("v_min_pu",axes[2]),("line_max_pct",axes[3])):
+            ax.step(hours,table[key],where="post",color=color,lw=1.6,label=label)
+    axes[0].set_ylabel("kW",color=MUTED); axes[1].set_ylabel("kW",color=MUTED)
+    axes[2].set_ylabel("tensão (pu)",color=MUTED); axes[3].set_ylabel("carregamento (%)",color=MUTED)
+    for limit in V_LIMITS:
+        axes[2].axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
+    axes[3].axhline(100,color=MUTED,lw=1,ls=(0,(4,3)))
+    axes[0].legend(frameon=False,fontsize=9,ncol=len(fleets),loc="upper left")
+    axes[1].legend(frameon=False,fontsize=9,ncol=len(fleets)+1,loc="upper left")
+    _time_axis(axes[-1])
+    return fig
+
+
+def export_intraday_sensitivity(output="results/s1"):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig = plot_intraday_sensitivity(output)
+    fig.savefig(Path(output)/"intraday_sensitivity.png",dpi=200,facecolor=SURFACE)
+    plt.close(fig)
+
+
 def plot_sessions(s1):
     """When cars arrive, how long they charge, their SOC on arrival and how long they wait."""
     import matplotlib.pyplot as plt
@@ -183,7 +253,7 @@ def plot_delta_v_map(s1, ax=None):
     _edges(ax,graph,pos,emphasis=False)
     cmap = LinearSegmentedColormap.from_list("drop",["#f0efec","#ec835a","#d03b3b","#7a1f1f"])
     xy = np.array([pos[b] for b in drop.index])
-    points = ax.scatter(xy[:,0],xy[:,1],c=drop.to_numpy(),cmap=cmap,vmin=0,vmax=max(drop.max(),1e-6),s=50,
+    points = ax.scatter(xy[:,0],xy[:,1],c=drop.to_numpy(),cmap=cmap,vmin=0,vmax=max(drop.max(),1e-6),s=50*marker_scale(graph),
                         edgecolor=MUTED,linewidth=.5,zorder=3)
     bar = plt.colorbar(points,ax=ax,shrink=.6,pad=.01)
     bar.set_label("queda de tensão (%)",color=MUTED); bar.ax.tick_params(colors=MUTED,labelsize=8)
@@ -204,10 +274,9 @@ def plot_profile_comparison(s1):
     d = d[d.time==study["peak"]].groupby(["bus","distance_km"])[["v_pu_s0","v_pu_s1"]].min().reset_index()
     fig,ax = plt.subplots(figsize=(10,4.8),layout="constrained")
     _style(ax,f"Tensão mínima por barra vs. distância — ponta {study['peak']:%H:%M}")
-    ax.scatter(d.distance_km,d.v_pu_s0,s=26,color=S0_GRAY,label="S0 (sem estações)",zorder=2)
-    ax.scatter(d.distance_km,d.v_pu_s1,s=22,color=S1_RED,marker="v",label="S1 (com estações)",zorder=3)
-    for _,r in d.iterrows():
-        ax.plot([r.distance_km]*2,[r.v_pu_s0,r.v_pu_s1],color=S1_RED,lw=.8,alpha=.5)
+    ax.scatter(d.distance_km,d.v_pu_s0,s=26*marker_scale(s1["study"]["graph"]),color=S0_GRAY,label="S0 (sem estações)",zorder=2)
+    ax.scatter(d.distance_km,d.v_pu_s1,s=22*marker_scale(s1["study"]["graph"]),color=S1_RED,marker="v",label="S1 (com estações)",zorder=3)
+    ax.vlines(d.distance_km,d.v_pu_s0,d.v_pu_s1,color=S1_RED,lw=.8,alpha=.5)
     for _,r in d[d.bus.isin(list(s1["sites"]))].iterrows():
         ax.annotate(f'{s1["params"].types[s1["sites"][r.bus]].name} {r.bus}',(r.distance_km,r.v_pu_s1),
                     xytext=(4,-14),textcoords="offset points",fontsize=8,color=INK)
@@ -255,9 +324,11 @@ def export_s1(output="results/s1", config_dir="configs", screening_dir="results/
     table = load_fleets(screening_dir)
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     if not fleets:
-        accepted = table[table.network_accepts].index
-        fleets = sorted({params.fleet.evs,*(accepted[-1:] if len(accepted) else [])})
-    s0 = run_s0(config_dir,params.resolution_min)
+        fleets = sorted({params.fleet.evs,*table.index})
+    s0 = run_s0(config_dir,params.resolution_min,params.network)
+    overloads = base_overloads(s0["flow"])
+    Path(output).mkdir(parents=True,exist_ok=True)
+    intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(Path(output)/"s0_intraday.csv",index=False)
     results = []
     for evs in fleets:
         s1 = run_s1(evs,config_dir,screening_dir,s0)
@@ -266,6 +337,7 @@ def export_s1(output="results/s1", config_dir="configs", screening_dir="results/
             old.unlink()
         for name in ("voltages","branches","source"):
             s1["study"]["flow"][name].to_csv(out/f"{name}.csv",index=False)
+        intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads).to_csv(out/"intraday.csv",index=False)
         delta_v(s1).to_csv(out/"delta_v.csv",index=False)
         s1["sessions"].to_csv(out/"sessions.csv",index=False)
         res = s1["params"].resolution_min
@@ -285,6 +357,7 @@ def export_s1(output="results/s1", config_dir="configs", screening_dir="results/
         result = summary(s1)
         (out/"summary.json").write_text(json.dumps(result,indent=2,default=str)+"\n",encoding="utf-8")
         results.append(result)
+    export_intraday_sensitivity(output)
     return results
 
 
@@ -294,7 +367,12 @@ def main():
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--screening",default="results/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
+    parser.add_argument("--intraday-only",action="store_true",
+                        help="only redraw intraday_sensitivity.png from the files already in --output")
     args = parser.parse_args()
+    if args.intraday_only:
+        export_intraday_sensitivity(args.output)
+        return
     print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
 
 

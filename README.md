@@ -10,9 +10,9 @@
 | Kenia (BESS) | `python -m bess` | `configs/bess.yaml` | `results/modules/bess/` |
 | Cesar (V2G) | `python -m v2g` | `configs/v2g.yaml` | `results/modules/v2g/` |
 | Integration / Integración / Integração | `python -m integration.coordinator --output results/ieee123` | `configs/*.yaml` | `results/ieee123/` |
-| S0 baseline / caso base | `python -m integration.s0_study --output results/s0` | `configs/ieee123.yaml` | `results/s0/` |
-| EVCS siting screening / triagem | `python -m integration.evcs_screening` (`--resweep`: ~9 min) | `configs/evcs.yaml` (`planning:`) | `results/evcs_screening/` |
-| S1 intraday (15 min) / S1 intradiário | `python -m integration.s1_study --evs 1000 2000` | `configs/evcs.yaml` (`planning:`) | `results/s1/evs_<n>/` |
+| S0 baseline (IEEE 8500) / caso base | `python -m integration.s0_study --output results/s0` (`--feeder ieee123` for the old feeder) | `configs/ieee8500.yaml` | `results/s0/` |
+| EVCS siting screening / triagem | `python -m integration.evcs_screening` (`--resweep`; IEEE 8500 ~1.5 h) | `configs/evcs.yaml` (`planning:`, `network:`) | `results/evcs_screening/` |
+| S1 intraday (15 min) / S1 intradiário | `python -m integration.s1_study --evs 2000 5000` | `configs/evcs.yaml` (`planning:`) | `results/s1/evs_<n>/` |
 
 ### Quick start / Inicio rápido / Começar
 ```bash
@@ -38,6 +38,8 @@ Repository / Repositorio / Repositório: https://github.com/atnee/EVCS-BESS-V2G
 Collaborative research framework for Ayrton (EVCS), Kenia (BESS) and Cesar (V2G).
 
 > **S0–S4 use the IEEE123 feeder with three-phase pandapower. The model contains explicit approximations; numerical equivalence with the IEEE reference case has not been validated yet.**
+
+> The EVCS studies (S0, siting screening, S1) also run on a larger feeder, a medium-voltage reduction of the **IEEE 8500-node** case (`planning.network` in `configs/evcs.yaml`); see [data/ieee8500/README.md](data/ieee8500/README.md).
 
 ### Getting started
 Python 3.12 recommended. Run the commands above from the project root so `configs/` is found. The backend is `pandapower.runpp_3ph` (3.4.x), with no dependency on OpenDSS or a commercial solver. The data ships with the package; the simulation does not need internet access.
@@ -65,8 +67,8 @@ Python 3.12 recommended. Run the commands above from the project root so `config
 The fleet has the same starting energy in S1–S4. Each asset is aggregated only once. Independent demand uses chargers at the same station without duplicating fleet vehicles.
 
 ### Key files
-- `notebooks/00_network_baseline.ipynb`: S0 study — how the feeder works, NetworkX topology, line R/X/L/C and voltage profile.
-- `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: individual work.
+- `notebooks/01_evcs_ayrton.ipynb`: EVCS on the IEEE 8500 — base case S0, siting screening and intraday S1 curves.
+- `notebooks/02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: individual work.
 - `notebooks/04_integrated_analysis.ipynb`: comparison.
 - `src/evcs/README.md`: EVCS module — sessions, hubs and eletropostos, daily and intraday curves (Portuguese).
 - `configs/*.yaml`: parameters and assumptions.
@@ -99,6 +101,8 @@ Base colaborativa de investigación para Ayrton (EVCS), Kenia (BESS) y Cesar (V2
 
 > **S0–S4 utilizan el alimentador IEEE123 con pandapower trifásico. El modelo contiene aproximaciones explícitas; la equivalencia numérica con el caso IEEE de referencia aún no ha sido validada.**
 
+> Los estudios del EVCS (S0, triaje de sitios, S1) también corren en un alimentador mayor, una reducción de media tensión del caso **IEEE 8500 nodos** (`planning.network` en `configs/evcs.yaml`); ver [data/ieee8500/README.md](data/ieee8500/README.md).
+
 ### Primeros pasos
 Se recomienda Python 3.12. Ejecuta los comandos de arriba en la raíz del proyecto para que se encuentre `configs/`. El backend es `pandapower.runpp_3ph` (3.4.x), sin dependencia de OpenDSS ni de un solver comercial. Los datos vienen incluidos en el paquete; la simulación no necesita internet.
 
@@ -125,8 +129,8 @@ Se recomienda Python 3.12. Ejecuta los comandos de arriba en la raíz del proyec
 La flota tiene la misma energía inicial en S1–S4. Cada activo se agrega una sola vez. La demanda independiente usa cargadores de la misma estación, sin duplicar los vehículos de la flota.
 
 ### Archivos principales
-- `notebooks/00_network_baseline.ipynb`: estudio S0 — cómo funciona el alimentador, topología con NetworkX, R/X/L/C de las líneas y perfil de tensión.
-- `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabajo individual.
+- `notebooks/01_evcs_ayrton.ipynb`: EVCS en el IEEE 8500 — caso base S0, triaje de sitios y curvas intradiarias del S1.
+- `notebooks/02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabajo individual.
 - `notebooks/04_integrated_analysis.ipynb`: comparación.
 - `src/evcs/README.md`: módulo EVCS — sesiones, hubs y electrolineras, curvas diarias e intradiarias (en portugués).
 - `configs/*.yaml`: parámetros e hipótesis.
@@ -159,6 +163,8 @@ Base colaborativa de pesquisa para Ayrton (EVCS), Kenia (BESS) e Cesar (V2G).
 
 > **S0–S4 utilizam o alimentador IEEE123 com pandapower trifásico. O modelo contém aproximações explícitas; a equivalência numérica com o caso IEEE de referência ainda não foi validada.**
 
+> Os estudos do EVCS (S0, triagem de locais, S1) também rodam num alimentador maior, uma redução de média tensão do caso **IEEE 8500 nós** (`planning.network` em `configs/evcs.yaml`); veja [data/ieee8500/README.md](data/ieee8500/README.md).
+
 ### Começar
 Python 3.12 recomendado. Execute os comandos acima na raiz do projeto para que `configs/` seja encontrado. O backend é `pandapower.runpp_3ph` (3.4.x), sem dependência de OpenDSS ou de solver comercial. Os dados estão incluídos no pacote; a simulação não precisa de internet.
 
@@ -185,8 +191,8 @@ Python 3.12 recomendado. Execute os comandos acima na raiz do projeto para que `
 A frota tem a mesma energia de partida em S1–S4. Cada ativo é agregado uma única vez. A demanda independente usa carregadores da mesma estação, sem duplicar os veículos da frota.
 
 ### Arquivos para começar
-- `notebooks/00_network_baseline.ipynb`: estudo S0 — como o alimentador funciona, topologia com NetworkX, R/X/L/C das linhas e perfil de tensão.
-- `notebooks/01_evcs_ayrton.ipynb`, `02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabalho individual.
+- `notebooks/01_evcs_ayrton.ipynb`: EVCS no IEEE 8500 — caso base S0, triagem de locais e curvas intradiárias do S1.
+- `notebooks/02_bess_kenia.ipynb`, `03_v2g_cesar.ipynb`: trabalho individual.
 - `notebooks/04_integrated_analysis.ipynb`: comparação.
 - `src/evcs/README.md`: módulo EVCS — sessões, hubs e eletropostos, curvas diárias e intradiárias.
 - `configs/*.yaml`: parâmetros e hipóteses.
