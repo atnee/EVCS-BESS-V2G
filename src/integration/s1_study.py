@@ -4,8 +4,8 @@ intraday power flow (planning.resolution_min, 15 min by default) compared with S
 python -m integration.s1_study                     # fleets: every fleet of the screening (sensitivity 2000-5000)
 python -m integration.s1_study --evs 2000 5000
 python -m integration.s1_study --intraday-only      # redraw intraday_sensitivity.png from saved results
-Reads results/<planning.network>/evcs_screening/ (python -m integration.evcs_screening) and writes
-results/<planning.network>/s1/.
+Reads results/<feeder>/evcs_screening/ (python -m integration.evcs_screening) and writes
+results/<feeder>/s1/; the feeder comes from configs/network.yaml.
 """
 from pathlib import Path
 import argparse
@@ -17,7 +17,7 @@ from core.schemas import make_profile, read_parameters
 from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
-from integration.scenarios import integrated_grid
+from integration.scenarios import integrated_grid, study_feeder
 from integration.evcs_screening import plot_sites, TYPE_STYLE, study_dir
 from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily, marker_scale,
                                   _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
@@ -36,7 +36,7 @@ def run_s1(evs, config_dir="configs", screening_dir=None, s0=None, sites=None):
     screening_dir = screening_dir or study_dir(config_dir)
     sites = load_fleets(screening_dir).loc[int(evs)].sites if sites is None else sites
     res = params.resolution_min
-    s0 = run_s0(config_dir,res,params.network) if s0 is None else s0
+    s0 = run_s0(config_dir,res,study_feeder(config_dir)) if s0 is None else s0
     sessions,power = simulate(params,sites)
     network = s0["network"]
     grid = dataclasses.replace(integrated_grid(config_dir),steps=1440//res,dt_h=res/60)
@@ -320,7 +320,7 @@ def summary(s1):
 
 
 def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None):
-    """Writes to `output` (default results/<planning.network>/s1)."""
+    """Writes to `output` (default results/<feeder>/s1)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -330,7 +330,7 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     if not fleets:
         fleets = sorted({params.fleet.evs,*table.index})
-    s0 = run_s0(config_dir,params.resolution_min,params.network)
+    s0 = run_s0(config_dir,params.resolution_min,study_feeder(config_dir))
     overloads = base_overloads(s0["flow"])
     Path(output).mkdir(parents=True,exist_ok=True)
     intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(Path(output)/"s0_intraday.csv",index=False)
@@ -368,9 +368,9 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output",help="default: results/<planning.network>/s1")
+    parser.add_argument("--output",help="default: results/<feeder>/s1")
     parser.add_argument("--configs",default="configs")
-    parser.add_argument("--screening",help="default: results/<planning.network>/evcs_screening")
+    parser.add_argument("--screening",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
     parser.add_argument("--intraday-only",action="store_true",
                         help="only redraw intraday_sensitivity.png from the files already in --output")

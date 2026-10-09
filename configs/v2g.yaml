@@ -51,7 +51,7 @@ discharge_window_h:
 standalone:
   station:
     id: EVCS-1
-    bus: '67'
+    bus: m1125976           # IEEE 8500 (IEEE123: '67')
     phases: ABC
     chargers: 8
     charger_kw: 11.0

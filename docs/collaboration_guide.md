@@ -26,7 +26,7 @@ Cada YAML possui seu próprio horizonte temporal. BESS usa `standalone_demand_kw
 ### Entrega para integração
 Preserve o contrato `Profile`: potência positiva injeta na rede, negativa consome, em kW/kvar por barra/fase/intervalo. Um pacote contém `profile.csv` e `manifest.json` com versão, horizonte, IDs de ativos/veículos, métricas e hash do perfil. `core.artifacts.read_profile_bundle(path, network)` valida e recupera esse perfil; `integration.coordinator.combine` rejeita horizontes incompatíveis e veículos/ativos duplicados.
 
-O coordenador executa S0–S4 e publica `results/ieee123/modules/<módulo>/<cenário>/`. A soma das três contribuições recompõe exatamente as injeções integradas. Módulos desativados têm perfis zero e `context.active=false`; V2G inclui a frota unidirecional em S1/S2, identificada por `v2g_discharge_enabled=false`.
+O coordenador executa S0–S4 e publica `results/ieee8500/integration/modules/<módulo>/<cenário>/`. A soma das três contribuições recompõe exatamente as injeções integradas. Módulos desativados têm perfis zero e `context.active=false`; V2G inclui a frota unidirecional em S1/S2, identificada por `v2g_discharge_enabled=false`.
 
 O coordenador chama apenas uma função por módulo. Todas retornam `(Profile, tabelas)`, e `Profile.metadata["kpis"]` traz as colunas do `summary.csv` (`capex_usd` é somado entre módulos). Fora dessas assinaturas, cada equipe pode renomear, dividir ou substituir seu código; `test_integration_uses_only_run_integrated` impede novos acoplamentos:
 

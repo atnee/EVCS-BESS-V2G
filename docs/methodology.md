@@ -1,6 +1,6 @@
 # Método, fidelidade e reprodutibilidade
 
-S0–S4 usam o mesmo alimentador IEEE123, calculado no pandapower 3.4.x com `runpp_3ph`. O modelo usa dados publicados do alimentador e aproximações de componentes de sequência detalhadas em [data/ieee123/README.md](../data/ieee123/README.md). Não há execução de OpenDSS, substituição pela rede sintética ou otimização conjunta.
+S0–S4 usam o mesmo alimentador, definido em `configs/network.yaml` (hoje o IEEE 8500, redução de média tensão; antes o IEEE123), calculado no pandapower 3.4.x com `runpp_3ph`. O modelo usa dados publicados do alimentador e aproximações de componentes de sequência detalhadas em [data/ieee123/README.md](../data/ieee123/README.md). Não há execução de OpenDSS, substituição pela rede sintética ou otimização conjunta.
 
 1. S0 contém cargas originais PQ/I/Z e capacitores. A curva diária dos YAML é uma hipótese multiplicativa aplicada somente às cargas; capacitores dependem da tensão.
 2. S1–S4 têm a mesma demanda EVCS independente e frota, com mesmas chegadas/saídas e energia terminal. S1/S2 carregam a frota; S3/S4 permitem V2G.

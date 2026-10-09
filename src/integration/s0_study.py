@@ -1,6 +1,6 @@
 """S0 baseline study: feeder without DER — topology, line parameters and voltage profile.
 
-python -m integration.s0_study                      # IEEE 8500 (base case of the studies) -> results/ieee8500/s0/
+python -m integration.s0_study                      # feeder of configs/network.yaml (IEEE 8500) -> results/ieee8500/s0/
 python -m integration.s0_study --feeder ieee123     # -> results/ieee123/s0/
 """
 from pathlib import Path
@@ -10,7 +10,7 @@ import json
 import numpy as np
 import pandas as pd
 from core.schemas import make_profile, read_parameters
-from integration.scenarios import integrated_grid
+from integration.scenarios import integrated_grid, study_feeder
 from network.feeder_loader import load_feeder
 from network.pandapower_solver import PandapowerSolver
 from network.topology import (feeder_graph, bus_table, graph_metrics, line_table, linecode_table,
@@ -25,7 +25,7 @@ EQUIPMENT = {"regulator": "#eb6834", "transformer": "#4a3aa7", "capacitor": "#2a
 V_LIMITS = (.95, 1.05)  # ANSI C84.1 range A
 
 
-def load_curve(config_dir, steps, feeder="ieee123"):
+def load_curve(config_dir, steps, feeder):
     """<feeder>.yaml hourly multipliers at `steps` per day: linear between hour centres, periodic."""
     hourly = np.asarray(read_parameters(Path(config_dir)/f"{feeder}.yaml").get("load_multipliers",[1.]*24),float)
     if steps == len(hourly):
@@ -35,12 +35,13 @@ def load_curve(config_dir, steps, feeder="ieee123"):
     return np.interp((np.arange(steps)+.5)*24/steps,np.arange(24)+.5,hourly,period=24)
 
 
-def run_s0(config_dir="configs", resolution_min=None, feeder="ieee123"):
+def run_s0(config_dir="configs", resolution_min=None, feeder=None):
     """Daily S0 power flow (feeder loads only, no DER) with the <feeder>.yaml load curve.
     resolution_min=None keeps the integration grid; e.g. 15 gives 96 intraday steps."""
     grid = integrated_grid(config_dir)
     if resolution_min:
         grid = dataclasses.replace(grid,steps=1440//resolution_min,dt_h=resolution_min/60)
+    feeder = feeder or study_feeder(config_dir)
     multipliers = load_curve(config_dir,grid.steps,feeder)
     network = load_feeder(feeder)
     no_der = make_profile(grid,"no-DER",network.slack_bus,"ABC",np.zeros(grid.steps))
@@ -303,11 +304,12 @@ def summary(study):
             "graph": {k: v for k,v in graph_metrics(study["graph"]).items() if k != "main_path"}}
 
 
-def export_s0(output=None, config_dir="configs", feeder="ieee8500"):
-    """Writes to `output` (default results/<feeder>/s0)."""
+def export_s0(output=None, config_dir="configs", feeder=None):
+    """Writes to `output` (default results/<feeder>/s0); feeder default from configs/network.yaml."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    feeder = feeder or study_feeder(config_dir)
     output = Path(output or Path("results")/feeder/"s0"); output.mkdir(parents=True,exist_ok=True)
     study = run_s0(config_dir,feeder=feeder)
     data = study["network"].equipment["feeder_data"][0]
@@ -335,7 +337,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--output",help="default: results/<feeder>/s0")
     parser.add_argument("--configs",default="configs")
-    parser.add_argument("--feeder",default="ieee8500",help="ieee8500 (default) or ieee123")
+    parser.add_argument("--feeder",help="ieee8500 or ieee123 (default: configs/network.yaml)")
     args = parser.parse_args()
     print(json.dumps(export_s0(args.output,args.configs,args.feeder),indent=2,default=str))
 

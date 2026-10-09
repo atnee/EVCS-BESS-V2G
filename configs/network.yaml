@@ -1,0 +1,4 @@
+# Feeder shared by every study: S0-S4 integration (EVCS, BESS, V2G) and the EVCS S0/screening/S1.
+# Options: ieee8500 (default) or ieee123. Each feeder has its own configs/<feeder>.yaml (daily load curve).
+# Changing it changes everyone's results: agree with the team first.
+feeder: ieee8500

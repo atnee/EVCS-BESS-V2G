@@ -75,7 +75,6 @@ class PlanningParameters:
     resolution_min: int = 15
     charger_efficiency: float = .95
     sizing_quantile: float = .95                # chargers = this quantile of unconstrained concurrency
-    network: str = "ieee123"                    # feeder of the EVCS studies (network.feeder_loader.FEEDERS)
     candidate_spacing_m: float = 0.             # screening candidates at least this far apart (0 = all)
 
     def __post_init__(self):

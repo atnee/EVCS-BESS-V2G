@@ -1,6 +1,6 @@
 # IEEE 8500 nós em pandapower (redução de média tensão)
 
-Alimentador maior que o IEEE123, usado pelos estudos do EVCS (S0, screening, S1) quando `configs/evcs.yaml` → `planning.network: ieee8500`. A integração S0–S4 com BESS e V2G continua no IEEE123.
+Alimentador de todos os estudos (integração S0–S4 com EVCS, BESS e V2G, e os estudos S0/triagem/S1 do EVCS), escolhido em `configs/network.yaml` (`feeder: ieee8500`).
 
 Como no IEEE123, não há motor OpenDSS: os arquivos de texto públicos são usados **somente como fonte de dados**, normalizados para JSON por `scripts/build_ieee8500_data.py`.
 

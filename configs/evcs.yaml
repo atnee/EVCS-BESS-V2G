@@ -6,7 +6,7 @@ time:
   dt_h: 1.0
 station:
   id: EVCS-1
-  bus: '67'
+  bus: m1125976             # IEEE 8500: DC hub site chosen by the screening for 2000 cars (IEEE123: '67')
   phases: ABC
   chargers: 8
   charger_kw: 11.0
@@ -42,7 +42,6 @@ independent_demand_kw:
 # Planning assumptions for siting/sizing (src/evcs/planning.py, src/evcs/README.md).
 # Placeholders until Honduras data replaces them; the screening also sweeps `evs`.
 planning:
-  network: ieee8500         # feeder of the EVCS studies (S0/screening/S1): ieee123 or ieee8500
   candidate_spacing_m: 250  # screening candidates: three-phase buses at least this far apart (0 = all)
   seed: 42                  # same seed -> same sessions (reproducible)
   resolution_min: 15        # intraday power-flow step (minutes); sessions are simulated per minute

@@ -12,6 +12,13 @@ def synthetic_network() -> Network:
          Line("l2","n1","n2","ABC",.3,.2,80),
          Line("l3","n1","n3","A",.4,.25,50)], "source", synthetic=True)
 
+def study_feeder(config_dir="configs"):
+    """Feeder of every study, from configs/network.yaml (`feeder`)."""
+    from pathlib import Path
+    from core.schemas import read_parameters
+    path = Path(config_dir)/"network.yaml"
+    return read_parameters(path)["feeder"] if path.exists() else "ieee8500"
+
 def integrated_grid(config_dir="configs"):
     """Shared horizon. Only the `time` block of each module YAML is part of the contract."""
     from pathlib import Path

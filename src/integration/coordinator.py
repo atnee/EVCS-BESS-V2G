@@ -10,9 +10,9 @@ from core.schemas import Profile, make_profile, read_parameters
 from evcs.runner import run_integrated as run_evcs
 from bess.runner import run_integrated as run_bess
 from v2g.runner import run_integrated as run_v2g
-from network.ieee123_loader import load_ieee123
+from network.feeder_loader import load_feeder
 from network.pandapower_solver import PandapowerSolver
-from integration.scenarios import SCENARIOS, integrated_grid
+from integration.scenarios import SCENARIOS, integrated_grid, study_feeder
 from integration.evaluation import evaluate
 from core.artifacts import export_profile_bundle
 
@@ -39,13 +39,14 @@ def combine(profiles: list[Profile], network) -> Profile:
 
 def run_scenarios(config_dir="configs"):
     grid = integrated_grid(config_dir)
-    config = read_parameters(Path(config_dir)/"ieee123.yaml")
-    if config.get("network") != "ieee123" or config.get("solver") != "pandapower.runpp_3ph":
-        raise ValueError("Scenarios require the configured IEEE123 pandapower backend")
-    network = load_ieee123()
+    feeder = study_feeder(config_dir)  # configs/network.yaml
+    config = read_parameters(Path(config_dir)/f"{feeder}.yaml")
+    if config.get("network") != feeder or config.get("solver") != "pandapower.runpp_3ph":
+        raise ValueError(f"Scenarios require the configured {feeder} pandapower backend")
+    network = load_feeder(feeder)
     multipliers = np.asarray(config.get("load_multipliers", [1.]*grid.steps),float)
     if multipliers.shape != (grid.steps,) or not np.isfinite(multipliers).all() or (multipliers<0).any():
-        raise ValueError("IEEE123 load_multipliers must match the time horizon")
+        raise ValueError(f"{feeder}.yaml load_multipliers must match the time horizon")
     # EVCS demand is identical in S1-S4; validating it here also checks the station bus early.
     ev = run_evcs(config_dir,grid)
     ev[0].validate(network)
@@ -107,7 +108,7 @@ def export_results(output="results/demo", config_dir="configs"):
             d["modules"]["bess"][1]["soc"].to_csv(output/f"{name}_bess_soc.csv",index=False)
         if "v2g" in d["modules"]:
             (output/f"{name}_fleet.json").write_text(json.dumps(d["modules"]["v2g"][0].metadata,indent=2))
-    ax.set(xlabel="Time step",ylabel="Source active power (kW)",title="IEEE123 / pandapower: EVCS–BESS–V2G")
+    ax.set(xlabel="Time step",ylabel="Source active power (kW)",title=f"{details['S0']['network'].name}: EVCS–BESS–V2G")
     ax.legend(ncol=5);ax.grid(alpha=.2)
     fig.savefig(output/"scenario_power.png",dpi=300)
     plt.close(fig)

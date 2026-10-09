@@ -16,7 +16,7 @@ Este módulo modela a recarga pública de veículos elétricos no alimentador **
 
 > Todos os valores de `planning:` no `evcs.yaml` são **hipóteses** até termos dados de Honduras. O algoritmo de otimização da alocação **ainda não foi definido**: a escolha de locais atual é uma triagem simples, que serve de referência para comparar com ele.
 
-> A integração S0–S4 com BESS e V2G (Kenia e Cesar) **continua no IEEE123** até combinarmos as barras de conexão no IEEE 8500.
+> A integração S0–S4 com BESS e V2G (Kenia e Cesar) também roda no IEEE 8500. A estação da integração (`station.bus`), a BESS e o V2G ficam na barra `m1125976`, local do hub DC que a triagem escolhe para 2000 carros.
 
 ## Arquivos
 
@@ -71,7 +71,6 @@ A carga existente em cada barra é usada como indicador de onde os carros estão
 
 | Parâmetro | Valor atual | Significado |
 |---|---|---|
-| `network` | ieee8500 | Alimentador dos estudos do EVCS (`ieee123` ou `ieee8500`) |
 | `candidate_spacing_m` | 250 | Distância mínima entre barras candidatas na triagem (0 = todas) |
 | `resolution_min` | 15 | Passo do fluxo de potência intradiário (as sessões são simuladas por minuto) |
 | `seed` | 42 | Semente: mesma semente → mesmas sessões |
@@ -110,13 +109,13 @@ python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.p
 ```
 
 - A **varredura de capacidade** (parte demorada da triagem) fica salva em `hosting_capacity.csv` e é reaproveitada enquanto as candidatas forem as mesmas; `--resweep` força refazer (necessário se a rede mudar).
-- O alimentador é escolhido em `planning.network` (`ieee8500`; `ieee123` ainda funciona). Os dados da rede vêm de `src/network/data/ieee8500.json`, gerado por `scripts/build_ieee8500_data.py` (só precisa rodar se os arquivos-fonte mudarem).
+- O alimentador de todos os estudos (inclusive a integração S0–S4) é escolhido em `configs/network.yaml` (`ieee8500`; `ieee123` ainda funciona). Os dados da rede vêm de `src/network/data/ieee8500.json`, gerado por `scripts/build_ieee8500_data.py` (só precisa rodar se os arquivos-fonte mudarem).
 - O notebook `notebooks/01_evcs_ayrton.ipynb` mostra os resultados salvos e tem uma célula para rodar tudo de novo.
 - `results/` não vai para o Git. As figuras deste README estão copiadas em `docs/evcs/figures/`.
 
 ### Saídas
 
-Sem `--output`, cada estudo grava em `results/<planning.network>/<estudo>/`. Mapa completo em [`results/README.md`](../../results/README.md).
+Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`. Mapa completo em [`results/README.md`](../../results/README.md).
 
 | Pasta / arquivo | Conteúdo |
 |---|---|

@@ -22,7 +22,7 @@ FEEDERS = {
             "Line ampacity is an assumed 400 A, not a validated IEEE thermal rating.",
         ]+COMMON_LIMITATIONS[3:]),
     "ieee8500": dict(name="IEEE 8500", file="ieee8500.json",
-        fidelity="IEEE8500 medium-voltage reduction; pandapower sequence approximation; fixed mean regulator taps",
+        fidelity="IEEE8500 medium-voltage reduction; pandapower sequence approximation; regulator taps controlled per step (ganged)",
         limitations=COMMON_LIMITATIONS[:3]+[
             "Service transformers, triplex secondaries and 120/240 V loads lumped as PQ loads on the primary bus.",
             "Regulator taps follow an emulated RegControl (vreg, band; ganged banks, no time delays).",

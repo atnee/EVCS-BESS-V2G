@@ -21,7 +21,7 @@ class TestIntegration(unittest.TestCase):
         summary,details=run_scenarios(root/"configs")
         self.assertEqual(list(summary.scenario),["S0","S1","S2","S3","S4"])
         self.assertFalse(summary.synthetic.any())
-        self.assertTrue(summary.network.str.contains("IEEE123").all())
+        self.assertTrue(summary.network.str.contains("IEEE8500").all())
         self.assertTrue(np.isfinite(summary.select_dtypes('number')).all().all())
         for d in details.values():
             f=d["flow"]

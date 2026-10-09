@@ -1,6 +1,6 @@
 """EVCS siting screening: network hosting capacity x fleet sessions x coverage, for DC hubs and AC eletropostos.
 
-python -m integration.evcs_screening                # -> results/<planning.network>/evcs_screening/
+python -m integration.evcs_screening                # -> results/<feeder>/evcs_screening/ (configs/network.yaml)
 python -m integration.evcs_screening --resweep      # recomputes the hosting sweep (IEEE 8500 ~1.5 h)
 Peak snapshot (load multiplier 1.0). A screening baseline for the optimization, not its result.
 """
@@ -16,6 +16,7 @@ from evcs.planning import (from_config, with_fleet, generate_sessions, size_site
 from network.hosting import HostingStudy
 from network.topology import feeder_graph, bus_table
 from integration.s0_study import _style, _edges, INK, MUTED, SURFACE
+from integration.scenarios import study_feeder
 
 FLEETS = (2000, 3000, 4000, 5000)   # sensitivity range (cars in the feeder area)
 TYPE_STYLE = {"dc": dict(color="#4a3aa7",marker="H",label="hub DC"),
@@ -57,7 +58,7 @@ def place_fleet(params, candidates, demand):
 def run_screening(config_dir="configs", fleets=FLEETS, hosting_csv=None, max_kw=3000., tol_kw=10.):
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     # 10 W outer-loop tolerance: hosting limits are searched to tol_kw anyway.
-    study = HostingStudy(feeder=params.network,tolerance_mw=1e-5)
+    study = HostingStudy(feeder=study_feeder(config_dir),tolerance_mw=1e-5)
     graph = feeder_graph(study.network.equipment["feeder_data"][0])
     buses = bus_table(graph)
     # Demand proxy: cars live where the load is.
@@ -173,9 +174,8 @@ def plot_coverage(result, evs, ax=None):
 
 
 def study_dir(config_dir="configs", study="evcs_screening"):
-    """Default output folder of an EVCS study: results/<planning.network>/<study>."""
-    network = read_parameters(Path(config_dir)/"evcs.yaml")["planning"].get("network","ieee123")
-    return Path("results")/network/study
+    """Default output folder of an EVCS study: results/<feeder>/<study> (feeder from configs/network.yaml)."""
+    return Path("results")/study_feeder(config_dir)/study
 
 
 def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=False):
@@ -205,7 +205,7 @@ def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=F
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output",help="default: results/<planning.network>/evcs_screening")
+    parser.add_argument("--output",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--resweep",action="store_true",help="recompute the hosting sweep instead of reusing the CSV")
     args = parser.parse_args()
