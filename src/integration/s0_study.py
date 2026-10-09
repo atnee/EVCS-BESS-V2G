@@ -4,6 +4,7 @@ python -m integration.s0_study --output results/s0
 """
 from pathlib import Path
 import argparse
+import dataclasses
 import json
 import numpy as np
 import pandas as pd
@@ -23,10 +24,23 @@ EQUIPMENT = {"regulator": "#eb6834", "transformer": "#4a3aa7", "capacitor": "#2a
 V_LIMITS = (.95, 1.05)  # ANSI C84.1 range A
 
 
-def run_s0(config_dir="configs"):
-    """Daily S0 power flow (IEEE123 loads only, no DER) with the ieee123.yaml load curve."""
+def load_curve(config_dir, steps):
+    """ieee123.yaml hourly multipliers at `steps` per day: linear between hour centres, periodic."""
+    hourly = np.asarray(read_parameters(Path(config_dir)/"ieee123.yaml").get("load_multipliers",[1.]*24),float)
+    if steps == len(hourly):
+        return hourly
+    if len(hourly) != 24:
+        raise ValueError("Intraday resampling needs 24 hourly load multipliers")
+    return np.interp((np.arange(steps)+.5)*24/steps,np.arange(24)+.5,hourly,period=24)
+
+
+def run_s0(config_dir="configs", resolution_min=None):
+    """Daily S0 power flow (IEEE123 loads only, no DER) with the ieee123.yaml load curve.
+    resolution_min=None keeps the integration grid; e.g. 15 gives 96 intraday steps."""
     grid = integrated_grid(config_dir)
-    multipliers = np.asarray(read_parameters(Path(config_dir)/"ieee123.yaml").get("load_multipliers",[1.]*grid.steps),float)
+    if resolution_min:
+        grid = dataclasses.replace(grid,steps=1440//resolution_min,dt_h=resolution_min/60)
+    multipliers = load_curve(config_dir,grid.steps)
     network = load_ieee123()
     no_der = make_profile(grid,"no-DER",network.slack_bus,"ABC",np.zeros(grid.steps))
     flow = PandapowerSolver(multipliers).solve(network,no_der)
@@ -191,12 +205,14 @@ def plot_daily(study):
     flow = study["flow"]
     fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.6),layout="constrained")
     v = feeder_voltages(study)
-    hours = np.arange(len(flow["source"]))
+    steps = len(flow["source"])
+    hours = np.arange(steps)*24/steps  # time of day, any resolution
+    every = max(1,steps//24)           # one marker per hour
     _style(ax1,"Faixa de tensão por fase ao longo do dia")
     for phase,style in PHASE_STYLE.items():
         g = v[v.phase==phase].groupby("time").v_pu
         ax1.fill_between(hours,g.min(),g.max(),color=style["color"],alpha=.06,linewidth=0)
-        ax1.plot(hours,g.min(),color=style["color"],marker=style["marker"],ms=4,lw=2,label=f"fase {phase} — mín.")
+        ax1.plot(hours,g.min(),color=style["color"],marker=style["marker"],ms=4,markevery=every,lw=2,label=f"fase {phase} — mín.")
         ax1.plot(hours,g.max(),color=style["color"],lw=1.2,ls=(0,(3,2)))
     for limit in V_LIMITS:
         ax1.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
@@ -204,8 +220,8 @@ def plot_daily(study):
     ax1.legend(handles=[*ax1.get_lines()[0:6:2],Line2D([],[],color=MUTED,lw=1.2,ls=(0,(3,2)),label="máx. (tracejado)")],
                frameon=False,fontsize=8,loc="upper center",bbox_to_anchor=(.5,-.16),ncol=4)
     _style(ax2,"Potência na subestação")
-    ax2.plot(hours,flow["source"].p_kw,color="#2a78d6",lw=2,marker="o",ms=4,label="P (kW)")
-    ax2.plot(hours,flow["source"].q_kvar,color="#eb6834",lw=2,marker="s",ms=4,label="Q (kvar)")
+    ax2.plot(hours,flow["source"].p_kw,color="#2a78d6",lw=2,marker="o",ms=4,markevery=every,label="P (kW)")
+    ax2.plot(hours,flow["source"].q_kvar,color="#eb6834",lw=2,marker="s",ms=4,markevery=every,label="Q (kvar)")
     ax2.set_xlabel("hora",color=MUTED); ax2.set_ylabel("kW / kvar",color=MUTED)
     ax2.legend(frameon=False,fontsize=9)
     return fig

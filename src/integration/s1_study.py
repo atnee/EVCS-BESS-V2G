@@ -1,103 +1,185 @@
-"""S1 study: EVCS stations allocated by the screening, 24 h power flow and comparison with S0.
+"""S1 study: hubs and eletropostos from the screening, minute-level charging sessions and an
+intraday power flow (planning.resolution_min, 15 min by default) compared with S0 at the same resolution.
 
-python -m integration.s1_study --output results/s1            # fleets: evcs.yaml planning.evs + largest accepted
-python -m integration.s1_study --evs 300 1000                  # chosen fleet sizes
+python -m integration.s1_study                     # fleets: evcs.yaml fleet.evs + largest accepted by the screening
+python -m integration.s1_study --evs 1000 2000
 Needs results/evcs_screening/fleet_scenarios.csv (python -m integration.evcs_screening).
 """
 from pathlib import Path
 import argparse
-import ast
 import dataclasses
 import json
 import numpy as np
 import pandas as pd
 from core.schemas import make_profile, read_parameters
-from evcs.planning import from_config, charging_needs, hourly_demand
+from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid
-from integration.s0_study import (run_s0, voltages_at, feeder_voltages, plot_voltage_profile, plot_daily,
-                                  _style, _edges, INK, MUTED, SURFACE)
+from integration.evcs_screening import plot_sites, TYPE_STYLE
+from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily,
+                                  _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
 
-STATION_COLORS = ("#eb6834","#2a78d6","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7","#e34948")
+S0_GRAY, S1_RED = "#b9b8b3", "#d03b3b"
 
 
 def load_fleets(screening_dir):
     fleets = pd.read_csv(Path(screening_dir)/"fleet_scenarios.csv")
-    fleets["buses"] = fleets.buses.apply(ast.literal_eval)
+    fleets["sites"] = fleets.sites.apply(json.loads)
     return fleets.set_index("evs")
 
 
-def station_demand(params, buses, steps):
-    """Public charging demand split equally among stations, limited by each station's power."""
-    need = charging_needs(params)
-    total = hourly_demand(params,steps)
-    per_station = total/max(len(buses),1)
-    served = np.minimum(per_station,need["station_kw"])
-    return {bus: served for bus in buses}, float((per_station-served).clip(0).sum()*len(buses))
-
-
-def run_s1(evs, config_dir="configs", screening_dir="results/evcs_screening", s0=None):
-    s0 = run_s0(config_dir) if s0 is None else s0
-    params = dataclasses.replace(from_config(read_parameters(Path(config_dir)/"evcs.yaml")),evs=int(evs))
-    row = load_fleets(screening_dir).loc[int(evs)]
-    network, grid = s0["network"], integrated_grid(config_dir)
-    demand,unserved = station_demand(params,row.buses,grid.steps)
+def run_s1(evs, config_dir="configs", screening_dir="results/evcs_screening", s0=None, sites=None):
+    params = with_fleet(from_config(read_parameters(Path(config_dir)/"evcs.yaml")),evs)
+    sites = load_fleets(screening_dir).loc[int(evs)].sites if sites is None else sites
+    res = params.resolution_min
+    s0 = run_s0(config_dir,res) if s0 is None else s0
+    sessions,power = simulate(params,sites)
+    network = s0["network"]
+    grid = dataclasses.replace(integrated_grid(config_dir),steps=1440//res,dt_h=res/60)
     profiles = [make_profile(grid,"external-zero",network.slack_bus,"ABC",np.zeros(grid.steps))]
-    profiles += [make_profile(grid,f"EVCS-{bus}",bus,"ABC",-kw) for bus,kw in demand.items()]
+    profiles += [make_profile(grid,f"{sites[bus]}-{bus}",bus,"ABC",-resample(kw,res)) for bus,kw in power.items()]
     flow = PandapowerSolver(s0["multipliers"]).solve(network,combine(profiles,network))
-    hours = flow["source"].time
-    study = dict(s0,flow=flow,peak=hours[int(flow["source"].p_kw.idxmax())],valley=hours[int(flow["source"].p_kw.idxmin())])
-    return dict(study=study,s0=s0,params=params,row=row,demand=demand,unserved_kwh=unserved,need=charging_needs(params))
+    times = flow["source"].time
+    study = dict(s0,flow=flow,peak=times[int(flow["source"].p_kw.idxmax())],valley=times[int(flow["source"].p_kw.idxmin())])
+    return dict(study=study,s0=s0,params=params,sites=sites,sessions=sessions,power=power,evs=int(evs))
 
 
 def delta_v(s1):
-    """S1 - S0 voltage per bus, phase and hour (negative = voltage dropped)."""
+    """S1 - S0 voltage per bus, phase and step (negative = voltage dropped)."""
     a, b = feeder_voltages(s1["s0"]), feeder_voltages(s1["study"])
     d = a.merge(b,on=["time","bus","phase"],suffixes=("_s0","_s1"))
     d["dv_pu"] = d.v_pu_s1-d.v_pu_s0
     return d.merge(s1["study"]["buses"][["bus","distance_km","x","y"]],on="bus")
 
 
+def by_type(s1, resolution_min):
+    """Grid power per station type at a given resolution (kW)."""
+    out = {}
+    for bus,kw in s1["power"].items():
+        key = s1["sites"][bus]
+        out[key] = out.get(key,0)+resample(kw,resolution_min)
+    return out
+
+
+def energy_kwh(study):
+    """Daily energy of the substation and of the line/transformer losses, any resolution."""
+    dt_h = 24/len(study["flow"]["source"])
+    return float(study["flow"]["source"].p_kw.sum()*dt_h), float(study["flow"]["branches"].loss_kw.sum()*dt_h)
+
+
+def _time_axis(ax):
+    ax.set_xlim(0,24); ax.set_xticks(range(0,25,3)); ax.set_xlabel("hora do dia",color=MUTED)
+
+
 def plot_allocation(s1, ax=None):
-    """Where the stations went: coverage circles, demand proxy and hosting limit of each site."""
     import matplotlib.pyplot as plt
-    from matplotlib.patches import Circle
-    study, row, p = s1["study"], s1["row"], s1["params"]
-    graph, buses = study["graph"], study["buses"]
-    pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
     ax = ax or plt.subplots(figsize=(11,8.5),layout="constrained")[1]
-    status = "rede aceita" if row.network_accepts else "rede NÃO aceita"
-    _style(ax,f"S1 — {int(row.name)} carros: {len(row.buses)} eletroposto(s) de {row.station_kw:.0f} kW, "
-              f"cobertura {row.coverage:.0%}, {status}")
-    _edges(ax,graph,pos,emphasis=False)  # no equipment markers: station colours stay unambiguous
-    load = buses[buses.load_kw > 0]
-    ax.scatter(load.x,load.y,s=load.load_kw/2,color="#86b6ef",alpha=.6,edgecolor="none",zorder=2,
-               label="carga existente (proxy de onde estão os carros)")
-    radius = p.coverage_radius_m/.3048
-    for i,bus in enumerate(row.buses):
-        x,y = pos[bus]; color = STATION_COLORS[i % len(STATION_COLORS)]
-        ax.add_patch(Circle((x,y),radius,facecolor=color,alpha=.08,edgecolor=color,lw=1.2,ls=(0,(4,3)),zorder=1))
-        ax.scatter(x,y,marker="P",s=260,color=color,edgecolor=SURFACE,linewidth=1.5,zorder=6)
-        ax.annotate(f"EVCS {bus}\n{row.station_kw:.0f} kW",(x,y),xytext=(9,9),textcoords="offset points",fontsize=9,
-                    color=INK,bbox=dict(boxstyle="round,pad=.2",fc=SURFACE,ec=color,alpha=.9))
-    ax.scatter([],[],marker="P",s=120,color=STATION_COLORS[0],label=f"eletroposto (raio de cobertura {p.coverage_radius_m:.0f} m)")
-    ax.legend(loc="lower left",frameon=False,fontsize=9)
-    ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
-    return ax
+    hubs = sum(k=="dc" for k in s1["sites"].values()); ac = len(s1["sites"])-hubs
+    buses = s1["study"]["buses"]; load = buses[buses.load_kw > 0]
+    return plot_sites(ax,s1["study"]["graph"],s1["sites"],s1["params"],
+                      f"S1 — {s1['evs']} carros: {hubs} hub(s) DC + {ac} eletroposto(s) AC",
+                      load[["x","y"]].assign(weight=load.load_kw))
+
+
+def plot_daily_curves(s1):
+    """Daily (hourly) curves: EV demand per station type (stacked) and substation power S0 vs S1."""
+    import matplotlib.pyplot as plt
+    fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.4),layout="constrained")
+    _style(ax1,"Curva diária — demanda das estações (média horária)")
+    hours, bottom = np.arange(24)+.5, np.zeros(24)
+    for key,kw in by_type(s1,60).items():
+        st = TYPE_STYLE[key]
+        ax1.bar(hours,kw,.85,bottom=bottom,color=st["color"],label=st["label"],edgecolor=SURFACE,linewidth=1)
+        bottom += kw
+    _time_axis(ax1); ax1.set_ylabel("kW",color=MUTED); ax1.legend(frameon=False,fontsize=9)
+    _style(ax2,"Curva diária — potência ativa na subestação (média horária)")
+    for name,study,color,marker in (("S0",s1["s0"],S0_GRAY,"o"),("S1",s1["study"],S1_RED,"v")):
+        p = study["flow"]["source"].p_kw.to_numpy()
+        ax2.plot(hours,resample(np.repeat(p,1440//len(p)),60),color=color,lw=2,marker=marker,ms=4,label=name)
+    _time_axis(ax2); ax2.set_ylabel("kW",color=MUTED); ax2.legend(frameon=False,fontsize=9)
+    return fig
+
+
+def plot_intraday_curves(s1):
+    """Intraday curves: EV demand at 1 min / resolution / 1 h (why resolution matters) and the
+    substation power at the power-flow resolution, S0 vs S1."""
+    import matplotlib.pyplot as plt
+    res = s1["params"].resolution_min
+    total = sum(s1["power"].values())
+    fig,(ax1,ax2) = plt.subplots(2,1,figsize=(13,7.6),layout="constrained",sharex=True)
+    _style(ax1,f"Curva intradiária — demanda total das estações (pico: {total.max():.0f} kW em 1 min, "
+               f"{resample(total,res).max():.0f} kW em {res} min, {resample(total,60).max():.0f} kW em 1 h)")
+    ax1.plot(np.arange(1440)/60,total,color="#86b6ef",lw=.8,label="1 min")
+    ax1.step(np.arange(1440//res)*res/60,resample(total,res),where="post",color="#1c5cab",lw=2,label=f"{res} min")
+    ax1.step(np.arange(24),resample(total,60),where="post",color=INK,lw=1.4,ls=(0,(4,2)),label="1 h")
+    for key,kw in by_type(s1,res).items():
+        ax1.step(np.arange(len(kw))*res/60,kw,where="post",color=TYPE_STYLE[key]["color"],lw=1.2,alpha=.9,
+                 label=f'{s1["params"].types[key].name} ({res} min)')
+    ax1.set_ylabel("kW",color=MUTED); ax1.legend(frameon=False,fontsize=8.5,ncol=5,loc="upper left")
+    _style(ax2,f"Curva intradiária — potência ativa na subestação ({res} min)")
+    for name,study,color in (("S0",s1["s0"],S0_GRAY),("S1",s1["study"],S1_RED)):
+        p = study["flow"]["source"].p_kw.to_numpy()
+        ax2.step(np.arange(len(p))*24/len(p),p,where="post",color=color,lw=2,label=name)
+    ax2.set_ylabel("kW",color=MUTED); ax2.legend(frameon=False,fontsize=9)
+    _time_axis(ax2)
+    return fig
+
+
+def plot_intraday_voltage(s1):
+    """Minimum feeder voltage per step (S0 vs S1) and the largest drop the stations cause per step."""
+    import matplotlib.pyplot as plt
+    fig,(ax1,ax2) = plt.subplots(2,1,figsize=(13,7),layout="constrained",sharex=True,height_ratios=(3,2))
+    res = s1["params"].resolution_min
+    _style(ax1,f"Curva intradiária de tensão ({res} min) — mínima do alimentador")
+    for name,study,color in (("S0",s1["s0"],S0_GRAY),("S1",s1["study"],S1_RED)):
+        v = feeder_voltages(study).groupby("time").v_pu.min().to_numpy()
+        ax1.step(np.arange(len(v))*24/len(v),v,where="post",color=color,lw=2.2,label=name)
+    for limit in V_LIMITS:
+        ax1.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
+    ax1.set_ylabel("tensão (pu)",color=MUTED); ax1.legend(frameon=False,fontsize=9,loc="upper right")
+    drop = -delta_v(s1).groupby("time").dv_pu.min().to_numpy()*100
+    worst = int(drop.argmax())
+    _style(ax2,f"Maior queda de tensão causada pelas estações em cada passo (máx. {drop.max():.2f}% às "
+               f"{worst*res//60:02d}:{worst*res%60:02d})")
+    ax2.bar(np.arange(len(drop))*24/len(drop),drop,24/len(drop),align="edge",color=S1_RED,edgecolor=SURFACE,linewidth=.5)
+    ax2.set_ylabel("queda (%)",color=MUTED)
+    _time_axis(ax2)
+    return fig
+
+
+def plot_sessions(s1):
+    """When cars arrive, how long they charge, their SOC on arrival and how long they wait."""
+    import matplotlib.pyplot as plt
+    s, p = s1["sessions"], s1["params"]
+    fig,axes = plt.subplots(2,2,figsize=(13,8),layout="constrained")
+    (a1,a2),(a3,a4) = axes
+    for key,t in p.types.items():
+        part, st = s[s.type==key], TYPE_STYLE[key]
+        label = f"{t.name} ({len(part)} sessões)"
+        a1.hist(part.arrival_min/60,bins=np.arange(25),color=st["color"],alpha=.75,label=label,edgecolor=SURFACE)
+        a2.hist(part.duration_min,bins=20,color=st["color"],alpha=.75,label=label,edgecolor=SURFACE)
+        a3.hist(part.soc_arrival*100,bins=np.arange(0,101,5),color=st["color"],alpha=.75,label=label,edgecolor=SURFACE)
+        a4.hist(part.wait_min.dropna(),bins=np.arange(0,max(31,t.max_wait_min+2),2),color=st["color"],alpha=.75,
+                label=f"{t.name}: {(~part.served).sum()} desistiram",edgecolor=SURFACE)
+    for ax,title,xl in ((a1,"Chegadas por hora","hora do dia"),(a2,"Tempo de recarga","minutos"),
+                        (a3,"SOC na chegada","%"),(a4,"Espera na fila (atendidos)","minutos")):
+        _style(ax,title); ax.set_xlabel(xl,color=MUTED); ax.set_ylabel("sessões",color=MUTED)
+        ax.legend(frameon=False,fontsize=8.5)
+    return fig
 
 
 def plot_delta_v_map(s1, ax=None):
-    """Voltage drop caused by the stations at the S1 peak hour (one-hue sequential: darker = larger drop)."""
+    """Voltage drop caused by the stations at the S1 peak step (one-hue sequential: darker = larger drop)."""
     import matplotlib.pyplot as plt
     from matplotlib.colors import LinearSegmentedColormap
     study = s1["study"]
     graph = study["graph"]
     pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
     d = delta_v(s1)
-    drop = -d[d.time==study["peak"]].groupby("bus").dv_pu.min()*100  # % of nominal, positive = drop
+    drop = -d[d.time==study["peak"]].groupby("bus").dv_pu.min()*100
     ax = ax or plt.subplots(figsize=(11,8.5),layout="constrained")[1]
-    _style(ax,f"Queda de tensão causada pelos eletropostos — ponta {study['peak']:%H:%M} (% da nominal)")
+    _style(ax,f"Queda de tensão causada pelas estações — ponta {study['peak']:%H:%M} (% da nominal)")
     _edges(ax,graph,pos,emphasis=False)
     cmap = LinearSegmentedColormap.from_list("drop",["#f0efec","#ec835a","#d03b3b","#7a1f1f"])
     xy = np.array([pos[b] for b in drop.index])
@@ -105,8 +187,8 @@ def plot_delta_v_map(s1, ax=None):
                         edgecolor=MUTED,linewidth=.5,zorder=3)
     bar = plt.colorbar(points,ax=ax,shrink=.6,pad=.01)
     bar.set_label("queda de tensão (%)",color=MUTED); bar.ax.tick_params(colors=MUTED,labelsize=8)
-    for bus in s1["row"].buses:
-        ax.scatter(*pos[bus],marker="P",s=200,color=INK,edgecolor=SURFACE,linewidth=1.2,zorder=5)
+    for bus,key in s1["sites"].items():
+        ax.scatter(*pos[bus],marker=TYPE_STYLE[key]["marker"],s=220,color=INK,edgecolor=SURFACE,linewidth=1.2,zorder=5)
     worst = drop.idxmax()
     ax.annotate(f"maior queda: barra {worst}, {drop[worst]:.2f}%",pos[worst],xytext=(-10,-18),textcoords="offset points",
                 ha="right",fontsize=9,color=INK,bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
@@ -115,63 +197,55 @@ def plot_delta_v_map(s1, ax=None):
 
 
 def plot_profile_comparison(s1):
-    """Minimum phase voltage vs. distance at the S1 peak: S0 in gray, S1 in color."""
+    """Minimum phase voltage vs. distance at the S1 peak step: S0 in gray, S1 in red."""
     import matplotlib.pyplot as plt
     study = s1["study"]
     d = delta_v(s1)
     d = d[d.time==study["peak"]].groupby(["bus","distance_km"])[["v_pu_s0","v_pu_s1"]].min().reset_index()
     fig,ax = plt.subplots(figsize=(10,4.8),layout="constrained")
     _style(ax,f"Tensão mínima por barra vs. distância — ponta {study['peak']:%H:%M}")
-    ax.scatter(d.distance_km,d.v_pu_s0,s=26,color="#b9b8b3",label="S0 (sem eletropostos)",zorder=2)
-    ax.scatter(d.distance_km,d.v_pu_s1,s=22,color="#d03b3b",marker="v",label="S1 (com eletropostos)",zorder=3)
+    ax.scatter(d.distance_km,d.v_pu_s0,s=26,color=S0_GRAY,label="S0 (sem estações)",zorder=2)
+    ax.scatter(d.distance_km,d.v_pu_s1,s=22,color=S1_RED,marker="v",label="S1 (com estações)",zorder=3)
     for _,r in d.iterrows():
-        ax.plot([r.distance_km]*2,[r.v_pu_s0,r.v_pu_s1],color="#d03b3b",lw=.8,alpha=.5)
-    stations = d[d.bus.isin(s1["row"].buses)]
-    for _,r in stations.iterrows():
-        ax.annotate(f"EVCS {r.bus}",(r.distance_km,r.v_pu_s1),xytext=(4,-14),textcoords="offset points",fontsize=8,color=INK)
-    for limit in (.95,1.05):
+        ax.plot([r.distance_km]*2,[r.v_pu_s0,r.v_pu_s1],color=S1_RED,lw=.8,alpha=.5)
+    for _,r in d[d.bus.isin(list(s1["sites"]))].iterrows():
+        ax.annotate(f'{s1["params"].types[s1["sites"][r.bus]].name} {r.bus}',(r.distance_km,r.v_pu_s1),
+                    xytext=(4,-14),textcoords="offset points",fontsize=8,color=INK)
+    for limit in V_LIMITS:
         ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
     ax.set_xlabel("distância elétrica da subestação (km)",color=MUTED); ax.set_ylabel("tensão (pu)",color=MUTED)
     ax.legend(frameon=False,fontsize=9,loc="lower right",ncol=2)
     return fig
 
 
-def plot_power(s1):
-    """Station demand per hour (stacked) and substation power S0 vs S1, as two single-axis panels."""
-    import matplotlib.pyplot as plt
-    study, s0 = s1["study"], s1["s0"]
-    hours = np.arange(len(study["flow"]["source"]))
-    fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.4),layout="constrained")
-    _style(ax1,"Demanda dos eletropostos por hora")
-    bottom = np.zeros(len(hours))
-    for i,(bus,kw) in enumerate(s1["demand"].items()):
-        ax1.bar(hours,kw,.8,bottom=bottom,color=STATION_COLORS[i % len(STATION_COLORS)],label=f"EVCS {bus}",
-                edgecolor=SURFACE,linewidth=1)
-        bottom += kw
-    ax1.set_xlabel("hora",color=MUTED); ax1.set_ylabel("kW",color=MUTED); ax1.legend(frameon=False,fontsize=9)
-    _style(ax2,"Potência ativa na subestação")
-    ax2.plot(hours,s0["flow"]["source"].p_kw,color="#b9b8b3",lw=2,marker="o",ms=4,label="S0")
-    ax2.plot(hours,study["flow"]["source"].p_kw,color="#d03b3b",lw=2,marker="v",ms=4,label="S1")
-    ax2.set_xlabel("hora",color=MUTED); ax2.set_ylabel("kW",color=MUTED); ax2.legend(frameon=False,fontsize=9)
-    return fig
-
-
 def summary(s1):
-    study, s0 = s1["study"], s1["s0"]
+    study, s0, s, p = s1["study"], s1["s0"], s1["sessions"], s1["params"]
     d = delta_v(s1)
     worst = d.loc[d.dv_pu.idxmin()]
     b = study["flow"]["branches"]; b = b[b.physical_phase & (b.time==study["peak"])]
-    return {"evs": int(s1["row"].name), "stations": list(s1["row"].buses), "station_kw": float(s1["row"].station_kw),
-            "coverage": float(s1["row"].coverage), "screening_network_accepts": bool(s1["row"].network_accepts),
-            "screening_binding": s1["row"].binding if isinstance(s1["row"].binding,str) else "",
-            "daily_public_kwh": s1["need"]["daily_public_kwh"], "unserved_kwh": s1["unserved_kwh"],
+    total = sum(s1["power"].values())
+    per_type = {}
+    for key,t in p.types.items():
+        part = s[s.type==key]
+        per_type[t.name] = dict(sites=[bus for bus,k in s1["sites"].items() if k==key],
+                                chargers_per_site=t.chargers_per_site,charger_kw=t.charger_kw,sessions=len(part),
+                                served_share=float(part.served.mean()) if len(part) else 1.,
+                                energy_kwh=float(part.energy_kwh.sum()),
+                                unserved_kwh=float(part.loc[~part.served,"energy_kwh"].sum()),
+                                mean_duration_min=float(part.duration_min.mean()) if len(part) else 0.,
+                                mean_wait_min=float(part.wait_min.mean()) if part.served.any() else 0.)
+    (e0,l0),(e1,l1) = energy_kwh(s0),energy_kwh(study)
+    return {"evs": s1["evs"], "battery_kwh_mean": p.fleet.battery_kwh, "resolution_min": p.resolution_min,
+            "daily_public_kwh": p.fleet.daily_public_kwh, "types": per_type,
+            "ev_peak_kw": {"1min": float(total.max()), f"{p.resolution_min}min": float(resample(total,p.resolution_min).max()),
+                           "60min": float(resample(total,60).max())},
             "peak_s0_kw": float(s0["flow"]["source"].p_kw.max()), "peak_s1_kw": float(study["flow"]["source"].p_kw.max()),
-            "losses_s0_kwh": float(s0["flow"]["branches"].loss_kw.sum()),
-            "losses_s1_kwh": float(study["flow"]["branches"].loss_kw.sum()),
+            "energy_s0_kwh": e0, "energy_s1_kwh": e1, "losses_s0_kwh": l0, "losses_s1_kwh": l1,
             "max_drop_pu": float(-worst.dv_pu), "max_drop_at": f"{worst.bus}.{worst.phase} {worst.time}",
-            "v_min_s1_pu": float(feeder_voltages(study).v_pu.min()),
+            "v_min_s0_pu": float(feeder_voltages(s0).v_pu.min()), "v_min_s1_pu": float(feeder_voltages(study).v_pu.min()),
             "buses_below_0.95": int(feeder_voltages(study).query("v_pu < .95").bus.nunique()),
-            "max_line_loading_peak_pct": float(b.loading_pct.max()), "max_loaded": b.loc[b.loading_pct.idxmax(),"line"]}
+            "max_equipment_loading_peak_pct": float(b[b.element_type=="trafo"].loading_pct.max()),
+            "max_line_loading_peak_pct": float(b[b.element_type=="line"].loading_pct.max())}
 
 
 def export_s1(output="results/s1", config_dir="configs", screening_dir="results/evcs_screening", fleets=None):
@@ -179,22 +253,32 @@ def export_s1(output="results/s1", config_dir="configs", screening_dir="results/
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     table = load_fleets(screening_dir)
+    params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     if not fleets:
-        planned = from_config(read_parameters(Path(config_dir)/"evcs.yaml")).evs
         accepted = table[table.network_accepts].index
-        fleets = sorted({planned,*(accepted[-1:] if len(accepted) else [])})
-    s0 = run_s0(config_dir)
+        fleets = sorted({params.fleet.evs,*(accepted[-1:] if len(accepted) else [])})
+    s0 = run_s0(config_dir,params.resolution_min)
     results = []
     for evs in fleets:
         s1 = run_s1(evs,config_dir,screening_dir,s0)
         out = Path(output)/f"evs_{evs}"; out.mkdir(parents=True,exist_ok=True)
-        for table_name in ("voltages","branches","source"):
-            s1["study"]["flow"][table_name].to_csv(out/f"{table_name}.csv",index=False)
+        for old in out.glob("*"):
+            old.unlink()
+        for name in ("voltages","branches","source"):
+            s1["study"]["flow"][name].to_csv(out/f"{name}.csv",index=False)
         delta_v(s1).to_csv(out/"delta_v.csv",index=False)
-        pd.DataFrame(s1["demand"]).assign(hour=range(len(next(iter(s1["demand"].values()))))).to_csv(out/"station_demand.csv",index=False)
-        figures = {"allocation": plot_allocation(s1).figure, "delta_v_map": plot_delta_v_map(s1).figure,
-                   "voltage_comparison": plot_profile_comparison(s1), "power": plot_power(s1),
-                   "voltage_profile": plot_voltage_profile(s1["study"]), "daily": plot_daily(s1["study"])}
+        s1["sessions"].to_csv(out/"sessions.csv",index=False)
+        res = s1["params"].resolution_min
+        pd.DataFrame(s1["power"]).assign(minute=range(1440)).to_csv(out/"station_power_1min.csv",index=False)
+        pd.DataFrame({b: resample(kw,res) for b,kw in s1["power"].items()}).assign(
+            hour=np.arange(1440//res)*res/60).to_csv(out/f"station_power_{res}min.csv",index=False)
+        pd.DataFrame({b: resample(kw,60) for b,kw in s1["power"].items()}).assign(hour=range(24)).to_csv(
+            out/"station_power_hourly.csv",index=False)
+        figures = {"allocation": plot_allocation(s1).figure, "curves_daily": plot_daily_curves(s1),
+                   "curves_intraday": plot_intraday_curves(s1), "voltage_intraday": plot_intraday_voltage(s1),
+                   "sessions": plot_sessions(s1), "delta_v_map": plot_delta_v_map(s1).figure,
+                   "voltage_comparison": plot_profile_comparison(s1),
+                   "voltage_profile": plot_voltage_profile(s1["study"]), "voltage_envelope": plot_daily(s1["study"])}
         for name,fig in figures.items():
             fig.savefig(out/f"{name}.png",dpi=200,facecolor=SURFACE)
             plt.close(fig)

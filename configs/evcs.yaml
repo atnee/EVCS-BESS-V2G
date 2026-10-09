@@ -39,17 +39,42 @@ independent_demand_kw:
 - 10.0
 - 10.0
 - 10.0
-# Planning assumptions for siting/sizing (src/evcs/planning.py). Placeholders until
-# Honduras data replaces them; the screening also sweeps `evs`.
+# Planning assumptions for siting/sizing (src/evcs/planning.py, src/evcs/README.md).
+# Placeholders until Honduras data replaces them; the screening also sweeps `evs`.
 planning:
-  evs: 300                  # electric cars in the feeder area
-  daily_km: 35.0            # km per car per day (urban use)
-  kwh_per_km: 0.18
-  public_share: 0.3         # 30% of the energy at public stations, 70% at home
-  charger_kw: 22.0          # AC 22 kW; use 50-150 for DC fast charging
-  chargers_per_station: 6
-  utilization: 0.25         # each charger busy 6 h/day on average
-  peak_hour_share: 0.12     # 12% of the daily public energy in the busiest hour
-  coverage_radius_m: 500.0  # max straight-line distance from demand to a station
-  min_spacing_m: 400.0      # min distance between stations
-  hourly_shape: [1, 1, 1, 1, 1, 1, 2, 4, 5, 5, 5, 5, 5, 5, 5, 6, 9, 11, 12, 11, 9, 6, 3, 2]
+  seed: 42                  # same seed -> same sessions (reproducible)
+  resolution_min: 15        # intraday power-flow step (minutes); sessions are simulated per minute
+  charger_efficiency: 0.95  # grid power = charging power / efficiency
+  sizing_quantile: 0.95     # chargers = 95th percentile of unconstrained simultaneous sessions
+  fleet:
+    evs: 1000               # electric cars in the feeder area
+    battery_kwh: 60.0       # average usable battery
+    battery_std_kwh: 15.0   # spread of battery sizes
+    daily_km: 35.0          # km per car per day (urban use)
+    kwh_per_km: 0.18
+    public_share: 0.3       # 30% of the energy at public stations, 70% at home
+    arrival_soc_mean: 0.30  # SOC when the car arrives at the station
+    arrival_soc_std: 0.10
+    max_ac_kw: 11.0         # on-board charger: limits AC charging
+    max_dc_kw: 100.0        # car DC acceptance: limits hub charging
+  station_types:
+    ac:
+      name: eletroposto
+      charger_kw: 22.0
+      chargers_per_site: 6
+      share: 0.6            # 60% of the public energy at AC eletropostos
+      target_soc: 0.9
+      max_wait_min: 30      # gives up after waiting this long
+      coverage_radius_m: 500.0
+      min_spacing_m: 400.0
+      arrival_shape: [0, 0, 0, 0, 0, 0, 1, 3, 5, 5, 4, 4, 4, 4, 4, 4, 5, 6, 6, 5, 3, 2, 1, 0]
+    dc:
+      name: hub
+      charger_kw: 150.0
+      chargers_per_site: 4
+      share: 0.4            # 40% at DC hubs
+      target_soc: 0.8       # fast charging usually stops at 80%
+      max_wait_min: 15
+      coverage_radius_m: 1500.0
+      min_spacing_m: 800.0
+      arrival_shape: [1, 0, 0, 0, 0, 1, 2, 4, 5, 4, 3, 3, 4, 3, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1]

@@ -38,7 +38,7 @@ O coordenador chama apenas uma função por módulo. Todas retornam `(Profile, t
 
 Dentro de cada módulo, o algoritmo é escolhido por `strategy:` no YAML, entre as funções registradas em `src/<módulo>/strategies.py`; `tests/test_strategies.py` verifica cada estratégia registrada contra o contrato. Veja [ONBOARDING.md](../ONBOARDING.md).
 
-O EVCS também publica `evcs.planning` (`from_config`, `charging_needs`, `hourly_demand`, `greedy_coverage`), usado pela triagem de locais e pelo estudo S1. Alterar essas assinaturas, as chaves de `kpis` é mudança de interface compartilhada e exige revisão dos três.
+O EVCS também publica `evcs.planning` (`from_config`, `with_fleet`, `generate_sessions`, `size_sites`, `simulate`, `resample`, `greedy_coverage`), usado pela triagem de locais e pelo estudo S1; ver `src/evcs/README.md`. Alterar essas assinaturas, as chaves de `kpis` é mudança de interface compartilhada e exige revisão dos três.
 
 Na execução integrada, infraestrutura EVCS e demanda atendida são entradas do V2G; demanda nominal da rede mais EVCS/frota alimenta o BESS. Portanto, resultados integrados podem mudar quando outro módulo muda. O alvo é independência de implementação, testes e arquivos, preservando coerência elétrica. Os horizontes dos três YAML devem coincidir para integrar; divergências geram erro explícito. O bloco `standalone` do V2G e a curva `standalone_demand_kw` do BESS não são usados pelo coordenador.
 
