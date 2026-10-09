@@ -48,7 +48,9 @@ def run_integrated(config_dir, grid, evcs_profile, enable_v2g=True):
         raise ValueError("Integrated EVCS/BESS/V2G time grids must match")
     profile = get_strategy(config.get("strategy","heuristic"))(
         Station(**evcs_profile.metadata["station"]),grid,vehicles_from_config(config),
-        -evcs_profile.total_injection(),evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g)
+        # Only the shared host station's demand: public EVCS stations are separate equipment.
+        evcs_profile.metadata.get("station_demand_kw",-evcs_profile.total_injection()),
+        evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g)
     profile.metadata["kpis"] = dict(v2g_delivered_kwh=profile.metadata["v2g_delivered_kwh"])
     return profile,output_tables(profile)
 

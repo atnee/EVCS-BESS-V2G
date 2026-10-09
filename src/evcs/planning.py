@@ -52,9 +52,10 @@ class StationType:
     coverage_radius_m: float
     min_spacing_m: float
     arrival_shape: tuple        # 24 hourly weights for arrival times
+    capex_usd: float = 0.       # installed cost of one site (chargers + connection), used by the integration KPIs
 
     def __post_init__(self):
-        if self.key not in ("ac","dc") or self.charger_kw <= 0 or self.chargers_per_site < 1:
+        if self.key not in ("ac","dc") or self.charger_kw <= 0 or self.chargers_per_site < 1 or self.capex_usd < 0:
             raise ValueError("Invalid station type")
         if not 0 <= self.share <= 1 or not 0 < self.target_soc <= 1 or self.max_wait_min < 0:
             raise ValueError("Invalid station share/target/wait")

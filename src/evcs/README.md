@@ -122,8 +122,9 @@ Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`. Mapa com
 | `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`, tabelas de linhas, barras e inventário |
 | `results/ieee8500/evcs_screening/` | `hosting_capacity.csv` e `hosting_map.png` (capacidade por barra), `fleet_scenarios.csv`, `coverage_<n>_evs.png` |
 | `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
+| `results/ieee8500/s1/impact_sensitivity.png` | **Impacto S1 × S0 por frota**: queda causada pelas estações, barras afetadas, tensão mínima, operações de tap |
 | `results/ieee8500/s1/s0_intraday.csv`, `evs_<n>/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
-| `results/ieee8500/s1/evs_<n>/` | Por frota: `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `delta_v_map.png`, `sessions.png`, curvas por estação (`station_power_*.csv`) e `summary.json` |
+| `results/ieee8500/s1/evs_<n>/` | Por frota: **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, curvas por estação (`station_power_*.csv`) e `summary.json` |
 
 ## Resultados atuais (IEEE 8500 com os ajustes)
 
@@ -151,6 +152,33 @@ Detalhe da frota de 5000 carros (demanda a 1 min, 15 min e 1 h; tensão a cada p
 ![Demanda intradiária das estações e potência na subestação, 5000 carros](../../docs/evcs/figures/curves_intraday_5000_evs.png)
 
 ![Tensão mínima intradiária e queda causada pelas estações, 5000 carros](../../docs/evcs/figures/voltage_intraday_5000_evs.png)
+
+### Impacto S1 × S0: o que as estações fazem com a tensão
+
+Os perfis de tensão do S0 e do S1 parecem iguais porque **os reguladores compensam**: quando as estações puxam a tensão para baixo, eles sobem o tap. Para separar os dois efeitos, cada S1 é resolvido duas vezes: com os reguladores atuando e com os **taps travados nos valores do S0** (o efeito das estações sozinhas).
+
+![Impacto S1 × S0 por frota](../../docs/evcs/figures/impact_sensitivity.png)
+
+| | 2000 | 3000 | 4000 | 5000 |
+|---|---|---|---|---|
+| Maior queda causada pelas estações (taps do S0) | 0,90 % | 1,16 % | 1,39 % | **2,17 %** |
+| Barras com queda acima de 1 % (taps do S0) | 0 | 652 | 1.360 | **2.080** |
+| Tensão mínima sem a ação dos reguladores (S0: 0,951 pu) | 0,948 pu | 0,945 pu | 0,944 pu | **0,943 pu** |
+| Tensão mínima com os reguladores atuando | 0,951 pu | 0,951 pu | **0,949 pu** | 0,951 pu |
+| Operações de tap no dia (S0: 56) | 48 | 49 | 62 | 57 |
+| Perdas no dia, S0 → S1 (15 min) | 14,3 → 14,8 MWh | → 15,0 MWh | → 15,2 MWh | → 15,6 MWh (+9 %) |
+
+- **Sem os reguladores, a partir de 2000 carros a tensão já sairia da faixa** (abaixo de 0,95 pu). São eles que mantêm o alimentador dentro do limite, e com 4000 carros nem isso basta (0,949 pu).
+- A queda é maior **longe da subestação e no norte/oeste**, onde ficam a maioria dos eletropostos; perto da subestação a tensão até sobe (+1,1 %), porque o regulador da subestação sobe o tap.
+- Bus a bus, a comparação "com reguladores" mistura a **banda morta** dos reguladores (um banco pode parar um tap abaixo do que estava no S0); por isso o efeito das estações é medido com os taps travados, e o caso regulado pela tensão mínima que de fato ocorre.
+
+Detalhe para 5000 carros:
+
+![Variação de tensão S1 − S0, mapa da queda e taps, 5000 carros](../../docs/evcs/figures/impact_s0_s1_5000_evs.png)
+
+### S1 na integração S0–S4
+
+A integração (`python -m integration.coordinator`, passo de 1 h) usa as mesmas estações para **5000 carros** (bloco `integration:` do `evcs.yaml`): 2 hubs DC + 7 eletropostos, pico de 913 kW às 19h, mais a estação anfitriã do V2G (`station:`, 88 kW). Em relação ao S0: ponta da subestação **11.783 → 12.573 kW** (e passa das 18h para as 19h), perdas **+9 %**, tronco sul 2/0 ACSR **96 → 100,5 %**, tensão mínima com taps travados **0,938 pu**. É o ponto de partida do S2 (BESS) e do S3 (V2G): ver [`docs/escopo_S2_S3.md`](../../docs/escopo_S2_S3.md).
 
 ### Tabela por frota
 

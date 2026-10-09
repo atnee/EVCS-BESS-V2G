@@ -18,6 +18,7 @@ from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid, study_feeder
+from integration.impact import plot_impact, impact_summary, voltage_change
 from integration.evcs_screening import plot_sites, TYPE_STYLE, study_dir
 from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily, marker_scale,
                                   _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
@@ -42,10 +43,13 @@ def run_s1(evs, config_dir="configs", screening_dir=None, s0=None, sites=None):
     grid = dataclasses.replace(integrated_grid(config_dir),steps=1440//res,dt_h=res/60)
     profiles = [make_profile(grid,"external-zero",network.slack_bus,"ABC",np.zeros(grid.steps))]
     profiles += [make_profile(grid,f"{sites[bus]}-{bus}",bus,"ABC",-resample(kw,res)) for bus,kw in power.items()]
-    flow = PandapowerSolver(s0["multipliers"]).solve(network,combine(profiles,network))
+    profile = combine(profiles,network)
+    flow = PandapowerSolver(s0["multipliers"]).solve(network,profile)
+    # Same stations with the regulator taps of S0: the stations' own effect, without the regulators' response.
+    frozen = PandapowerSolver(s0["multipliers"],fixed_taps=s0["flow"]["source"]).solve(network,profile)
     times = flow["source"].time
     study = dict(s0,flow=flow,peak=times[int(flow["source"].p_kw.idxmax())],valley=times[int(flow["source"].p_kw.idxmin())])
-    return dict(study=study,s0=s0,params=params,sites=sites,sessions=sessions,power=power,evs=int(evs))
+    return dict(study=study,s0=s0,frozen=frozen,params=params,sites=sites,sessions=sessions,power=power,evs=int(evs))
 
 
 def delta_v(s1):
@@ -316,7 +320,62 @@ def summary(s1):
             "v_min_s0_pu": float(feeder_voltages(s0).v_pu.min()), "v_min_s1_pu": float(feeder_voltages(study).v_pu.min()),
             "buses_below_0.95": int(feeder_voltages(study).query("v_pu < .95").bus.nunique()),
             "max_equipment_loading_peak_pct": float(b[b.element_type=="trafo"].loading_pct.max()),
-            "max_line_loading_peak_pct": float(b[b.element_type=="line"].loading_pct.max())}
+            "max_line_loading_peak_pct": float(b[b.element_type=="line"].loading_pct.max()),
+            "impact": impact_summary(s0["flow"],study["flow"],study["buses"],study["network"].slack_bus,s1["frozen"])}
+
+
+def plot_s1_impact(s1):
+    study, res = s1["study"], s1["params"].resolution_min
+    total = resample(sum(s1["power"].values()),res)
+    return plot_impact(s1["s0"]["flow"],study["flow"],study["buses"],study["graph"],study["network"].slack_bus,
+                       frozen=s1["frozen"],sites={b: k for b,k in s1["sites"].items()},label="S1",demand_kw=total)
+
+
+def plot_impact_sensitivity(results):
+    """Across fleets. The stations' own effect is measured with the S0 taps (frozen): worst drop and buses
+    dropping more than 1 %. With regulators acting, bus-by-bus differences mix in the regulators' dead band
+    (a bank can rest one tap lower than in S0), so the regulated case is shown by the minimum voltage it
+    actually reaches, next to S0 and to the frozen-tap minimum."""
+    import matplotlib.pyplot as plt
+    from integration.impact import REGULATED, FROZEN, BASE_GRAY
+    evs = [r["evs"] for r in results]
+    x = np.arange(len(evs))
+    fig,(a1,a2,a4,a3) = plt.subplots(1,4,figsize=(20,4.8),layout="constrained")
+    _style(a1,"Maior queda causada pelas estações (taps do S0)")
+    a1.bar(x,[r["impact"]["frozen_taps"]["max_drop_pct"] for r in results],.6,color=FROZEN)
+    for i,r in enumerate(results):
+        a1.annotate(f'{r["impact"]["frozen_taps"]["max_drop_pct"]:.2f} %',(i,r["impact"]["frozen_taps"]["max_drop_pct"]),
+                    xytext=(0,3),textcoords="offset points",ha="center",fontsize=9,color=INK)
+    a1.set_ylabel("%",color=MUTED)
+    _style(a2,"Barras com queda acima de 1 % (taps do S0)")
+    a2.bar(x,[r["impact"]["frozen_taps"]["buses_drop_over_1pct"] for r in results],.6,color=FROZEN)
+    _style(a4,"Tensão mínima do dia")
+    s0 = results[0]["impact"]["v_min_pu_s0"]
+    a4.axhline(s0,color=BASE_GRAY,lw=2.2,label=f"S0 ({s0:.3f} pu)")
+    a4.plot(x,[r["impact"]["frozen_taps"]["v_min_pu"] for r in results],color=FROZEN,marker="o",lw=2,label="S1, taps do S0")
+    a4.plot(x,[r["impact"]["regulated"]["v_min_pu"] for r in results],color=REGULATED,marker="s",lw=2,label="S1, reguladores atuando")
+    a4.axhline(V_LIMITS[0],color=MUTED,lw=1,ls=(0,(4,3)))
+    a4.set_ylabel("pu",color=MUTED); a4.legend(frameon=False,fontsize=9,loc="lower left")
+    _style(a3,"Operações de tap no dia (todos os reguladores)")
+    a3.bar(x-.2,[sum(r["impact"]["tap_operations_s0"].values()) for r in results],.38,color=BASE_GRAY,label="S0")
+    a3.bar(x+.2,[sum(r["impact"]["tap_operations"].values()) for r in results],.38,color=REGULATED,label="S1")
+    a3.legend(frameon=False,fontsize=9)
+    for ax in (a1,a2,a3,a4):
+        ax.set_xticks(x,[f"{e} carros" for e in evs])
+    return fig
+
+
+def export_impact_sensitivity(output):
+    """Redraw impact_sensitivity.png from the saved evs_<n>/summary.json files."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    files = sorted(Path(output).glob("evs_*/summary.json"),key=lambda p: int(p.parent.name.split("_")[1]))
+    results = [json.loads(p.read_text(encoding="utf-8")) for p in files]
+    if len(results) > 1:
+        fig = plot_impact_sensitivity(results)
+        fig.savefig(Path(output)/"impact_sensitivity.png",dpi=200,facecolor=SURFACE)
+        plt.close(fig)
 
 
 def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None):
@@ -342,7 +401,11 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
             old.unlink()
         for name in ("voltages","branches","source"):
             s1["study"]["flow"][name].to_csv(out/f"{name}.csv",index=False)
-        intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads).to_csv(out/"intraday.csv",index=False)
+        day = intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads)
+        for name,flow in (("regulated",s1["study"]["flow"]),("frozen_taps",s1["frozen"])):
+            change = voltage_change(s0["flow"],flow,s0["buses"],s0["network"].slack_bus)
+            day[f"max_drop_{name}_pct"] = -change.groupby("time").dv_pu.min().to_numpy()*100
+        day.to_csv(out/"intraday.csv",index=False)
         delta_v(s1).to_csv(out/"delta_v.csv",index=False)
         s1["sessions"].to_csv(out/"sessions.csv",index=False)
         res = s1["params"].resolution_min
@@ -353,9 +416,8 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
             out/"station_power_hourly.csv",index=False)
         figures = {"allocation": plot_allocation(s1).figure, "curves_daily": plot_daily_curves(s1),
                    "curves_intraday": plot_intraday_curves(s1), "voltage_intraday": plot_intraday_voltage(s1),
-                   "sessions": plot_sessions(s1), "delta_v_map": plot_delta_v_map(s1).figure,
-                   "voltage_comparison": plot_profile_comparison(s1),
-                   "voltage_profile": plot_voltage_profile(s1["study"]), "voltage_envelope": plot_daily(s1["study"])}
+                   "sessions": plot_sessions(s1), "impact_s0_s1": plot_s1_impact(s1),
+                   "voltage_comparison": plot_profile_comparison(s1), "voltage_envelope": plot_daily(s1["study"])}
         for name,fig in figures.items():
             fig.savefig(out/f"{name}.png",dpi=200,facecolor=SURFACE)
             plt.close(fig)
@@ -363,6 +425,7 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
         (out/"summary.json").write_text(json.dumps(result,indent=2,default=str)+"\n",encoding="utf-8")
         results.append(result)
     export_intraday_sensitivity(output)
+    export_impact_sensitivity(output)
     return results
 
 
@@ -373,10 +436,11 @@ def main():
     parser.add_argument("--screening",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
     parser.add_argument("--intraday-only",action="store_true",
-                        help="only redraw intraday_sensitivity.png from the files already in --output")
+                        help="only redraw intraday_sensitivity.png and impact_sensitivity.png from the files in --output")
     args = parser.parse_args()
     if args.intraday_only:
         export_intraday_sensitivity(args.output or study_dir(args.configs,"s1"))
+        export_impact_sensitivity(args.output or study_dir(args.configs,"s1"))
         return
     print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
 

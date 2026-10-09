@@ -37,7 +37,9 @@ def combine(profiles: list[Profile], network) -> Profile:
     return result
 
 
-def run_scenarios(config_dir="configs"):
+def run_scenarios(config_dir="configs", frozen_taps=False):
+    """frozen_taps: also solve S1-S4 with the regulator taps of S0 (details[name]['frozen']), to separate
+    the effect of the new assets from the regulators' response (see integration.impact)."""
     grid = integrated_grid(config_dir)
     feeder = study_feeder(config_dir)  # configs/network.yaml
     config = read_parameters(Path(config_dir)/f"{feeder}.yaml")
@@ -77,17 +79,45 @@ def run_scenarios(config_dir="configs"):
                 metrics[key] += value  # capex_usd is summed across modules
         records.append(metrics)
         details[name] = {"flow":flow,"profile":profile,"network":network,"modules":modules}
+        if frozen_taps and name != "S0":
+            details[name]["frozen"] = PandapowerSolver(multipliers,fixed_taps=details["S0"]["flow"]["source"]).solve(network,profile)
     return pd.DataFrame(records),details
 
 
-def export_results(output="results/demo", config_dir="configs"):
+def export_impact(output, details):
+    """impact_<Sx>.png and impact.csv: each scenario against S0 (integration.impact)."""
+    import matplotlib.pyplot as plt
+    from network.topology import feeder_graph, bus_table
+    from integration.impact import plot_impact, impact_summary
+    network = details["S0"]["network"]
+    graph = feeder_graph(network.equipment["feeder_data"][0])
+    buses = bus_table(graph)
+    rows = []
+    for name,d in details.items():
+        if name == "S0":
+            continue
+        assets = sorted(set(d["profile"].data.bus)-{network.slack_bus})
+        fig = plot_impact(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,frozen=d.get("frozen"),
+                          sites={b: b for b in assets},label=name,demand_kw=-d["profile"].total_injection())
+        fig.savefig(output/f"impact_{name}.png",dpi=200)
+        plt.close(fig)
+        s = impact_summary(details["S0"]["flow"],d["flow"],buses,network.slack_bus,d.get("frozen"))
+        row = {"scenario": name, **{k: v for k,v in s.items() if not isinstance(v,dict)}}
+        for view in ("regulated","frozen_taps"):
+            row.update({f"{view}_{k}": v for k,v in s.get(view,{}).items()})
+        row.update(tap_operations_s0=sum(s["tap_operations_s0"].values()),tap_operations=sum(s["tap_operations"].values()))
+        rows.append(row)
+    pd.DataFrame(rows).to_csv(output/"impact.csv",index=False)
+
+
+def export_results(output="results/demo", config_dir="configs", frozen_taps=False):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import hashlib
     output = Path(output)
     output.mkdir(parents=True,exist_ok=True)
-    summary,details = run_scenarios(config_dir)
+    summary,details = run_scenarios(config_dir,frozen_taps)
     summary.to_csv(output/"summary.csv",index=False)
     fig,ax = plt.subplots(figsize=(9,4.8),layout="constrained")
     for name,d in details.items():
@@ -123,6 +153,7 @@ def export_results(output="results/demo", config_dir="configs"):
               "dataset_sha256":hashlib.sha256(json.dumps(details["S0"]["network"].equipment["feeder_data"][0],sort_keys=True).encode()).hexdigest(),
               "config_sha256":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(config_dir).glob("*.yaml")}}
     (output/"manifest.json").write_text(json.dumps(manifest,indent=2))
+    export_impact(output,details)
     return summary
 
 
@@ -130,8 +161,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output",default="results/demo")
     parser.add_argument("--configs",default="configs")
+    parser.add_argument("--frozen-taps",action="store_true",
+                        help="also solve S1-S4 with the S0 regulator taps (impact figures; ~+6 min on the IEEE 8500)")
     args=parser.parse_args()
-    print(export_results(args.output,args.configs).to_string(index=False))
+    print(export_results(args.output,args.configs,args.frozen_taps).to_string(index=False))
 
 if __name__ == "__main__":
     main()

@@ -93,9 +93,13 @@ def _run_3ph(net, init):
 
 
 class PandapowerSolver:
-    def __init__(self, load_multipliers=None, tolerance_mw=1e-8):
+    def __init__(self, load_multipliers=None, tolerance_mw=1e-8, fixed_taps=None):
+        """fixed_taps: optional table (one row per step, columns tap_<regulator>) such as the `source`
+        output of another solve. Regulator control is then switched off and the taps follow the table:
+        used to isolate the effect of new loads from the regulators' response."""
         self.load_multipliers = load_multipliers
         self.tolerance_mw = tolerance_mw
+        self.fixed_taps = fixed_taps
 
     def solve(self, network, profile: Profile) -> dict:
         """Profile contains added DER injections only; IEEE loads are built in."""
@@ -107,6 +111,11 @@ class PandapowerSolver:
         net = create_pandapower_network(network)
         nominal = net.asymmetric_load[POWER_COLUMNS].copy()
         load_ids = nominal.index[:len(network.equipment["feeder_data"][0]["loads"])]
+        controls = list(net.get("regulator_control",[]))
+        if self.fixed_taps is not None:
+            if len(self.fixed_taps) != profile.grid.steps:
+                raise ValueError("fixed_taps needs one row per step")
+            net["regulator_control"] = []
         additions = {}
         for bus in profile.data.bus.unique():
             additions[bus] = pp.create_asymmetric_load(net,net.bus_lookup[bus],name=f"DER:{bus}",type="wye")
@@ -116,6 +125,9 @@ class PandapowerSolver:
                 idx = additions[row.bus]
                 net.asymmetric_load.at[idx,f"p_{row.phase.lower()}_mw"] = -row.p_kw/1000
                 net.asymmetric_load.at[idx,f"q_{row.phase.lower()}_mvar"] = -row.q_kvar/1000
+            if self.fixed_taps is not None:
+                for r in controls:
+                    net.trafo.at[r["trafo"],"tap_pos"] = float(self.fixed_taps[f"tap_{r['name']}"].iloc[step])
             current_nominal = nominal.copy()
             current_nominal.loc[load_ids] *= multipliers[step]
             iterations = solve_snapshot(net,current_nominal,tolerance_mw=self.tolerance_mw,warm=step>0)
@@ -124,7 +136,7 @@ class PandapowerSolver:
                                q_kvar=float(ext[[f"q_{p}_mvar" for p in "abc"]].sum().sum()*1000),
                                converged=True,zip_iterations=iterations,load_multiplier=multipliers[step],
                                **{f"tap_{r['name']}": float(net.trafo.at[r["trafo"],"tap_pos"])
-                                  for r in net.get("regulator_control",[])}))
+                                  for r in controls}))
             for idx,b in net.bus.iterrows():
                 for phase in b.phases:
                     voltages.append(dict(time=time,bus=b["name"],phase=phase,
