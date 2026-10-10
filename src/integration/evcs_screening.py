@@ -14,6 +14,7 @@ from core.schemas import read_parameters
 from evcs.planning import (from_config, with_fleet, generate_sessions, size_sites, simulate, resample, greedy_coverage,
                            thin_candidates, optimal_coverage)
 from network.hosting import HostingStudy
+from network.feeder_loader import FEEDERS
 from network.topology import feeder_graph, bus_table
 from integration.s0_study import _style, _edges, save_figures, INK, MUTED, SURFACE
 from integration.scenarios import study_feeder
@@ -33,9 +34,26 @@ def candidate_table(network, buses, demand=None, spacing_m=0.):
     return thin_candidates(c,demand,spacing_m) if demand is not None else c.reset_index(drop=True)
 
 
-def hosting_sweep(study, candidates, max_kw=3000., tol_kw=10.):
-    full = study.sweep(candidates.bus,max_kw,tol_kw)
-    voltage_only = HostingStudy(study.network,line_limit_pct=np.inf,equipment_limit_pct=np.inf,tolerance_mw=study.tolerance_mw).sweep(candidates.bus,max_kw*2,tol_kw*5)
+def sweep_chunk(feeder, buses, max_kw, tol_kw, tolerance_mw, voltage_only=False):
+    """Hosting capacity of a group of buses in its own model (one worker process of hosting_sweep).
+    voltage_only: ignore line and equipment limits (electrical strength of the bus)."""
+    limits = dict(line_limit_pct=np.inf,equipment_limit_pct=np.inf) if voltage_only else {}
+    study = HostingStudy(feeder=feeder,tolerance_mw=tolerance_mw,**limits)
+    return study.sweep(buses,max_kw,tol_kw)
+
+
+def hosting_sweep(study, candidates, max_kw=3000., tol_kw=10., feeder=None, workers=None):
+    """Full criteria and voltage-only capacity of every candidate. With several CPU cores the buses are
+    dealt round-robin to parallel processes (integration.parallel), each with its own network model."""
+    from integration.parallel import run_parallel, default_workers
+    feeder = feeder or next(k for k,v in FEEDERS.items() if v["name"] == study.network.equipment["feeder_data"][0]["name"])
+    buses = list(candidates.bus)
+    n = default_workers(len(buses)) if workers is None else max(1,workers)
+    chunks = [buses[i::n] for i in range(n)]
+    tasks = [(feeder,c,max_kw,tol_kw,study.tolerance_mw,False) for c in chunks] + \
+            [(feeder,c,max_kw*2,tol_kw*5,study.tolerance_mw,True) for c in chunks]
+    parts = run_parallel(sweep_chunk,tasks,n)
+    full, voltage_only = pd.concat(parts[:n]), pd.concat(parts[n:])
     return candidates.merge(full,on="bus").merge(
         voltage_only.rename(columns={"hosting_kw":"voltage_only_kw","binding":"voltage_binding",
                                      "v_min_at_capacity":"voltage_v_min"}),on="bus")
@@ -89,7 +107,7 @@ def place_fleet(params, candidates, demand, buses=None, slack=None, excluded=(),
     return sessions,sizing,sites,coverage,phases
 
 
-def run_screening(config_dir="configs", fleets=FLEETS, hosting_csv=None, max_kw=3000., tol_kw=10.):
+def run_screening(config_dir="configs", fleets=FLEETS, hosting_csv=None, max_kw=3000., tol_kw=10., workers=None):
     params = from_config(read_parameters(Path(config_dir)/"evcs.yaml"))
     # 10 W outer-loop tolerance: hosting limits are searched to tol_kw anyway.
     study = HostingStudy(feeder=study_feeder(config_dir),tolerance_mw=1e-5)
@@ -102,7 +120,7 @@ def run_screening(config_dir="configs", fleets=FLEETS, hosting_csv=None, max_kw=
     if saved is not None and set(saved.bus) == set(candidates.bus):
         candidates = saved
     else:  # no sweep saved for this feeder/candidate set
-        candidates = hosting_sweep(study,candidates,max_kw,tol_kw)
+        candidates = hosting_sweep(study,candidates,max_kw,tol_kw,study_feeder(config_dir),workers)
     rows = []
     slack = study.network.slack_bus
     for evs in fleets:
@@ -239,13 +257,13 @@ def study_dir(config_dir="configs", study="evcs_screening"):
     return Path("results")/study_feeder(config_dir)/study
 
 
-def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=False):
+def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=False, workers=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     output = Path(output or study_dir(config_dir)); output.mkdir(parents=True,exist_ok=True)
     tables = output/"dados"; tables.mkdir(exist_ok=True)  # CSV tables apart from the figures
-    result = run_screening(config_dir,fleets,None if resweep else tables/"hosting_capacity.csv")
+    result = run_screening(config_dir,fleets,None if resweep else tables/"hosting_capacity.csv",workers=workers)
     result["candidates"].to_csv(tables/"hosting_capacity.csv",index=False)
     result["fleets"].to_csv(tables/"fleet_scenarios.csv",index=False)
     figures = {"hosting_capacity_map": plot_hosting_map(result).figure,
@@ -267,8 +285,9 @@ def main():
     parser.add_argument("--output",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--resweep",action="store_true",help="recompute the hosting sweep instead of reusing the CSV")
+    parser.add_argument("--workers",type=int,help="parallel processes for the hosting sweep (default: CPU cores - 1)")
     args = parser.parse_args()
-    result = export_screening(args.output,args.configs,resweep=args.resweep)
+    result = export_screening(args.output,args.configs,resweep=args.resweep,workers=args.workers)
     print(result["fleets"].drop(columns=["sites"]).to_string(index=False))
 
 

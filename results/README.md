@@ -8,6 +8,8 @@ Tudo aqui é **gerado pelos comandos** e não vai para o Git (exceto `demo_refer
 results/
 ├── ieee8500/                  alimentador de todos os estudos (configs/network.yaml)
 │   ├── resumo/                ← COMECE AQUI: 8 gráficos numerados + LEIA-ME.md
+│   ├── s0_vs_s1/              só o caso base × S1 (maior frota): ANALISE.md (S0, S1 e S0 × S1, qualidade de
+│   │                          energia), metrics.csv, composição das estações, quality_*, network_*
 │   ├── s0/                    caso base: network_topology, voltage_map_peak, voltage_profile_peak/valley,
 │   │                          voltage_range_day, demand_substation_power_day, lines_impedance/capacitance
 │   ├── evcs_screening/        hosting_capacity_map, stations_<n>_evs (onde ficam as estações de cada frota)
@@ -39,6 +41,7 @@ Todos os gráficos estão em inglês, um por arquivo. Para refazer só as figura
 | `ieee8500/s1/` | `python -m integration.s1_study` | ~12 min por frota |
 | `ieee8500/integration/` | `python -m integration.coordinator --output results/ieee8500/integration --frozen-taps` | ~15 min |
 | `ieee8500/resumo/` | `python -m integration.resumo` (também roda sozinho ao fim do S1 e da integração) | segundos |
+| `ieee8500/s0_vs_s1/` | `python -m integration.analysis` (`--evs 5000` para outra frota; também roda ao fim do S1) | ~15 s |
 | `modules/` | `python -m evcs`, `python -m bess`, `python -m v2g` | segundos |
 
 A pasta do alimentador segue `feeder` em `configs/network.yaml` (hoje `ieee8500`).

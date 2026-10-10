@@ -124,8 +124,11 @@ def redraw(config_dir="configs", results="results"):
         done.append("integration")
 
     from integration.resumo import export_resumo
+    from integration.analysis import export_analysis
     export_resumo(root)
     done.append("resumo")
+    if export_analysis(root,config_dir):
+        done.append("s0_vs_s1")
     return done
 
 

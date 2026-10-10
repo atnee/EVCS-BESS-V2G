@@ -19,6 +19,7 @@ from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid, study_feeder
+from integration.parallel import run_parallel
 from integration.impact import impact_figures, impact_summary, voltage_change, network_state_figures, flow_from_csv
 from integration.evcs_screening import plot_sites, TYPE_STYLE, study_dir
 from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_envelope, new_axes, save_figures, marker_scale,
@@ -329,11 +330,43 @@ def summary(s1):
             "impact": impact_summary(s0["flow"],study["flow"],study["buses"],study["network"].slack_bus,s1["frozen"])}
 
 
-def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None):
-    """Writes to `output` (default results/<feeder>/s1)."""
+def export_fleet(evs, output, config_dir, screening_dir, s0, overloads):
+    """Solve and export one fleet into output/evs_<n>/ (tables in dados/, one plot per figure);
+    returns its summary. Runs in a worker process when export_s1 runs fleets in parallel."""
     import matplotlib
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    s1 = run_s1(evs,config_dir,screening_dir,s0)
+    out = Path(output)/f"evs_{evs}"; out.mkdir(parents=True,exist_ok=True)
+    for old in out.glob("*"):
+        shutil.rmtree(old) if old.is_dir() else old.unlink()
+    tables = out/"dados"; tables.mkdir()  # CSV tables apart from the figures
+    for name in ("voltages","branches","source"):
+        s1["study"]["flow"][name].to_csv(tables/f"{name}.csv",index=False)
+        s1["frozen"][name].to_csv(tables/f"frozen_taps_{name}.csv",index=False)  # for redrawing
+    day = intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads)
+    for name,flow in (("regulated",s1["study"]["flow"]),("frozen_taps",s1["frozen"])):
+        change = voltage_change(s0["flow"],flow,s0["buses"],s0["network"].slack_bus)
+        day[f"max_drop_{name}_pct"] = -change.groupby("time").dv_pu.min().to_numpy()*100
+    day.to_csv(tables/"intraday.csv",index=False)
+    delta_v(s1).to_csv(tables/"delta_v.csv",index=False)
+    s1["sessions"].to_csv(tables/"sessions.csv",index=False)
+    res = s1["params"].resolution_min
+    pd.DataFrame(s1["power"]).assign(minute=range(1440)).to_csv(tables/"station_power_1min.csv",index=False)
+    pd.DataFrame({b: resample(kw,res) for b,kw in s1["power"].items()}).assign(
+        hour=np.arange(1440//res)*res/60).to_csv(tables/f"station_power_{res}min.csv",index=False)
+    pd.DataFrame({b: resample(kw,60) for b,kw in s1["power"].items()}).assign(hour=range(24)).to_csv(
+        tables/"station_power_hourly.csv",index=False)
+    save_figures(fleet_figures(s1,s0),out)
+    result = summary(s1)
+    (out/"summary.json").write_text(json.dumps(result,indent=2,default=str)+"\n",encoding="utf-8")
+    return result
+
+
+def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None, workers=None):
+    """Writes to `output` (default results/<feeder>/s1). workers: parallel processes, one fleet each
+    (default: integration.parallel.default_workers; 1 = in sequence)."""
+    import matplotlib
+    matplotlib.use("Agg")
     output = output or study_dir(config_dir,"s1")
     screening_dir = screening_dir or study_dir(config_dir)
     table = load_fleets(screening_dir)
@@ -346,37 +379,14 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
     intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(base_tables/"s0_intraday.csv",index=False)
     for name in ("voltages","branches","source"):  # base case at the same resolution, for redrawing
         s0["flow"][name].to_csv(base_tables/f"s0_{name}.csv",index=False)
-    results = []
-    for evs in fleets:
-        s1 = run_s1(evs,config_dir,screening_dir,s0)
-        out = Path(output)/f"evs_{evs}"; out.mkdir(parents=True,exist_ok=True)
-        for old in out.glob("*"):
-            shutil.rmtree(old) if old.is_dir() else old.unlink()
-        tables = out/"dados"; tables.mkdir()  # CSV tables apart from the figures
-        for name in ("voltages","branches","source"):
-            s1["study"]["flow"][name].to_csv(tables/f"{name}.csv",index=False)
-            s1["frozen"][name].to_csv(tables/f"frozen_taps_{name}.csv",index=False)  # for redrawing
-        day = intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads)
-        for name,flow in (("regulated",s1["study"]["flow"]),("frozen_taps",s1["frozen"])):
-            change = voltage_change(s0["flow"],flow,s0["buses"],s0["network"].slack_bus)
-            day[f"max_drop_{name}_pct"] = -change.groupby("time").dv_pu.min().to_numpy()*100
-        day.to_csv(tables/"intraday.csv",index=False)
-        delta_v(s1).to_csv(tables/"delta_v.csv",index=False)
-        s1["sessions"].to_csv(tables/"sessions.csv",index=False)
-        res = s1["params"].resolution_min
-        pd.DataFrame(s1["power"]).assign(minute=range(1440)).to_csv(tables/"station_power_1min.csv",index=False)
-        pd.DataFrame({b: resample(kw,res) for b,kw in s1["power"].items()}).assign(
-            hour=np.arange(1440//res)*res/60).to_csv(tables/f"station_power_{res}min.csv",index=False)
-        pd.DataFrame({b: resample(kw,60) for b,kw in s1["power"].items()}).assign(hour=range(24)).to_csv(
-            tables/"station_power_hourly.csv",index=False)
-        save_figures(fleet_figures(s1,s0),out)
-        result = summary(s1)
-        (out/"summary.json").write_text(json.dumps(result,indent=2,default=str)+"\n",encoding="utf-8")
-        results.append(result)
+    # One process per fleet (integration.parallel): the fleets are independent once S0 is solved.
+    results = run_parallel(export_fleet,[(evs,output,config_dir,screening_dir,s0,overloads) for evs in fleets],workers)
     export_sensitivity(output)
-    if Path(output).name == "s1":  # default layout results/<feeder>/s1: refresh results/<feeder>/resumo
+    if Path(output).name == "s1":  # default layout results/<feeder>/s1: refresh the summary and the S0 x S1 analysis
         from integration.resumo import export_resumo
+        from integration.analysis import export_analysis
         export_resumo(Path(output).parent)
+        export_analysis(Path(output).parent,config_dir)
     return results
 
 
@@ -386,6 +396,7 @@ def main():
     parser.add_argument("--configs",default="configs")
     parser.add_argument("--screening",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
+    parser.add_argument("--workers",type=int,help="parallel processes, one fleet each (default: CPU cores - 1; 1 = sequence)")
     parser.add_argument("--intraday-only",action="store_true",
                         help="only redraw the all-fleet figures and the summary from the files in --output")
     args = parser.parse_args()
@@ -394,7 +405,7 @@ def main():
         from integration.resumo import export_resumo
         export_resumo(Path(args.output or study_dir(args.configs,"s1")).parent)
         return
-    print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
+    print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs,args.workers),indent=2,default=str))
 
 
 if __name__ == "__main__":

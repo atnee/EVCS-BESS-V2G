@@ -239,15 +239,16 @@ A otimização leva menos de 2 s; o tempo está no fluxo de potência trifásico
 |---|---|
 | Varredura de capacidade da rede (só na 1ª vez; fica salva) | ~1,5 h |
 | Triagem com a otimização (5 frotas) | ~4 min |
-| S1, 5 frotas × 96 passos × 2 soluções (reguladores atuando e taps travados) | ~1 h |
+| S1, 5 frotas × 96 passos × 2 soluções (reguladores atuando e taps travados), em paralelo | ~35 min (antes ~65 min em sequência) |
 | Integração S0–S4 com `--frozen-taps` | ~15 min |
 | Refazer só os gráficos (`python -m integration.redraw`) | ~3 min |
+| Análise S0 × S1 com qualidade de energia (`python -m integration.analysis`) | ~15 s |
 
-Testes feitos (Ryzen 5 3600, 6 núcleos, 16 GB): o **numba** acelera só ~6 % (não vale torná-lo obrigatório); o **paralelismo** (um processo por frota, um núcleo por processo: `OMP_NUM_THREADS=1`) roda 5 tarefas em 96 s contra 225 s em sequência, **~2,3× mais rápido**. Depende do número de núcleos do processador, não da placa de vídeo. Próximo passo: implementar no S1 e na varredura de capacidade, com o número de processos ajustado ao computador.
+Testes feitos (Ryzen 5 3600, 6 núcleos, 16 GB): o **numba** acelera só ~6 % (não vale torná-lo obrigatório); o **paralelismo** (um processo por frota, um núcleo por processo: `OMP_NUM_THREADS=1`) roda 5 tarefas em 96 s contra 225 s em sequência, **~2,3× mais rápido**. Depende do número de núcleos do processador, não da placa de vídeo. Implementado (`integration/parallel.py`): o S1 roda uma frota por processo e a varredura de capacidade divide as barras entre os processos; o número de processos é o de núcleos físicos menos um (`--workers` ou a variável `EVCS_WORKERS` mudam isso). Os resultados são idênticos aos da execução em sequência.
 
 ## Limitações e próximos passos
 
-- **Paralelismo (próximo passo):** ver "Tempo de execução".
+- **Análise S0 × S1:** `results/ieee8500/s0_vs_s1/ANALISE.md` compara o caso base e o S1 com indicadores de qualidade de energia (ANSI C84.1 e PRODIST Módulo 8 como referências); harmônicos e flicker não são avaliados.
 - **Otimização:** eletropostos por cobertura total de custo mínimo (`optimal_coverage`, HiGHS); os hubs DC ainda são escolhidos de forma gulosa e a rede não entra como restrição da otimização (o impacto é medido no S1, de propósito: o S1 sobrecarrega a rede e o S2 alivia).
 - **Um dia representativo só:** a simulação é de um único dia, com uma semente. Para resultados estatísticos, rodar várias sementes (Monte Carlo).
 - **Distribuição das sessões:** as sessões são divididas entre as estações ao acaso, não pela distância do carro à estação.

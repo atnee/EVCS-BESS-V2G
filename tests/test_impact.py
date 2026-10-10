@@ -53,3 +53,21 @@ class TestFixedTaps(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestQualityMetrics(unittest.TestCase):
+    """integration.analysis: phase voltage unbalance (PVUR) and PRODIST time shares."""
+    def test_pvur(self):
+        from integration.analysis import pvur
+        t = pd.Timestamp("2026-01-01",tz="UTC")
+        v = pd.DataFrame(dict(time=[t]*3,bus=["b"]*3,phase=list("ABC"),v_pu=[1.,1.,.97]))
+        out = pvur({"voltages": v},{"b"})
+        self.assertAlmostEqual(out.pvur_pct.iloc[0],(1-.99)/.99*100*2,places=6)  # max deviation from mean 0.99
+
+    def test_prodist_shares(self):
+        from integration.analysis import prodist_shares
+        times = pd.date_range("2026-01-01",periods=4,freq="15min",tz="UTC")
+        worst = pd.DataFrame(dict(time=times,bus="b",v_pu=[1.,.92,.89,1.06]))
+        s = prodist_shares(worst).loc["b"]
+        self.assertEqual(s.drp_pct,25.)   # 0.92: precarious
+        self.assertEqual(s.drc_pct,50.)   # 0.89 and 1.06: critical
