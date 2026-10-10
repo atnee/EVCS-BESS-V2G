@@ -123,6 +123,7 @@ python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.p
 | `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`; tabelas de linhas, barras e inventário em `dados/` |
 | `results/ieee8500/evcs_screening/` | `hosting_map.png` (capacidade por barra), `coverage_<n>_evs.png`; em `dados/`: `hosting_capacity.csv`, `fleet_scenarios.csv` |
 | `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
+| `results/ieee8500/s1/sobrecarga_por_frota.png` | **Sobrecarga S0 × S1 conforme a quantidade de carros** (ponta, linha mais carregada, tensão, queda, perdas); tabela em `dados/sobrecarga_por_frota.csv` |
 | `results/ieee8500/s1/impact_sensitivity.png` | **Impacto S1 × S0 por frota**: queda causada pelas estações, barras afetadas, tensão mínima, operações de tap |
 | `results/ieee8500/s1/dados/s0_intraday.csv`, `evs_<n>/dados/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
 | `results/ieee8500/s1/evs_<n>/` | Por frota: **`network_state.png`** (rede no S0 e no S1 lado a lado), **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes) em `dados/` |

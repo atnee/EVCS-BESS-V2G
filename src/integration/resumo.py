@@ -13,13 +13,15 @@ import pandas as pd
 from integration.scenarios import study_feeder
 
 FIGURES = [  # (source relative to results/<feeder>, name in resumo/, what it shows)
-    ("s1/intraday_sensitivity.png","1_curvas_do_dia_por_frota.png",
+    ("s1/sobrecarga_por_frota.png","1_sobrecarga_por_frota.png",
+     "S0 × S1 em função da quantidade de carros: quanto cada indicador da rede piora à medida que a demanda de EV cresce."),
+    ("s1/intraday_sensitivity.png","2_curvas_do_dia_por_frota.png",
      "Como o dia muda com 2000–5000 carros: demanda das estações, subestação, tensão mínima e linha mais carregada, a cada 15 min."),
-    ("s1/impact_sensitivity.png","2_tensao_por_frota.png",
+    ("s1/impact_sensitivity.png","3_tensao_por_frota.png",
      "O que as estações fazem com a tensão em cada frota: queda causada por elas, barras afetadas, tensão mínima com e sem os reguladores."),
-    ("s1/evs_{evs}/network_state.png","3_rede_S0_x_S1_{evs}_carros.png",
+    ("s1/evs_{evs}/network_state.png","4_rede_S0_x_S1_{evs}_carros.png",
      "A rede no S0 e no S1 lado a lado: mapa de tensão, carregamento das linhas com as estações, equipamentos mais carregados."),
-    ("integration/network_state_S1.png","4_integracao_rede_S0_x_S1.png",
+    ("integration/network_state_S1.png","5_integracao_rede_S0_x_S1.png",
      "O mesmo na integração S0–S4 (passo de 1 h), que é o ponto de partida do S2 (BESS) e do S3 (V2G)."),
 ]
 
@@ -31,6 +33,121 @@ def _num(x, digits=0):
 def _peak(table):
     i = int(table.p_kw.idxmax())
     return table.p_kw.iloc[i], pd.Timestamp(table.time.iloc[i])
+
+
+def overload_table(s1_dir, dt_h=.25):
+    """One row per fleet, S0 as 0 cars: EV demand added and how each network indicator responds."""
+    s1_dir = Path(s1_dir)
+    s0 = pd.read_csv(s1_dir/"dados"/"s0_intraday.csv")
+    fleets = sorted(int(d.name.split("_")[1]) for d in s1_dir.glob("evs_*") if (d/"summary.json").exists())
+    first = json.loads((s1_dir/f"evs_{fleets[0]}"/"summary.json").read_text(encoding="utf-8"))["impact"]
+    def indicators(day):
+        return dict(ponta_kw=day.p_kw.max(),hora_ponta=pd.Timestamp(day.time.iloc[int(day.p_kw.idxmax())]),
+                    linha_max_pct=day.line_max_pct.max(),horas_linha_95=(day.line_max_pct >= 95).sum()*dt_h,
+                    equip_max_pct=day.equipment_max_pct.max(),vmin_pu=day.v_min_pu.min(),
+                    horas_v_abaixo=(day.v_min_pu < .95).sum()*dt_h)
+    rows = [dict(carros=0,ev_pico_kw=0.,ev_mwh=0.,**indicators(s0),vmin_sem_reg_pu=first["v_min_pu_s0"],queda_max_pct=0.,
+                 barras_queda_1pct=0,perdas_mwh=first["losses_kwh_s0"]/1000,taps=sum(first["tap_operations_s0"].values()),
+                 atendido=float("nan"))]
+    for evs in fleets:
+        d = s1_dir/f"evs_{evs}"
+        summary = json.loads((d/"summary.json").read_text(encoding="utf-8"))
+        m = summary["impact"]
+        ev = pd.read_csv(next((d/"dados").glob("station_power_*min.csv"))).drop(columns="hour").sum(axis=1)
+        energy = sum(t["energy_kwh"] for t in summary["types"].values())
+        unserved = sum(t["unserved_kwh"] for t in summary["types"].values())
+        rows.append(dict(carros=evs,ev_pico_kw=ev.max(),ev_mwh=ev.sum()*dt_h/1000,**indicators(pd.read_csv(d/"dados"/"intraday.csv")),
+                         vmin_sem_reg_pu=m["frozen_taps"]["v_min_pu"],queda_max_pct=m["frozen_taps"]["max_drop_pct"],
+                         barras_queda_1pct=m["frozen_taps"]["buses_drop_over_1pct"],perdas_mwh=m["losses_kwh"]/1000,
+                         taps=sum(m["tap_operations"].values()),atendido=1-unserved/energy))
+    return pd.DataFrame(rows)
+
+
+def overload_markdown(t):
+    s0 = t.iloc[0]
+    cols = ["S0"]+[f"{int(c)} carros" for c in t.carros[1:]]
+    def line(label, values):
+        return f"| {label} | "+" | ".join(values)+" |"
+    pct = lambda x,ref: "" if x == ref else f" ({'+' if x >= ref else ''}{_num(100*(x/ref-1),1)} %)"
+    out = ["| | "+" | ".join(cols)+" |","|---|"+"---|"*len(cols),
+           line("Demanda de EV na ponta (15 min)",[f"{_num(x)} kW" for x in t.ev_pico_kw]),
+           line("Energia de EV no dia",[f"{_num(x,1)} MWh" for x in t.ev_mwh]),
+           line("EV na ponta / ponta do S0",[f"{_num(100*x/s0.ponta_kw,1)} %" for x in t.ev_pico_kw]),
+           line("**Ponta na subestação**",[f"{_num(x)} kW{pct(x,s0.ponta_kw)}" for x in t.ponta_kw]),
+           line("Hora da ponta",[f"{h:%H:%M}" for h in t.hora_ponta]),
+           line("**Linha mais carregada**",[f"{_num(x,1)} %" for x in t.linha_max_pct]),
+           line("Horas com linha ≥ 95 %",[f"{_num(x,2)} h" for x in t.horas_linha_95]),
+           line("Transformador/regulador mais carregado",[f"{_num(x,1)} %" for x in t.equip_max_pct]),
+           line("**Tensão mínima sem a ação dos reguladores**",[f"{_num(x,3)} pu" for x in t.vmin_sem_reg_pu]),
+           line("Tensão mínima com os reguladores",[f"{_num(x,3)} pu" for x in t.vmin_pu]),
+           line("Maior queda causada pelas estações",[f"{_num(x,2)} %" for x in t.queda_max_pct]),
+           line("Barras com queda > 1 %",[str(int(x)) for x in t.barras_queda_1pct]),
+           line("Perdas no dia",[f"{_num(x,1)} MWh{pct(x,s0.perdas_mwh)}" for x in t.perdas_mwh]),
+           line("Operações de tap no dia",[str(int(x)) for x in t.taps]),
+           line("Recargas atendidas",["—"]+[f"{_num(100*x)} %" for x in t.atendido[1:]])]
+    return "\n".join(out)
+
+
+def plot_overload(t):
+    """Network indicators against the number of cars (S0 = 0): how the added EV demand loads the feeder."""
+    import matplotlib.pyplot as plt
+    from integration.s0_study import _style, INK, MUTED, SURFACE, V_LIMITS
+    from integration.impact import REGULATED, FROZEN, BASE_GRAY
+    x = t.carros.to_numpy()
+    labels = ["S0"]+[f"{int(c)}" for c in x[1:]]
+    fig,axes = plt.subplots(2,3,figsize=(18,9.5),layout="constrained")
+    fig.suptitle("Sobrecarga da rede em função da quantidade de carros elétricos (S0 = 0 carros; S1 a cada 15 min)",
+                 fontsize=13,color=INK,x=.01,ha="left")
+    def finish(ax, ylabel):
+        ax.set_xticks(x,labels); ax.set_xlabel("carros elétricos",color=MUTED); ax.set_ylabel(ylabel,color=MUTED)
+    def tag(ax, xs, ys, fmt, dy=6):
+        for a,b in zip(xs,ys):
+            ax.annotate(fmt(b),(a,b),xytext=(0,dy),textcoords="offset points",ha="center",fontsize=8,color=INK)
+
+    ax = axes[0,0]; _style(ax,"Ponta na subestação: carga do S0 + EV")
+    base = t.ponta_kw.iloc[0]
+    ax.bar(x,[base]*len(x),width=700,color=BASE_GRAY,label="ponta do S0")
+    ax.bar(x,t.ponta_kw-base,bottom=base,width=700,color=REGULATED,label="acréscimo com EV")
+    tag(ax,x,t.ponta_kw,lambda v: f"{v:,.0f}".replace(",","."))
+    ax.set_ylim(base*.9,t.ponta_kw.max()*1.03); ax.legend(frameon=False,fontsize=9,loc="upper left"); finish(ax,"kW")
+
+    ax = axes[0,1]; _style(ax,"Demanda de EV na ponta (15 min) e energia no dia")
+    ax.plot(x,t.ev_pico_kw,color=REGULATED,marker="o",lw=2,label="pico de EV (kW)")
+    tag(ax,x,t.ev_pico_kw,lambda v: f"{v:,.0f} kW".replace(",","."))
+    twin = ax.twinx(); twin.plot(x,t.ev_mwh,color=BASE_GRAY,marker="s",lw=2,ls=(0,(4,2)),label="energia (MWh/dia)")
+    twin.set_ylabel("MWh/dia",color=MUTED); twin.tick_params(colors=MUTED,labelsize=8); twin.spines["top"].set_visible(False)
+    ax.legend(handles=ax.get_lines()+twin.get_lines(),frameon=False,fontsize=9,loc="upper left"); finish(ax,"kW")
+
+    ax = axes[0,2]; _style(ax,"Linha mais carregada (sem sobrecargas que já existiam)")
+    ax.plot(x,t.linha_max_pct,color=FROZEN,marker="o",lw=2)
+    tag(ax,x,t.linha_max_pct,lambda v: f"{v:.1f} %")
+    ax.axhline(100,color=MUTED,lw=1,ls=(0,(4,3))); ax.annotate("limite",(x[0],100),xytext=(2,3),textcoords="offset points",fontsize=8,color=MUTED)
+    for a,h in zip(x,t.horas_linha_95):
+        ax.annotate(f"{h:.2f} h ≥ 95 %".replace(".",","),(a,t.linha_max_pct.min()-.6),ha="center",fontsize=8,color=MUTED)
+    ax.set_ylim(t.linha_max_pct.min()-1,101.5); finish(ax,"%")
+
+    ax = axes[1,0]; _style(ax,"Tensão mínima do dia")
+    ax.plot(x,t.vmin_sem_reg_pu,color=FROZEN,marker="o",lw=2,label="sem a ação dos reguladores (taps do S0)")
+    ax.plot(x,t.vmin_pu,color=REGULATED,marker="s",lw=2,label="com os reguladores atuando")
+    tag(ax,x,t.vmin_sem_reg_pu,lambda v: f"{v:.3f}",dy=-12)
+    ax.axhline(V_LIMITS[0],color=MUTED,lw=1,ls=(0,(4,3))); ax.annotate("limite 0,95 pu",(x[-1],V_LIMITS[0]),xytext=(-2,3),
+                                                                        textcoords="offset points",ha="right",fontsize=8,color=MUTED)
+    ax.legend(frameon=False,fontsize=9,loc="lower left"); finish(ax,"pu")
+
+    ax = axes[1,1]; _style(ax,"Queda de tensão causada pelas estações (taps do S0)")
+    ax.bar(x,t.barras_queda_1pct,width=700,color=FROZEN,alpha=.35,label="barras com queda > 1 %")
+    tag(ax,x,t.barras_queda_1pct,lambda v: f"{int(v)}")
+    twin = ax.twinx(); twin.plot(x,t.queda_max_pct,color=FROZEN,marker="o",lw=2,label="maior queda (%)")
+    twin.set_ylabel("maior queda (%)",color=MUTED); twin.tick_params(colors=MUTED,labelsize=8); twin.spines["top"].set_visible(False)
+    ax.legend(handles=[*ax.containers[:1],*twin.get_lines()],frameon=False,fontsize=9,loc="upper left"); finish(ax,"barras")
+
+    ax = axes[1,2]; _style(ax,"Perdas no dia e transformador/regulador mais carregado")
+    ax.plot(x,t.perdas_mwh,color=INK,marker="o",lw=2,label="perdas (MWh/dia)")
+    tag(ax,x,t.perdas_mwh,lambda v: f"{v:.1f}".replace(".",","))
+    twin = ax.twinx(); twin.plot(x,t.equip_max_pct,color=BASE_GRAY,marker="s",lw=2,ls=(0,(4,2)),label="regulador mais carregado (%)")
+    twin.set_ylim(0,100); twin.set_ylabel("%",color=MUTED); twin.tick_params(colors=MUTED,labelsize=8); twin.spines["top"].set_visible(False)
+    ax.legend(handles=ax.get_lines()+twin.get_lines(),frameon=False,fontsize=9,loc="upper left"); finish(ax,"MWh")
+    return fig
 
 
 def s0_s1_table(s1_dir, evs):
@@ -81,6 +198,17 @@ def export_resumo(feeder_dir, evs=None):
     evs = evs or (max(fleets) if fleets else None)
     out = feeder_dir/"resumo"
     out.mkdir(parents=True,exist_ok=True)
+    overload = None
+    if fleets and (s1_dir/"dados"/"s0_intraday.csv").exists():
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from integration.s0_study import SURFACE
+        overload = overload_table(s1_dir)
+        overload.to_csv(s1_dir/"dados"/"sobrecarga_por_frota.csv",index=False)
+        fig = plot_overload(overload)
+        fig.savefig(s1_dir/"sobrecarga_por_frota.png",dpi=170,facecolor=SURFACE)
+        plt.close(fig)
     for old in out.glob("*.png"):
         old.unlink()
     shown = []
@@ -92,6 +220,12 @@ def export_resumo(feeder_dir, evs=None):
     doc = [f"# Resumo — {feeder_dir.name.upper()}","",
            "Comece por aqui. Figuras numeradas na ordem de leitura; as tabelas completas estão nas pastas de cada estudo "
            "(`s0/`, `evcs_screening/`, `s1/`, `integration/`), em subpastas `dados/`.",""]
+    if overload is not None:
+        doc += ["## Sobrecarga: S0 × S1 conforme a quantidade de carros (passo de 15 min)","",
+                "A quantidade de carros é a demanda de EV acrescentada à rede; S0 é o caso sem carros.","",
+                overload_markdown(overload),"",
+                "Linhas em negrito: ponta da subestação, linha mais carregada e tensão mínima sem a ação dos reguladores "
+                "são os indicadores que mais respondem à demanda de EV.",""]
     if evs is not None and (s1_dir/"dados"/"s0_intraday.csv").exists():
         doc += [f"## S0 × S1 com {evs} carros (estudo do EVCS, passo de 15 min)","",s0_s1_table(s1_dir,evs),"",
                 "Os reguladores sobem o tap e escondem boa parte do efeito na tensão; a linha \"sem a ação dos reguladores\" "
