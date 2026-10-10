@@ -108,23 +108,24 @@ python -m integration.s1_study --intraday-only    # só redesenha a figura intra
 python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.py -q
 ```
 
-- A **varredura de capacidade** (parte demorada da triagem) fica salva em `hosting_capacity.csv` e é reaproveitada enquanto as candidatas forem as mesmas; `--resweep` força refazer (necessário se a rede mudar).
+- A **varredura de capacidade** (parte demorada da triagem) fica salva em `dados/hosting_capacity.csv` e é reaproveitada enquanto as candidatas forem as mesmas; `--resweep` força refazer (necessário se a rede mudar).
 - O alimentador de todos os estudos (inclusive a integração S0–S4) é escolhido em `configs/network.yaml` (`ieee8500`; `ieee123` ainda funciona). Os dados da rede vêm de `src/network/data/ieee8500.json`, gerado por `scripts/build_ieee8500_data.py` (só precisa rodar se os arquivos-fonte mudarem).
 - O notebook `notebooks/01_evcs_ayrton.ipynb` mostra os resultados salvos e tem uma célula para rodar tudo de novo.
 - `results/` não vai para o Git. As figuras deste README estão copiadas em `docs/evcs/figures/`.
 
 ### Saídas
 
-Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`. Mapa completo em [`results/README.md`](../../results/README.md).
+**Comece por `results/ieee8500/resumo/`**: as 4 figuras principais e um `LEIA-ME.md` de uma página com a tabela S0 × S1 (atualizado ao fim do S1 e da integração, ou com `python -m integration.resumo`). Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`; figuras na pasta, tabelas CSV na subpasta `dados/`. Mapa completo em [`results/README.md`](../../results/README.md).
 
 | Pasta / arquivo | Conteúdo |
 |---|---|
-| `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`, tabelas de linhas, barras e inventário |
-| `results/ieee8500/evcs_screening/` | `hosting_capacity.csv` e `hosting_map.png` (capacidade por barra), `fleet_scenarios.csv`, `coverage_<n>_evs.png` |
+| `results/ieee8500/resumo/` | **Comece aqui**: 4 figuras numeradas + `LEIA-ME.md` com a tabela S0 × S1 e a integração |
+| `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`; tabelas de linhas, barras e inventário em `dados/` |
+| `results/ieee8500/evcs_screening/` | `hosting_map.png` (capacidade por barra), `coverage_<n>_evs.png`; em `dados/`: `hosting_capacity.csv`, `fleet_scenarios.csv` |
 | `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
 | `results/ieee8500/s1/impact_sensitivity.png` | **Impacto S1 × S0 por frota**: queda causada pelas estações, barras afetadas, tensão mínima, operações de tap |
-| `results/ieee8500/s1/s0_intraday.csv`, `evs_<n>/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
-| `results/ieee8500/s1/evs_<n>/` | Por frota: **`network_state.png`** (rede no S0 e no S1 lado a lado), **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, curvas por estação (`station_power_*.csv`) e `summary.json` |
+| `results/ieee8500/s1/dados/s0_intraday.csv`, `evs_<n>/dados/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
+| `results/ieee8500/s1/evs_<n>/` | Por frota: **`network_state.png`** (rede no S0 e no S1 lado a lado), **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes) em `dados/` |
 
 ## Resultados atuais (IEEE 8500 com os ajustes)
 

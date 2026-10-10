@@ -9,6 +9,7 @@ results/<feeder>/s1/; the feeder comes from configs/network.yaml.
 """
 from pathlib import Path
 import argparse
+import shutil
 import dataclasses
 import json
 import numpy as np
@@ -27,7 +28,7 @@ S0_GRAY, S1_RED = "#b9b8b3", "#d03b3b"
 
 
 def load_fleets(screening_dir):
-    fleets = pd.read_csv(Path(screening_dir)/"fleet_scenarios.csv")
+    fleets = pd.read_csv(Path(screening_dir)/"dados"/"fleet_scenarios.csv")
     fleets["sites"] = fleets.sites.apply(json.loads)
     return fleets.set_index("evs")
 
@@ -185,8 +186,8 @@ def plot_intraday_sensitivity(output):
     station demand, substation power, minimum voltage and highest line loading, 15 min."""
     import matplotlib.pyplot as plt
     output = Path(output)
-    s0 = pd.read_csv(output/"s0_intraday.csv")
-    fleets = sorted(int(d.name.split("_")[1]) for d in output.glob("evs_*") if (d/"intraday.csv").exists())
+    s0 = pd.read_csv(output/"dados"/"s0_intraday.csv")
+    fleets = sorted(int(d.name.split("_")[1]) for d in output.glob("evs_*") if (d/"dados"/"intraday.csv").exists())
     steps = len(s0)
     hours = np.arange(steps)*24/steps
     fig,axes = plt.subplots(4,1,figsize=(13,13),layout="constrained",sharex=True,height_ratios=(2,2,2,2))
@@ -198,8 +199,8 @@ def plot_intraday_sensitivity(output):
         ax.step(hours,s0[key],where="post",color=S0_GRAY,lw=2.6,label="S0 (caso base)")
     for evs,color in zip(fleets,FLEET_COLORS[-len(fleets):] if len(fleets) <= len(FLEET_COLORS) else FLEET_COLORS*9):
         d = output/f"evs_{evs}"
-        table = pd.read_csv(d/"intraday.csv")
-        stations = pd.read_csv(next(d.glob("station_power_*min.csv"))).drop(columns="hour").sum(axis=1)
+        table = pd.read_csv(d/"dados"/"intraday.csv")
+        stations = pd.read_csv(next((d/"dados").glob("station_power_*min.csv"))).drop(columns="hour").sum(axis=1)
         label = f"{evs} carros"
         axes[0].step(np.arange(len(stations))*24/len(stations),stations,where="post",color=color,lw=1.8,label=label)
         for key,ax in (("p_kw",axes[1]),("v_min_pu",axes[2]),("line_max_pct",axes[3])):
@@ -373,16 +374,16 @@ def export_network_states(output, config_dir="configs"):
     from network.feeder_loader import read_feeder_data
     from network.topology import feeder_graph, bus_table
     output = Path(output)
-    if not (output/"s0_voltages.csv").exists():
+    if not (output/"dados"/"s0_voltages.csv").exists():
         return
     feeder = study_feeder(config_dir)
     graph = feeder_graph(read_feeder_data(feeder))
     buses, slack = bus_table(graph), graph.graph["source"]
-    base = flow_from_csv(output,"s0_")
+    base = flow_from_csv(output/"dados","s0_")
     fleets = load_fleets(study_dir(config_dir))
     for d in sorted(output.glob("evs_*"),key=lambda p: int(p.name.split("_")[1])):
         evs = int(d.name.split("_")[1])
-        fig = plot_network_state(base,flow_from_csv(d),buses,graph,slack,fleets.loc[evs].sites,
+        fig = plot_network_state(base,flow_from_csv(d/"dados"),buses,graph,slack,fleets.loc[evs].sites,
                                  title=f"Rede no S0 e no S1 com {evs} carros")
         fig.savefig(d/"network_state.png",dpi=170,facecolor=SURFACE)
         plt.close(fig)
@@ -414,31 +415,32 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
         fleets = sorted({params.fleet.evs,*table.index})
     s0 = run_s0(config_dir,params.resolution_min,study_feeder(config_dir))
     overloads = base_overloads(s0["flow"])
-    Path(output).mkdir(parents=True,exist_ok=True)
-    intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(Path(output)/"s0_intraday.csv",index=False)
+    base_tables = Path(output)/"dados"; base_tables.mkdir(parents=True,exist_ok=True)
+    intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(base_tables/"s0_intraday.csv",index=False)
     for name in ("voltages","branches","source"):  # base case at the same resolution, for redrawing
-        s0["flow"][name].to_csv(Path(output)/f"s0_{name}.csv",index=False)
+        s0["flow"][name].to_csv(base_tables/f"s0_{name}.csv",index=False)
     results = []
     for evs in fleets:
         s1 = run_s1(evs,config_dir,screening_dir,s0)
         out = Path(output)/f"evs_{evs}"; out.mkdir(parents=True,exist_ok=True)
         for old in out.glob("*"):
-            old.unlink()
+            shutil.rmtree(old) if old.is_dir() else old.unlink()
+        tables = out/"dados"; tables.mkdir()  # CSV tables apart from the figures
         for name in ("voltages","branches","source"):
-            s1["study"]["flow"][name].to_csv(out/f"{name}.csv",index=False)
+            s1["study"]["flow"][name].to_csv(tables/f"{name}.csv",index=False)
         day = intraday_table(s1["study"]["flow"],s0["network"].slack_bus,overloads)
         for name,flow in (("regulated",s1["study"]["flow"]),("frozen_taps",s1["frozen"])):
             change = voltage_change(s0["flow"],flow,s0["buses"],s0["network"].slack_bus)
             day[f"max_drop_{name}_pct"] = -change.groupby("time").dv_pu.min().to_numpy()*100
-        day.to_csv(out/"intraday.csv",index=False)
-        delta_v(s1).to_csv(out/"delta_v.csv",index=False)
-        s1["sessions"].to_csv(out/"sessions.csv",index=False)
+        day.to_csv(tables/"intraday.csv",index=False)
+        delta_v(s1).to_csv(tables/"delta_v.csv",index=False)
+        s1["sessions"].to_csv(tables/"sessions.csv",index=False)
         res = s1["params"].resolution_min
-        pd.DataFrame(s1["power"]).assign(minute=range(1440)).to_csv(out/"station_power_1min.csv",index=False)
+        pd.DataFrame(s1["power"]).assign(minute=range(1440)).to_csv(tables/"station_power_1min.csv",index=False)
         pd.DataFrame({b: resample(kw,res) for b,kw in s1["power"].items()}).assign(
-            hour=np.arange(1440//res)*res/60).to_csv(out/f"station_power_{res}min.csv",index=False)
+            hour=np.arange(1440//res)*res/60).to_csv(tables/f"station_power_{res}min.csv",index=False)
         pd.DataFrame({b: resample(kw,60) for b,kw in s1["power"].items()}).assign(hour=range(24)).to_csv(
-            out/"station_power_hourly.csv",index=False)
+            tables/"station_power_hourly.csv",index=False)
         figures = {"allocation": plot_allocation(s1).figure, "curves_daily": plot_daily_curves(s1),
                    "curves_intraday": plot_intraday_curves(s1), "voltage_intraday": plot_intraday_voltage(s1),
                    "sessions": plot_sessions(s1), "impact_s0_s1": plot_s1_impact(s1),
@@ -454,6 +456,9 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
         results.append(result)
     export_intraday_sensitivity(output)
     export_impact_sensitivity(output)
+    if Path(output).name == "s1":  # default layout results/<feeder>/s1: refresh results/<feeder>/resumo
+        from integration.resumo import export_resumo
+        export_resumo(Path(output).parent)
     return results
 
 
@@ -470,6 +475,8 @@ def main():
         export_intraday_sensitivity(args.output or study_dir(args.configs,"s1"))
         export_impact_sensitivity(args.output or study_dir(args.configs,"s1"))
         export_network_states(args.output or study_dir(args.configs,"s1"),args.configs)
+        from integration.resumo import export_resumo
+        export_resumo(Path(args.output or study_dir(args.configs,"s1")).parent)
         return
     print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
 

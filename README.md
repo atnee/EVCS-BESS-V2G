@@ -21,7 +21,7 @@ configs/      parameters (YAML) — one per module · network.yaml (feeder of ev
 src/          code: evcs/ bess/ v2g/ (one per owner) · network/ (feeders, power flow) · integration/ (studies, coordinator) · core/
 data/         feeder source data (ieee123/, ieee8500/ — see each README) · honduras/ templates
 notebooks/    01 EVCS (Ayrton) · 02 BESS (Kenia) · 03 V2G (Cesar) · 04 integration
-results/      generated outputs, not in Git — map in results/README.md
+results/      generated outputs, not in Git — START at results/ieee8500/resumo/ (4 figures + LEIA-ME.md); map in results/README.md
 docs/         methodology, team guide, docs/evcs/figures (figures shown in src/evcs/README.md)
 scripts/      rebuild the feeder JSON from data/<feeder>/source
 tests/        pytest

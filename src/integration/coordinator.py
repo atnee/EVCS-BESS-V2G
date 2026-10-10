@@ -135,10 +135,11 @@ def export_results(output="results/demo", config_dir="configs", frozen_taps=Fals
     output = Path(output)
     output.mkdir(parents=True,exist_ok=True)
     summary,details = run_scenarios(config_dir,frozen_taps)
+    (output/"dados").mkdir(exist_ok=True)  # per-scenario tables apart from the figures
     summary.to_csv(output/"summary.csv",index=False)
     fig,ax = plt.subplots(figsize=(9,4.8),layout="constrained")
     for name,d in details.items():
-        d["profile"].export(output/f"{name}_injections.csv")
+        d["profile"].export(output/"dados"/f"{name}_injections.csv")
         for module in ("evcs","bess","v2g"):
             active = module in d["modules"]
             profile,tables = d["modules"][module] if active else (
@@ -149,12 +150,12 @@ def export_results(output="results/demo", config_dir="configs", frozen_taps=Fals
                          "v2g_discharge_enabled":SCENARIOS[name][2] if module=="v2g" else None},
                 tables=tables,input_files=Path(config_dir).glob("*.yaml"))
         for table in ("voltages","branches","source","native_loads"):
-            d["flow"][table].to_csv(output/f"{name}_{table}.csv",index=False)
+            d["flow"][table].to_csv(output/"dados"/f"{name}_{table}.csv",index=False)
         ax.plot(np.arange(len(d["flow"]["source"])),d["flow"]["source"].p_kw,label=name,linewidth=1.8)
         if "bess" in d["modules"]:
-            d["modules"]["bess"][1]["soc"].to_csv(output/f"{name}_bess_soc.csv",index=False)
+            d["modules"]["bess"][1]["soc"].to_csv(output/"dados"/f"{name}_bess_soc.csv",index=False)
         if "v2g" in d["modules"]:
-            (output/f"{name}_fleet.json").write_text(json.dumps(d["modules"]["v2g"][0].metadata,indent=2))
+            (output/"dados"/f"{name}_fleet.json").write_text(json.dumps(d["modules"]["v2g"][0].metadata,indent=2))
     ax.set(xlabel="Time step",ylabel="Source active power (kW)",title=f"{details['S0']['network'].name}: EVCS–BESS–V2G")
     ax.legend(ncol=5);ax.grid(alpha=.2)
     fig.savefig(output/"scenario_power.png",dpi=300)
@@ -164,13 +165,16 @@ def export_results(output="results/demo", config_dir="configs", frozen_taps=Fals
               "backend_version":details["S0"]["flow"]["backend_version"],
               "fidelity":details["S0"]["flow"]["fidelity"],
               "limitations":details["S0"]["flow"]["limitations"],
-              "injections_scope":"additional DER only; original realized loads in *_native_loads.csv",
+              "injections_scope":"additional DER only; original realized loads in dados/*_native_loads.csv",
               "module_outputs":"modules/{evcs,bess,v2g}/{S0,S1,S2,S3,S4}/profile.csv",
               "dataset_provenance":details["S0"]["network"].equipment["feeder_data"][0]["provenance"],
               "dataset_sha256":hashlib.sha256(json.dumps(details["S0"]["network"].equipment["feeder_data"][0],sort_keys=True).encode()).hexdigest(),
               "config_sha256":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(config_dir).glob("*.yaml")}}
     (output/"manifest.json").write_text(json.dumps(manifest,indent=2))
     export_impact(output,details)
+    if output.name == "integration":  # results/<feeder>/integration: refresh results/<feeder>/resumo
+        from integration.resumo import export_resumo
+        export_resumo(output.parent)
     return summary
 
 

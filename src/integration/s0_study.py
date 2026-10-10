@@ -315,13 +315,14 @@ def export_s0(output=None, config_dir="configs", feeder=None):
     data = study["network"].equipment["feeder_data"][0]
     peak = voltages_at(study,study["peak"]).pivot_table(index="bus",columns="phase",values="v_pu")
     peak.columns = [f"v_{p.lower()}_pu_peak" for p in peak.columns]
-    study["buses"].merge(peak,left_on="bus",right_index=True,how="left").to_csv(output/"buses.csv",index=False)
-    line_table(data).to_csv(output/"lines.csv",index=False)
-    linecode_table(data).to_csv(output/"linecodes.csv",index=False)
+    tables = output/"dados"; tables.mkdir(exist_ok=True)  # CSV tables apart from the figures
+    study["buses"].merge(peak,left_on="bus",right_index=True,how="left").to_csv(tables/"buses.csv",index=False)
+    line_table(data).to_csv(tables/"lines.csv",index=False)
+    linecode_table(data).to_csv(tables/"linecodes.csv",index=False)
     for name,table in electrical_inventory(data).items():
-        table.to_csv(output/f"inventory_{name}.csv",index=name=="totals")
+        table.to_csv(tables/f"inventory_{name}.csv",index=name=="totals")
     for table in ("voltages","branches","source"):
-        study["flow"][table].to_csv(output/f"{table}.csv",index=False)
+        study["flow"][table].to_csv(tables/f"{table}.csv",index=False)
     figures = {"topology": plot_topology(study).figure, "voltage_map": plot_voltage_map(study).figure,
                "voltage_profile": plot_voltage_profile(study), "daily": plot_daily(study),
                "linecodes": plot_linecodes(linecode_table(data))}

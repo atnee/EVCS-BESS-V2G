@@ -183,9 +183,10 @@ def export_screening(output=None, config_dir="configs", fleets=FLEETS, resweep=F
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     output = Path(output or study_dir(config_dir)); output.mkdir(parents=True,exist_ok=True)
-    result = run_screening(config_dir,fleets,None if resweep else output/"hosting_capacity.csv")
-    result["candidates"].to_csv(output/"hosting_capacity.csv",index=False)
-    result["fleets"].to_csv(output/"fleet_scenarios.csv",index=False)
+    tables = output/"dados"; tables.mkdir(exist_ok=True)  # CSV tables apart from the figures
+    result = run_screening(config_dir,fleets,None if resweep else tables/"hosting_capacity.csv")
+    result["candidates"].to_csv(tables/"hosting_capacity.csv",index=False)
+    result["fleets"].to_csv(tables/"fleet_scenarios.csv",index=False)
     figures = {"hosting_map": plot_hosting_map(result).figure,
                "voltage_only_map": plot_hosting_map(result,"voltage_only_kw","Capacidade limitada só pela tensão (kW): força elétrica da barra").figure}
     for old in output.glob("coverage_*_evs.png"):

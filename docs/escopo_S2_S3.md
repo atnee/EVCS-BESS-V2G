@@ -53,7 +53,7 @@ python -m bess        # ou: python -m v2g  — execução independente, sem rede
 python -m integration.coordinator --output results/ieee8500/integration --frozen-taps   # S0–S4 na rede, ~15 min
 ```
 
-Saídas de comparação em `results/ieee8500/integration/`: `summary.csv` (ponta, perdas, tensões, carregamento e KPIs por cenário), `impact.csv`, `impact_S2.png` / `impact_S3.png` (cada cenário contra o S0, com e sem a ação dos reguladores) e `network_state_S2.png` / `network_state_S3.png` (a rede lado a lado com o S0). O efeito de vocês é a diferença **S2 − S1** e **S3 − S1** nessas tabelas.
+Saídas de comparação em `results/ieee8500/integration/`: `summary.csv` (ponta, perdas, tensões, carregamento e KPIs por cenário), `impact.csv`, `impact_S2.png` / `impact_S3.png` (cada cenário contra o S0, com e sem a ação dos reguladores) e `network_state_S2.png` / `network_state_S3.png` (a rede lado a lado com o S0). O efeito de vocês é a diferença **S2 − S1** e **S3 − S1** nessas tabelas. A tabela da integração (S0–S4 lado a lado) também aparece em `results/ieee8500/resumo/LEIA-ME.md`, atualizado sozinho ao fim de cada integração; as tabelas completas por cenário ficam em `integration/dados/`.
 
 ## 3. Kenia — S2: BESS
 
