@@ -5,6 +5,7 @@ Two views of the voltage change:
 - with the regulator taps locked at the S0 values (`frozen`): the effect of the new load/injection alone.
 All tables come from PandapowerSolver.solve outputs (voltages, branches, source).
 """
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from integration.s0_study import _style, _edges, marker_scale, INK, MUTED, SURFACE, V_LIMITS
@@ -136,4 +137,141 @@ def plot_impact(base, case, buses, graph, slack, frozen=None, sites=None, label=
     ax_tap.set_ylabel("posição do tap",color=MUTED)
     ax_tap.set_xlim(0,24); ax_tap.set_xticks(range(0,25,3)); ax_tap.set_xlabel("hora do dia",color=MUTED)
     ax_tap.legend(frameon=False,fontsize=9,ncol=len(colors),loc="upper left")
+    return fig
+
+
+SITE_STYLE = {"dc": dict(color="#4a3aa7",marker="H",s=260,label="hub DC"),
+              "ac": dict(color="#eb6834",marker="P",s=200,label="eletroposto AC"),
+              "host": dict(color="#1baf7a",marker="s",s=150,label="estação anfitriã V2G"),
+              "bess": dict(color="#c2409a",marker="D",s=160,label="BESS")}
+LOADING_BANDS = [(0,50,"< 50 %"),(50,80,"50–80 %"),(80,100,"80–100 %"),(100,1e9,"> 100 %")]
+VOLTAGE_BANDS = [(0,.95,"< 0,95"),(.95,.97,"0,95–0,97"),(.97,1.03,"0,97–1,03"),(1.03,1.05,"1,03–1,05"),(1.05,9,"> 1,05")]
+
+
+def flow_from_csv(folder, prefix=""):
+    """Saved solver tables (voltages, branches, source) back as a flow dict, times parsed."""
+    folder = Path(folder)
+    flow = {name: pd.read_csv(folder/f"{prefix}{name}.csv") for name in ("voltages","branches","source")}
+    for table in flow.values():
+        table["time"] = pd.to_datetime(table.time)  # keeps the saved UTC offset (local time)
+    return flow
+
+
+def network_snapshot(flow, slack, time):
+    """Minimum phase voltage per bus and highest phase loading per line/transformer at one step."""
+    v = flow["voltages"]
+    v = v[(v.time==time) & (v.bus!=slack)].groupby("bus").v_pu.min()
+    b = flow["branches"]
+    b = b[(b.time==time) & b.physical_phase]
+    lines = b[b.element_type=="line"].groupby("line").loading_pct.max()
+    trafos = b[b.element_type=="trafo"].groupby("line").loading_pct.max()
+    return v, lines, trafos
+
+
+def plot_network_state(base, case, buses, graph, slack, sites=None, label="S1", title=None):
+    """S0 and the case side by side, each at its own peak and on the same scales: bus voltage map,
+    line loading map (stations marked), equipment and most loaded lines, buses/lines per band.
+    sites: {bus: 'dc' | 'ac' | 'host' | 'bess'}."""
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm, Normalize
+    from matplotlib.lines import Line2D
+    sites = sites or {}
+    pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
+    segments = {d["id"]: (pos[u],pos[w]) for u,w,d in graph.edges(data=True) if d["kind"] == "line"}
+    states = {}
+    for name,flow in (("S0",base),(label,case)):
+        peak = peak_step(flow)
+        states[name] = (peak,*network_snapshot(flow,slack,peak),float(flow["source"].p_kw.max()))
+    v_all = pd.concat([s[1] for s in states.values()])
+    vnorm = TwoSlopeNorm(vcenter=1.,vmin=min(V_LIMITS[0]-.005,v_all.min()),vmax=max(V_LIMITS[1],v_all.max()))
+    vcmap = LinearSegmentedColormap.from_list("v",["#b2182b","#e34948","#f0efec","#86b6ef","#2a78d6"])
+    lnorm = Normalize(0,110)
+    lcmap = LinearSegmentedColormap.from_list("load",["#dcdbd6","#f2c14e","#ec835a","#d03b3b","#7a1f1f"])
+    k = marker_scale(graph)
+
+    fig = plt.figure(figsize=(18,19),layout="constrained")
+    gs = fig.add_gridspec(3,2,height_ratios=(1,1,.62))
+    if title:
+        fig.suptitle(title,fontsize=14,color=INK,x=.01,ha="left")
+
+    def mark_sites(ax):
+        for bus,kind in sites.items():
+            st = SITE_STYLE.get(kind,SITE_STYLE["ac"])
+            ax.scatter(*pos[bus],marker=st["marker"],s=st["s"],color=st["color"],edgecolor=SURFACE,linewidth=1.3,zorder=6)
+
+    def frame(ax):
+        ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+
+    for col,(name,(peak,v,lines,trafos,p)) in enumerate(states.items()):
+        ax = fig.add_subplot(gs[0,col])
+        _style(ax,f"{name} — tensão mínima por barra, ponta {peak:%H:%M} ("+f"{p:,.0f}".replace(",",".")+" kW)")
+        _edges(ax,graph,pos,emphasis=False)
+        xy = np.array([pos[b] for b in v.index])
+        pts = ax.scatter(xy[:,0],xy[:,1],c=v.to_numpy(),cmap=vcmap,norm=vnorm,s=46*k,edgecolor=MUTED,linewidth=.3*k,zorder=3)
+        if name != "S0":
+            mark_sites(ax)
+        worst = v.idxmin()
+        ax.annotate(f"mín. {v.min():.3f} pu",pos[worst],xytext=(8,-14),textcoords="offset points",fontsize=9,color=INK,
+                    bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85),zorder=7)
+        frame(ax)
+        if col == 1:
+            bar = fig.colorbar(pts,ax=ax,shrink=.7,pad=.01); bar.set_label("tensão (pu)",color=MUTED)
+
+        ax = fig.add_subplot(gs[1,col])
+        _style(ax,f"{name} — carregamento das linhas na ponta {peak:%H:%M}")
+        ids = [i for i in lines.index if i in segments]
+        load = lines.reindex(ids).to_numpy()
+        order = np.argsort(load)  # most loaded drawn on top
+        coll = LineCollection([segments[ids[i]] for i in order],colors=lcmap(lnorm(load[order])),
+                              linewidths=.5+3.2*np.clip(load[order],0,110)/110,capstyle="round",zorder=2)
+        ax.add_collection(coll); ax.autoscale_view()
+        if name != "S0":
+            mark_sites(ax)
+        base_over = states["S0"][2][states["S0"][2] > 100].index if "S0" in states else []
+        top = lines.drop(base_over,errors="ignore").idxmax()  # base-case overloads are not the stations' doing
+        if top in segments:
+            (x0,y0),(x1,y1) = segments[top]
+            ax.annotate(f"{top}: {lines[top]:.0f} %",((x0+x1)/2,(y0+y1)/2),xytext=(10,10),textcoords="offset points",
+                        fontsize=9,color=INK,bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85),zorder=7)
+        frame(ax)
+        if col == 1:
+            sm = plt.cm.ScalarMappable(norm=lnorm,cmap=lcmap); sm.set_array([])
+            bar = fig.colorbar(sm,ax=ax,shrink=.7,pad=.01); bar.set_label("carregamento (%)",color=MUTED)
+            handles = [Line2D([],[],marker=SITE_STYLE[kd]["marker"],ls="",color=SITE_STYLE[kd]["color"],ms=11,
+                              label=SITE_STYLE[kd]["label"]) for kd in dict.fromkeys(sites.values()) if kd in SITE_STYLE]
+            if handles:
+                ax.legend(handles=handles,loc="lower left",frameon=False,fontsize=9)
+
+    (p0,v0,l0,t0,_),(p1,v1,l1,t1,_) = states.values()
+    ax = fig.add_subplot(gs[2,0])
+    _style(ax,"Carregamento na ponta: transformador, reguladores e linhas mais carregadas")
+    preexisting = l0[l0 > 100].index
+    top_lines = l1.drop(preexisting,errors="ignore").nlargest(4).index.tolist()
+    names = list(t1.sort_values(ascending=False).index)+top_lines
+    s0 = [t0.get(n,np.nan) if n in t1.index else l0.get(n,np.nan) for n in names]
+    s1 = [t1.get(n,np.nan) if n in t1.index else l1.get(n,np.nan) for n in names]
+    y = np.arange(len(names))
+    ax.barh(y+.2,s0,.38,color=BASE_GRAY,label="S0")
+    ax.barh(y-.2,s1,.38,color=REGULATED,label=label)
+    for i,val in enumerate(s1):
+        ax.annotate(f"{val:.0f} %",(val,i-.2),xytext=(3,0),textcoords="offset points",va="center",fontsize=8,color=INK)
+    ax.axvline(100,color=MUTED,lw=1,ls=(0,(4,3)))
+    ax.set_yticks(y,[f"{n} (linha)" if n in top_lines else n for n in names]); ax.invert_yaxis()
+    if len(preexisting):
+        ax.annotate("sem as linhas já acima de 100 % no S0: "+", ".join(preexisting),(0,-.12),xycoords="axes fraction",
+                    fontsize=8,color=MUTED)
+    ax.set_xlabel("carregamento (%)",color=MUTED); ax.legend(frameon=False,fontsize=9,loc="center right")
+
+    ax = fig.add_subplot(gs[2,1])
+    _style(ax,"Quantas barras e linhas em cada faixa (na ponta)")
+    groups = [("tensão "+lab,(v0>=lo)&(v0<hi),(v1>=lo)&(v1<hi)) for lo,hi,lab in VOLTAGE_BANDS] + \
+             [("linhas "+lab,(l0>=lo)&(l0<hi),(l1>=lo)&(l1<hi)) for lo,hi,lab in LOADING_BANDS[1:]]
+    y = np.arange(len(groups))
+    a = [int(g[1].sum()) for g in groups]; b = [int(g[2].sum()) for g in groups]
+    ax.barh(y+.2,a,.38,color=BASE_GRAY,label="S0"); ax.barh(y-.2,b,.38,color=REGULATED,label=label)
+    for i,(x0,x1) in enumerate(zip(a,b)):
+        ax.annotate(f"{x0} → {x1}",(max(x0,x1),i),xytext=(4,0),textcoords="offset points",va="center",fontsize=8,color=INK)
+    ax.set_yticks(y,[g[0] for g in groups]); ax.invert_yaxis(); ax.set_xscale("symlog",linthresh=10)
+    ax.set_xlabel("quantidade (escala log)",color=MUTED); ax.legend(frameon=False,fontsize=9,loc="lower right")
     return fig

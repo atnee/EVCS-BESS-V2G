@@ -84,11 +84,24 @@ def run_scenarios(config_dir="configs", frozen_taps=False):
     return pd.DataFrame(records),details
 
 
+def site_kinds(detail):
+    """Bus -> kind of the assets active in a scenario, for the network figures."""
+    kinds = {}
+    for module,(profile,_) in detail["modules"].items():
+        if module == "evcs":
+            meta = profile.metadata
+            kinds.update({bus: key for bus,key in meta.get("public_sites",{}).items()})
+            kinds.setdefault(meta["station"]["bus"],"host")
+        elif module == "bess":
+            kinds.update({bus: "bess" for bus in set(profile.data.bus)})
+    return kinds
+
+
 def export_impact(output, details):
     """impact_<Sx>.png and impact.csv: each scenario against S0 (integration.impact)."""
     import matplotlib.pyplot as plt
     from network.topology import feeder_graph, bus_table
-    from integration.impact import plot_impact, impact_summary
+    from integration.impact import plot_impact, impact_summary, plot_network_state
     network = details["S0"]["network"]
     graph = feeder_graph(network.equipment["feeder_data"][0])
     buses = bus_table(graph)
@@ -100,6 +113,10 @@ def export_impact(output, details):
         fig = plot_impact(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,frozen=d.get("frozen"),
                           sites={b: b for b in assets},label=name,demand_kw=-d["profile"].total_injection())
         fig.savefig(output/f"impact_{name}.png",dpi=200)
+        plt.close(fig)
+        fig = plot_network_state(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,
+                                 site_kinds(d),label=name,title=f"Rede no S0 e no {name}")
+        fig.savefig(output/f"network_state_{name}.png",dpi=170)
         plt.close(fig)
         s = impact_summary(details["S0"]["flow"],d["flow"],buses,network.slack_bus,d.get("frozen"))
         row = {"scenario": name, **{k: v for k,v in s.items() if not isinstance(v,dict)}}

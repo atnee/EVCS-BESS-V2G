@@ -18,10 +18,12 @@ Integração S0–S4, passo de 1 h (`results/ieee8500/integration/`):
 | Ponta na subestação | 11.783 kW às 18h | 12.573 kW às 19h | **+790 kW** e a ponta muda de hora |
 | Demanda das estações na ponta | — | 913 kW às 19h | 9,6 MWh/dia atendidos |
 | Perdas no dia | 14,4 MWh | 15,7 MWh | **+9 %** |
-| Tronco sul 2/0 ACSR (`ln5835160-1`) | 96 % | **100,5 %** | sobrecarga às 19h |
+| Tronco sul 2/0 ACSR (`ln5835160-1`) | 96 % | **100,5 %** | sobrecarga às 18h (99 % às 19h) |
 | Tronco da saída 397 ACSR (`ln5513564-1`) | 92 % | 97 % | |
 | Tensão mínima, reguladores atuando | 0,951 pu | 0,954 pu | reguladores compensam |
 | Tensão mínima, taps travados no S0 | 0,951 pu | **0,938 pu** | efeito real das estações: até −1,9 % |
+
+![Rede no S0 e no S1 na integração](evcs/figures/integration_network_state_S1.png)
 
 ![Impacto do S1 em relação ao S0 na integração](evcs/figures/integration_impact_S1.png)
 
@@ -51,7 +53,7 @@ python -m bess        # ou: python -m v2g  — execução independente, sem rede
 python -m integration.coordinator --output results/ieee8500/integration --frozen-taps   # S0–S4 na rede, ~15 min
 ```
 
-Saídas de comparação em `results/ieee8500/integration/`: `summary.csv` (ponta, perdas, tensões, carregamento e KPIs por cenário), `impact.csv` e `impact_S2.png` / `impact_S3.png` (cada cenário contra o S0, com e sem a ação dos reguladores). O efeito de vocês é a diferença **S2 − S1** e **S3 − S1** nessas tabelas.
+Saídas de comparação em `results/ieee8500/integration/`: `summary.csv` (ponta, perdas, tensões, carregamento e KPIs por cenário), `impact.csv`, `impact_S2.png` / `impact_S3.png` (cada cenário contra o S0, com e sem a ação dos reguladores) e `network_state_S2.png` / `network_state_S3.png` (a rede lado a lado com o S0). O efeito de vocês é a diferença **S2 − S1** e **S3 − S1** nessas tabelas.
 
 ## 3. Kenia — S2: BESS
 

@@ -124,7 +124,7 @@ Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`. Mapa com
 | `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
 | `results/ieee8500/s1/impact_sensitivity.png` | **Impacto S1 × S0 por frota**: queda causada pelas estações, barras afetadas, tensão mínima, operações de tap |
 | `results/ieee8500/s1/s0_intraday.csv`, `evs_<n>/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
-| `results/ieee8500/s1/evs_<n>/` | Por frota: **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, curvas por estação (`station_power_*.csv`) e `summary.json` |
+| `results/ieee8500/s1/evs_<n>/` | Por frota: **`network_state.png`** (rede no S0 e no S1 lado a lado), **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, curvas por estação (`station_power_*.csv`) e `summary.json` |
 
 ## Resultados atuais (IEEE 8500 com os ajustes)
 
@@ -153,6 +153,16 @@ Detalhe da frota de 5000 carros (demanda a 1 min, 15 min e 1 h; tensão a cada p
 
 ![Tensão mínima intradiária e queda causada pelas estações, 5000 carros](../../docs/evcs/figures/voltage_intraday_5000_evs.png)
 
+### Como a rede fica no S0 e no S1 (5000 carros)
+
+Mesma escala nos dois lados, cada um na sua ponta: tensão por barra, carregamento das linhas com os hubs e eletropostos, transformador/reguladores/linhas mais carregadas e quantas barras e linhas há em cada faixa.
+
+![Rede no S0 e no S1 com 5000 carros](../../docs/evcs/figures/network_state_5000_evs.png)
+
+- O **norte/oeste**, onde fica a maior parte dos eletropostos e um dos hubs, é a região que mais perde tensão; a ponta passa das 18h30 para as 19h.
+- As linhas que já eram as mais carregadas no S0 (troncos 2/0 ACSR que levam ao sul e ao hub do norte) chegam a **100 %**.
+- Transformador da subestação: 43 → 47 %; regulador VREG3, que alimenta o norte: 66 → 72 %. Nenhum transformador limita.
+
 ### Impacto S1 × S0: o que as estações fazem com a tensão
 
 Os perfis de tensão do S0 e do S1 parecem iguais porque **os reguladores compensam**: quando as estações puxam a tensão para baixo, eles sobem o tap. Para separar os dois efeitos, cada S1 é resolvido duas vezes: com os reguladores atuando e com os **taps travados nos valores do S0** (o efeito das estações sozinhas).
@@ -178,7 +188,7 @@ Detalhe para 5000 carros:
 
 ### S1 na integração S0–S4
 
-A integração (`python -m integration.coordinator`, passo de 1 h) usa as mesmas estações para **5000 carros** (bloco `integration:` do `evcs.yaml`): 2 hubs DC + 7 eletropostos, pico de 913 kW às 19h, mais a estação anfitriã do V2G (`station:`, 88 kW). Em relação ao S0: ponta da subestação **11.783 → 12.573 kW** (e passa das 18h para as 19h), perdas **+9 %**, tronco sul 2/0 ACSR **96 → 100,5 %**, tensão mínima com taps travados **0,938 pu**. É o ponto de partida do S2 (BESS) e do S3 (V2G): ver [`docs/escopo_S2_S3.md`](../../docs/escopo_S2_S3.md).
+A integração (`python -m integration.coordinator`, passo de 1 h) usa as mesmas estações para **5000 carros** (bloco `integration:` do `evcs.yaml`): 2 hubs DC + 7 eletropostos, pico de 913 kW às 19h, mais a estação anfitriã do V2G (`station:`, 88 kW). Em relação ao S0: ponta da subestação **11.783 → 12.573 kW** (e passa das 18h para as 19h), perdas **+9 %**, tronco sul 2/0 ACSR **96 → 100,5 %** (às 18h), tensão mínima com taps travados **0,938 pu**. É o ponto de partida do S2 (BESS) e do S3 (V2G): ver [`docs/escopo_S2_S3.md`](../../docs/escopo_S2_S3.md).
 
 ### Tabela por frota
 

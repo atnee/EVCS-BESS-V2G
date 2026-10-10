@@ -6,6 +6,7 @@ Tudo aqui é **gerado pelos comandos** e não vai para o Git (exceto `demo_refer
 results/
 ├── ieee8500/                  alimentador de todos os estudos (configs/network.yaml)
 │   ├── integration/           integração S0–S4 com EVCS, BESS e V2G (coordenador)
+│   │   ├── network_state_S1..S4.png       a rede no S0 e no cenário, lado a lado
 │   │   ├── impact_S1..S4.png, impact.csv   cada cenário × S0 (com --frozen-taps: também com os taps do S0)
 │   │   └── modules/<módulo>/<cenário>/   contribuição de cada módulo
 │   ├── s0/                    caso base S0: topologia, perfil de tensão, linhas, summary.json
@@ -14,7 +15,7 @@ results/
 │       ├── intraday_sensitivity.png   ← todas as frotas × S0 (comece por aqui)
 │       ├── impact_sensitivity.png     ← o que as estações fazem com a tensão, por frota
 │       ├── s0_intraday.csv
-│       └── evs_<n>/           uma pasta por frota (impact_s0_s1.png, curvas, tensão, sessões, summary.json)
+│       └── evs_<n>/           uma pasta por frota (network_state.png, impact_s0_s1.png, curvas, tensão, sessões, summary.json)
 ├── modules/                   execução independente de cada módulo (python -m evcs | bess | v2g)
 ├── notebook_demo/             saída do notebook 04 (integração S0–S4)
 └── demo_reference/            resultados sintéticos históricos da versão inicial (versionado)

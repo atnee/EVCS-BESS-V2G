@@ -18,7 +18,7 @@ from evcs.planning import from_config, with_fleet, simulate, resample
 from network.pandapower_solver import PandapowerSolver
 from integration.coordinator import combine
 from integration.scenarios import integrated_grid, study_feeder
-from integration.impact import plot_impact, impact_summary, voltage_change
+from integration.impact import plot_impact, impact_summary, voltage_change, plot_network_state, flow_from_csv
 from integration.evcs_screening import plot_sites, TYPE_STYLE, study_dir
 from integration.s0_study import (run_s0, feeder_voltages, plot_voltage_profile, plot_daily, marker_scale,
                                   _style, _edges, INK, MUTED, SURFACE, V_LIMITS)
@@ -365,6 +365,29 @@ def plot_impact_sensitivity(results):
     return fig
 
 
+def export_network_states(output, config_dir="configs"):
+    """Redraw evs_<n>/network_state.png from saved files (needs s0_*.csv in `output`)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from network.feeder_loader import read_feeder_data
+    from network.topology import feeder_graph, bus_table
+    output = Path(output)
+    if not (output/"s0_voltages.csv").exists():
+        return
+    feeder = study_feeder(config_dir)
+    graph = feeder_graph(read_feeder_data(feeder))
+    buses, slack = bus_table(graph), graph.graph["source"]
+    base = flow_from_csv(output,"s0_")
+    fleets = load_fleets(study_dir(config_dir))
+    for d in sorted(output.glob("evs_*"),key=lambda p: int(p.name.split("_")[1])):
+        evs = int(d.name.split("_")[1])
+        fig = plot_network_state(base,flow_from_csv(d),buses,graph,slack,fleets.loc[evs].sites,
+                                 title=f"Rede no S0 e no S1 com {evs} carros")
+        fig.savefig(d/"network_state.png",dpi=170,facecolor=SURFACE)
+        plt.close(fig)
+
+
 def export_impact_sensitivity(output):
     """Redraw impact_sensitivity.png from the saved evs_<n>/summary.json files."""
     import matplotlib
@@ -393,6 +416,8 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
     overloads = base_overloads(s0["flow"])
     Path(output).mkdir(parents=True,exist_ok=True)
     intraday_table(s0["flow"],s0["network"].slack_bus,overloads).to_csv(Path(output)/"s0_intraday.csv",index=False)
+    for name in ("voltages","branches","source"):  # base case at the same resolution, for redrawing
+        s0["flow"][name].to_csv(Path(output)/f"s0_{name}.csv",index=False)
     results = []
     for evs in fleets:
         s1 = run_s1(evs,config_dir,screening_dir,s0)
@@ -417,6 +442,9 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
         figures = {"allocation": plot_allocation(s1).figure, "curves_daily": plot_daily_curves(s1),
                    "curves_intraday": plot_intraday_curves(s1), "voltage_intraday": plot_intraday_voltage(s1),
                    "sessions": plot_sessions(s1), "impact_s0_s1": plot_s1_impact(s1),
+                   "network_state": plot_network_state(s0["flow"],s1["study"]["flow"],s0["buses"],s0["graph"],
+                                                       s0["network"].slack_bus,s1["sites"],
+                                                       title=f"Rede no S0 e no S1 com {s1['evs']} carros"),
                    "voltage_comparison": plot_profile_comparison(s1), "voltage_envelope": plot_daily(s1["study"])}
         for name,fig in figures.items():
             fig.savefig(out/f"{name}.png",dpi=200,facecolor=SURFACE)
@@ -436,11 +464,12 @@ def main():
     parser.add_argument("--screening",help="default: results/<feeder>/evcs_screening")
     parser.add_argument("--evs",type=int,nargs="*")
     parser.add_argument("--intraday-only",action="store_true",
-                        help="only redraw intraday_sensitivity.png and impact_sensitivity.png from the files in --output")
+                        help="only redraw the sensitivity figures and network_state.png from the files in --output")
     args = parser.parse_args()
     if args.intraday_only:
         export_intraday_sensitivity(args.output or study_dir(args.configs,"s1"))
         export_impact_sensitivity(args.output or study_dir(args.configs,"s1"))
+        export_network_states(args.output or study_dir(args.configs,"s1"),args.configs)
         return
     print(json.dumps(export_s1(args.output,args.configs,args.screening,args.evs),indent=2,default=str))
 
