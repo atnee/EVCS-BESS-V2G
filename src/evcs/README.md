@@ -60,24 +60,31 @@ Cada sessão:
 
 **Escolha de locais (triagem):**
 
-0. Candidatas: barras trifásicas na tensão do alimentador. No IEEE 8500 (647 barras trifásicas) elas são reduzidas a pontos a pelo menos `candidate_spacing_m` (250 m → 101 candidatas), preferindo os com mais carga por perto, para que a varredura de capacidade caiba em ~1,5 h.
-1. Primeiro os **hubs**, que exigem mais capacidade da rede; depois os **eletropostos**, nas barras restantes.
-2. Para cada tipo, escolhe-se a barra que cobre mais demanda ainda descoberta dentro de `coverage_radius_m`.
-3. A barra só entra se aceitar a potência instalada da estação (capacidade da rede) e se estiver a pelo menos `min_spacing_m` das outras do mesmo tipo.
-
 A carga existente em cada barra é usada como indicador de onde os carros estão.
+
+1. **Hubs DC** (primeiro, porque exigem mais da rede): entre as barras trifásicas candidatas (no IEEE 8500, as 647 trifásicas reduzidas a pontos a pelo menos `candidate_spacing_m` = 250 m → 101 candidatas, com a capacidade da rede calculada para cada uma), escolhe-se a que cobre mais demanda ainda descoberta dentro de `coverage_radius_m`, se a rede aceitar a potência do hub e se estiver a pelo menos `min_spacing_m` dos outros hubs.
+2. **Eletropostos AC — otimização de cobertura total** (`ac_siting: full_coverage`): escolhe-se o conjunto de **menor custo** que deixa **toda a carga do alimentador a no máximo 500 m de um eletroposto**, resolvido exatamente como problema inteiro (cobertura de conjuntos, `evcs.planning.optimal_coverage`, scipy/HiGHS):
+   - candidatas: **todas** as barras de média tensão; em barra trifásica cabe um **eletroposto trifásico** (`ac`, 6 × 22 kW, USD 60 mil); em ramal mono/bifásico, um **eletroposto monofásico** (`ac1`, 2 × 7,4 kW numa fase, USD 24 mil). Sem os monofásicos a cobertura total é impossível: 24 % da carga está a mais de 500 m de qualquer barra trifásica (ramais de até 3,3 km);
+   - restrição de cobertura: cada ponto de carga tem pelo menos um eletroposto no raio;
+   - restrição de capacidade: a potência de recarga instalada (carregador ou limite do carro, o menor) atende os carregadores dimensionados pela simultaneidade das sessões;
+   - laço de verificação: as sessões são simuladas nos locais escolhidos; se menos de `min_served_share` (95 %) das recargas AC forem atendidas (filas nos locais pequenos), a exigência de capacidade sobe 15 % e o problema é resolvido de novo; eletropostos trifásicos em barras que a rede não aceita são retirados e o problema é refeito.
+   - Com `ac_siting: greedy`, volta o método antigo (máxima cobertura com o número de eletropostos dimensionado).
+
+Cada sessão AC vai para um dos eletropostos (trifásico ou monofásico) com probabilidade proporcional à potência de recarga do local, e recarrega na potência daquele local.
 
 ## Parâmetros (`configs/evcs.yaml` → `planning:`)
 
 | Parâmetro | Valor atual | Significado |
 |---|---|---|
-| `candidate_spacing_m` | 250 | Distância mínima entre barras candidatas na triagem (0 = todas) |
+| `candidate_spacing_m` | 250 | Distância mínima entre barras candidatas dos hubs (0 = todas) |
+| `ac_siting` | full_coverage | Eletropostos: `full_coverage` (otimização de cobertura total) ou `greedy` |
+| `min_served_share` | 0,95 | Parcela mínima de recargas AC atendidas na cobertura total |
 | `resolution_min` | 15 | Passo do fluxo de potência intradiário (as sessões são simuladas por minuto) |
 | `seed` | 42 | Semente: mesma semente → mesmas sessões |
 | `charger_efficiency` | 0,95 | Rendimento do carregador |
 | `sizing_quantile` | 0,95 | Percentil de simultaneidade usado para dimensionar carregadores |
 | `fleet.evs` | 2000 | Quantidade de carros elétricos na área (caso base; sensibilidade de 2000 a 5000) |
-| `fleet.battery_kwh` | 60 | **Bateria média** (kWh úteis) |
+| `fleet.battery_kwh` | 44,9 | **Bateria média** (kWh úteis; ex.: BYD Dolphin) |
 | `fleet.battery_std_kwh` | 15 | Variação do tamanho das baterias |
 | `fleet.daily_km` / `kwh_per_km` | 35 / 0,18 | Uso diário e consumo |
 | `fleet.public_share` | 0,30 | Parcela da energia recarregada fora de casa |
@@ -87,7 +94,8 @@ A carga existente em cada barra é usada como indicador de onde os carros estão
 
 | Tipo | Carregadores por estação | `share` | `target_soc` | `max_wait_min` | Raio / espaçamento |
 |---|---|---|---|---|---|
-| `ac` — **eletroposto** | 6 × 22 kW (132 kW) | 60 % | 90 % | 30 min | 500 m / 400 m |
+| `ac` — **eletroposto trifásico** | 6 × 22 kW (132 kW) | 60 % | 90 % | 30 min | 500 m / 400 m |
+| `ac1` — **eletroposto monofásico** | 2 × 7,4 kW (14,8 kW, uma fase) | atende as sessões AC junto com `ac` | 90 % | 30 min | 500 m / — |
 | `dc` — **hub** | 4 × 150 kW (600 kW) | 40 % | 80 % | 15 min | 1500 m / 800 m |
 
 `arrival_shape`:
@@ -103,8 +111,8 @@ Tudo em Python (pandapower); não precisa de OpenDSS. Na raiz do repositório:
 $env:PYTHONPATH="src"          # Linux/macOS: export PYTHONPATH=src
 python -m integration.s0_study                    # caso base S0 (~2 min)            -> results/ieee8500/s0/
 python -m integration.evcs_screening              # triagem (1ª vez ~1,5 h)          -> results/ieee8500/evcs_screening/
-python -m integration.s1_study                    # S1, ~6 min por frota             -> results/ieee8500/s1/
-python -m integration.s1_study --intraday-only    # só redesenha a figura intradiária
+python -m integration.s1_study                    # S1, ~12 min por frota            -> results/ieee8500/s1/
+python -m integration.redraw                      # só refaz os gráficos a partir dos resultados salvos (~3 min)
 python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.py -q
 ```
 
@@ -130,7 +138,11 @@ python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.p
 
 ## Resultados atuais (IEEE 8500 com os ajustes)
 
-Sensibilidade à quantidade de carros: 2000 a 5000.
+> ⚠️ **As tabelas e figuras desta seção são da rodada anterior** (bateria média de 60 kWh, 2000–5000 carros, eletropostos escolhidos pelo método guloso). A rodada atual usa **bateria de 44,9 kWh, 2000–10.000 carros e a otimização de cobertura total**; os números atualizados estão em `results/ieee8500/resumo/LEIA-ME.md` (gerado localmente). Esta seção será refeita com eles.
+>
+> Rodada atual, em resumo: ~73 locais cobrem 100 % da carga em todas as frotas; a rede **passa a ficar sobrecarregada a partir de 4.000 carros** (linha-tronco acima de 100 % e tensão abaixo de 0,95 pu mesmo com os reguladores); com 10.000 carros a linha chega a 108 %, a tensão a 0,936 pu (3 h por dia abaixo do limite), a ponta sobe 17 % e as perdas 19 %.
+
+Sensibilidade à quantidade de carros (rodada anterior): 2000 a 5000.
 
 ### Caso base S0
 
@@ -219,9 +231,24 @@ A integração (`python -m integration.coordinator`, passo de 1 h) usa as mesmas
 - **A cobertura é baixa:** o número de estações sai da energia da frota, e poucos eletropostos com raio de 500 m cobrem só 18–27 % da carga. No IEEE 8500 a cobertura passa a ser uma restrição relevante para a otimização.
 - **Recarga em casa** (70 % da energia) ainda não entra na rede; incluí-la piora todos os cenários.
 
+## Tempo de execução
+
+A otimização leva menos de 2 s; o tempo está no fluxo de potência trifásico do IEEE 8500 (2.521 barras): cerca de 3 s por passo de tempo, porque cada passo repete o fluxo ~9 vezes (cargas e capacitores dependentes da tensão, controle dos reguladores).
+
+| Etapa | Tempo hoje |
+|---|---|
+| Varredura de capacidade da rede (só na 1ª vez; fica salva) | ~1,5 h |
+| Triagem com a otimização (5 frotas) | ~4 min |
+| S1, 5 frotas × 96 passos × 2 soluções (reguladores atuando e taps travados) | ~1 h |
+| Integração S0–S4 com `--frozen-taps` | ~15 min |
+| Refazer só os gráficos (`python -m integration.redraw`) | ~3 min |
+
+Testes feitos (Ryzen 5 3600, 6 núcleos, 16 GB): o **numba** acelera só ~6 % (não vale torná-lo obrigatório); o **paralelismo** (um processo por frota, um núcleo por processo: `OMP_NUM_THREADS=1`) roda 5 tarefas em 96 s contra 225 s em sequência, **~2,3× mais rápido**. Depende do número de núcleos do processador, não da placa de vídeo. Próximo passo: implementar no S1 e na varredura de capacidade, com o número de processos ajustado ao computador.
+
 ## Limitações e próximos passos
 
-- **Otimização ainda não definida:** é preciso combinar o que o algoritmo decide, o objetivo, as restrições e o método.
+- **Paralelismo (próximo passo):** ver "Tempo de execução".
+- **Otimização:** eletropostos por cobertura total de custo mínimo (`optimal_coverage`, HiGHS); os hubs DC ainda são escolhidos de forma gulosa e a rede não entra como restrição da otimização (o impacto é medido no S1, de propósito: o S1 sobrecarrega a rede e o S2 alivia).
 - **Um dia representativo só:** a simulação é de um único dia, com uma semente. Para resultados estatísticos, rodar várias sementes (Monte Carlo).
 - **Distribuição das sessões:** as sessões são divididas entre as estações ao acaso, não pela distância do carro à estação.
 - **Recarga DC simplificada:** a potência é constante até 80 %, sem a redução real perto do fim da recarga.

@@ -92,12 +92,14 @@ class HostingStudy:
     def sweep(self, buses, max_kw=3000., tol_kw=10.):
         return pd.DataFrame([self.capacity(b,max_kw,tol_kw) for b in buses])
 
-    def check(self, placements):
-        """Simultaneous check of several stations {bus: kw} (individual capacities do not add up)."""
+    def check(self, placements, phases=None):
+        """Simultaneous check of several stations {bus: kw} (individual capacities do not add up).
+        phases: optional {bus: 'A'|'B'|'C'|'ABC'}; default balanced three-phase."""
         extra = []
         for bus,kw in placements.items():
+            ph = (phases or {}).get(bus,"ABC").lower()
             idx = pp.create_asymmetric_load(self.net,self.net.bus_lookup[bus],name=f"station:{bus}",type="wye",
-                **{f"p_{p}_mw": kw/3000 for p in "abc"},**{f"q_{p}_mvar": kw*self.q_ratio/3000 for p in "abc"})
+                **{f"p_{p}_mw": kw/1000/len(ph) for p in ph},**{f"q_{p}_mvar": kw*self.q_ratio/1000/len(ph) for p in ph})
             extra.append(idx)
         try:
             return self.evaluate(None,0.)

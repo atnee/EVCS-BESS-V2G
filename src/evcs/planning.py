@@ -42,7 +42,7 @@ class Fleet:
 
 @dataclass(frozen=True)
 class StationType:
-    key: str                    # "ac" or "dc"
+    key: str                    # "ac", "dc" or "ac1" (single-phase eletroposto)
     name: str                   # label: eletroposto / hub
     charger_kw: float
     chargers_per_site: int
@@ -53,10 +53,14 @@ class StationType:
     min_spacing_m: float
     arrival_shape: tuple        # 24 hourly weights for arrival times
     capex_usd: float = 0.       # installed cost of one site (chargers + connection), used by the integration KPIs
+    serves: str = ""            # session type it charges ("ac"/"dc"); default: its own key
+    phases: int = 3             # 3 = three-phase site; 1 = single-phase (connects to one phase of a lateral)
 
     def __post_init__(self):
-        if self.key not in ("ac","dc") or self.charger_kw <= 0 or self.chargers_per_site < 1 or self.capex_usd < 0:
+        if self.key not in ("ac","dc","ac1") or self.charger_kw <= 0 or self.chargers_per_site < 1 or self.capex_usd < 0:
             raise ValueError("Invalid station type")
+        if self.service not in ("ac","dc") or self.phases not in (1,3):
+            raise ValueError("Invalid station service/phases")
         if not 0 <= self.share <= 1 or not 0 < self.target_soc <= 1 or self.max_wait_min < 0:
             raise ValueError("Invalid station share/target/wait")
         shape = np.asarray(self.arrival_shape,float)
@@ -66,6 +70,11 @@ class StationType:
     @property
     def site_kw(self):
         return self.charger_kw*self.chargers_per_site
+
+    @property
+    def service(self):
+        """Session type this station charges: its own key unless `serves` says otherwise."""
+        return self.serves or self.key
 
 
 @dataclass(frozen=True)
@@ -77,16 +86,24 @@ class PlanningParameters:
     charger_efficiency: float = .95
     sizing_quantile: float = .95                # chargers = this quantile of unconstrained concurrency
     candidate_spacing_m: float = 0.             # screening candidates at least this far apart (0 = all)
+    ac_siting: str = "greedy"                   # eletropostos: greedy (maximal coverage) or full_coverage (set covering)
+    min_served_share: float = .95               # full_coverage: add AC capacity until this share of sessions is served
 
     def __post_init__(self):
         if abs(sum(t.share for t in self.types.values())-1) > 1e-9:
             raise ValueError("Station type shares must add up to 1")
         if (MINUTES % self.resolution_min or not 0 < self.charger_efficiency <= 1 or not 0 < self.sizing_quantile <= 1
-                or self.candidate_spacing_m < 0):
+                or self.candidate_spacing_m < 0 or self.ac_siting not in ("greedy","full_coverage")
+                or not 0 < self.min_served_share <= 1):
             raise ValueError("Invalid resolution/efficiency/quantile")
 
     def car_limit(self, key):
-        return self.fleet.max_ac_kw if key == "ac" else self.fleet.max_dc_kw
+        service = self.types[key].service if key in self.types else key
+        return self.fleet.max_ac_kw if service == "ac" else self.fleet.max_dc_kw
+
+    def charging_kw(self, key):
+        """Power one charger of this type actually delivers to a car (charger or car limit)."""
+        return min(self.types[key].charger_kw,self.car_limit(key))
 
 
 def from_config(config):
@@ -150,35 +167,43 @@ def size_sites(p: PlanningParameters, sessions=None):
 
 
 def simulate(p: PlanningParameters, sites, sessions=None):
-    """Assign sessions to sites of their type and queue them on the chargers.
+    """Assign sessions to the sites that serve their type and queue them on the chargers.
 
-    sites: {bus: type_key}. Returns (sessions with site/start/wait/served, minute grid power per site).
-    Sessions are spread over the sites of their type in turn; the day is periodic (charging past
-    midnight wraps to the early hours)."""
+    sites: {bus: type_key}. A session goes to one of the sites serving its type (e.g. AC sessions to
+    three-phase `ac` and single-phase `ac1` eletropostos) with probability proportional to the site's
+    charging power, and charges at that site's power (charger or car limit, whichever is lower).
+    Returns (sessions with site/start/wait/served, minute grid power per site). The day is periodic
+    (charging past midnight wraps to the early hours)."""
     rng = np.random.default_rng(p.seed+1)
     sessions = (generate_sessions(p) if sessions is None else sessions).copy()
     sessions["site"], sessions["start_min"], sessions["wait_min"], sessions["served"] = None, np.nan, np.nan, False
     power = {bus: np.zeros(MINUTES) for bus in sites}
-    for key,t in p.types.items():
-        buses = [b for b,k in sites.items() if k == key]
-        idx = sessions.index[sessions.type==key]
+    for service in sorted(set(sessions.type)):
+        buses = [b for b,k in sites.items() if p.types[k].service == service]
+        idx = sessions.index[sessions.type==service]
         if not buses:
             continue
-        sessions.loc[idx,"site"] = rng.choice(buses,size=len(idx))
+        weight = np.array([p.charging_kw(sites[b])*p.types[sites[b]].chargers_per_site for b in buses],float)
+        sessions.loc[idx,"site"] = rng.choice(buses,size=len(idx),p=weight/weight.sum())
+        max_wait = p.types[service].max_wait_min  # patience belongs to the session type
         for bus in buses:
+            t, key = p.types[sites[bus]], sites[bus]
+            kw_car = p.charging_kw(key)
             free = np.zeros(t.chargers_per_site)
-            for i in sessions.index[(sessions.type==key) & (sessions.site==bus)]:
+            for i in sessions.index[(sessions.type==service) & (sessions.site==bus)]:
                 row = sessions.loc[i]
                 charger = int(free.argmin())
                 start = max(row.arrival_min,free[charger])
-                if start-row.arrival_min > t.max_wait_min:
+                if start-row.arrival_min > max_wait:
                     continue  # gave up: unserved
-                free[charger] = start+row.duration_min
-                sessions.loc[i,["start_min","wait_min","served"]] = [start,start-row.arrival_min,True]
-                minutes = (np.arange(int(row.duration_min))+int(start)) % MINUTES
+                duration = max(1,math.ceil(row.energy_kwh/kw_car*60))
+                free[charger] = start+duration
+                sessions.loc[i,["start_min","wait_min","served","duration_min","power_kw","grid_kw"]] = [
+                    start,start-row.arrival_min,True,duration,kw_car,kw_car/p.charger_efficiency]
+                minutes = (np.arange(duration)+int(start)) % MINUTES
                 # Last minute charges only the remaining energy.
-                kw = np.full(len(minutes),row.grid_kw)
-                kw[-1] = row.grid_kw*(row.energy_kwh/row.power_kw*60-(len(minutes)-1))
+                kw = np.full(len(minutes),kw_car/p.charger_efficiency)
+                kw[-1] = kw[-1]*(row.energy_kwh/kw_car*60-(len(minutes)-1))
                 np.add.at(power[bus],minutes,kw)
     return sessions, power
 
@@ -232,3 +257,31 @@ def greedy_coverage(candidates, demand, radius_m, spacing_m, stations, station_k
         eligible &= spacing[best] >= spacing_m
     covered = 1-weight[uncovered].sum()/weight.sum() if weight.sum() else 0.
     return chosen,float(covered)
+
+
+def optimal_coverage(candidates, demand, radius_m, cost, capacity_kw, min_capacity_kw=0., time_limit_s=120.):
+    """Minimum-cost set of sites so that every demand point is within `radius_m` of a site and the
+    installed charging capacity reaches `min_capacity_kw` (integer program, scipy/HiGHS).
+
+    candidates: DataFrame with bus, x, y (one row per possible site; a bus may appear once per type).
+    demand: DataFrame with bus, x, y, weight. cost, capacity_kw: one value per candidate.
+    Demand points with no candidate within the radius cannot be covered: they are left out and
+    reported. Returns (chosen candidate positions, share of demand weight covered, uncovered demand rows)."""
+    from scipy.optimize import milp, LinearConstraint, Bounds
+    cost = np.asarray(cost,float); capacity = np.asarray(capacity_kw,float)
+    if len(cost) != len(candidates) or len(capacity) != len(candidates):
+        raise ValueError("cost and capacity_kw need one value per candidate")
+    covers = distances_m(demand[["x","y"]],candidates[["x","y"]]) <= radius_m
+    reachable = covers.any(axis=1)
+    constraints = [LinearConstraint(covers[reachable].astype(float),lb=1,ub=np.inf)]
+    if min_capacity_kw > 0:
+        constraints.append(LinearConstraint(capacity[None,:],lb=min_capacity_kw,ub=np.inf))
+    result = milp(c=cost,constraints=constraints,integrality=np.ones(len(cost)),bounds=Bounds(0,1),
+                  options={"time_limit":time_limit_s})
+    if result.x is None:
+        raise ValueError(f"No feasible siting: {result.message}")
+    chosen = np.flatnonzero(result.x > .5)
+    covered = covers[:,chosen].any(axis=1)
+    weight = demand.weight.to_numpy(float)
+    return chosen, float(weight[covered].sum()/weight.sum()), demand[~reachable]
+

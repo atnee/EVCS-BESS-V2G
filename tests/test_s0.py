@@ -51,6 +51,6 @@ class TestS0Study(unittest.TestCase):
             summary = export_s0(Path(tmp)/"s0",configs)
             self.assertTrue(.95 < summary["peak_vmin_pu"] < 1.)
             self.assertGreater(summary["peak_losses_kw"],0)
-            for name in ("topology","voltage_map","voltage_profile","daily","linecodes"):
+            for name in ("network_topology","voltage_map_peak","voltage_profile_peak","voltage_range_day","lines_impedance"):
                 self.assertTrue((Path(tmp)/"s0"/f"{name}.png").stat().st_size > 10_000)
             self.assertEqual(json.loads((Path(tmp)/"s0"/"summary.json").read_text())["graph"]["buses"],2521)

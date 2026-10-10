@@ -105,17 +105,41 @@ def _edges(ax, graph, pos, emphasis=True):
     ax.autoscale_view()
 
 
+def new_axes(figsize=(10,6)):
+    """One figure with a single plot (every exported figure is a single plot)."""
+    import matplotlib.pyplot as plt
+    plt.rcParams["figure.max_open_warning"] = 0  # figure sets are built first, then saved and closed
+    return plt.subplots(figsize=figsize,layout="constrained")[1]
+
+
+def save_figures(figures, folder, dpi=200, clean=False):
+    """Save {name: Figure} as folder/name.png, one file per plot, and close them. clean=True removes
+    other PNGs in the folder (left by older versions) so it only holds current figures."""
+    import matplotlib.pyplot as plt
+    folder = Path(folder); folder.mkdir(parents=True,exist_ok=True)
+    if clean:
+        for old in folder.glob("*.png"):
+            if old.stem not in figures:
+                old.unlink()
+    for name,fig in figures.items():
+        fig.savefig(folder/f"{name}.png",dpi=dpi,facecolor=SURFACE)
+        plt.close(fig)
+
+
+def _map_frame(ax):
+    ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+
+
 def plot_topology(study, highlight=None, ax=None):
     """Feeder drawn at the IEEE bus coordinates with NetworkX graph data.
     highlight: buses to circle (default: bus 67, the EVCS/BESS bus of the IEEE123 integration)."""
-    import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     graph, buses = study["graph"], study["buses"].set_index("bus")
     pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
-    ax = ax or plt.subplots(figsize=(11,8.5),layout="constrained")[1]
+    ax = ax or new_axes((11,8.5))
     k = marker_scale(graph)
     highlight = [b for b in (("67",) if highlight is None else highlight) if b in graph] if graph.graph["name"] == "IEEE 123" or highlight else []
-    _style(ax,f'{graph.graph["name"]} — topologia (NetworkX, coordenadas originais)')
+    _style(ax,f'{graph.graph["name"]} feeder topology')
     _edges(ax,graph,pos)
     xy = np.array([pos[n] for n in graph])
     ax.scatter(xy[:,0],xy[:,1],s=10*k,color=INK,zorder=3,linewidths=0)
@@ -123,13 +147,12 @@ def plot_topology(study, highlight=None, ax=None):
     ax.scatter(*pos[source],marker="*",s=260,color=INK,zorder=5)
     caps = buses[buses.capacitor_kvar > 0]
     ax.scatter(caps.x,caps.y,marker="v",s=90,color=EQUIPMENT["capacitor"],edgecolor=SURFACE,linewidth=1.5,zorder=5)
-    kv = lambda value: f"{value:g}".replace(".",",")
-    labels = {source: f'{source} subestação {kv(graph.nodes[source]["vn_kv"])} kV'}
+    labels = {source: f'{source} substation {graph.nodes[source]["vn_kv"]:g} kV'}
     transformer = next((d for *_,d in graph.edges(data=True) if d["kind"]=="transformer"),{})
     for u,v,d in graph.edges(data=True):
         if d["kind"] in ("regulator","transformer") or (d["kind"]=="switch" and not d["closed"]):
             text = {"regulator": d["id"], "transformer": f'{d["id"]} {d.get("kv","").replace(".0/","/")} kV',
-                    "switch": f'{d["id"]} aberta'}[d["kind"]]
+                    "switch": f'{d["id"]} open'}[d["kind"]]
             labels[v] = text
     for bus in caps.index:
         labels[bus] = f"C{bus} {caps.at[bus,'capacitor_kvar']:.0f} kvar"
@@ -150,17 +173,17 @@ def plot_topology(study, highlight=None, ax=None):
     for bus,text in merged:
         ax.annotate(text,pos[bus],xytext=offsets.get(bus,(6,6)),textcoords="offset points",fontsize=8,color=INK,zorder=7,
                     bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
-    ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
-    handles = [Line2D([],[],color="#3a3936",lw=2.6,label="linha trifásica"),
-               Line2D([],[],color=MUTED,lw=1.6,label="linha bifásica"),
-               Line2D([],[],color="#8a8984",lw=.9,label="linha monofásica"),
-               Line2D([],[],color=INK,lw=1.4,label="chave fechada"),
-               Line2D([],[],color=INK,lw=1.4,ls=(0,(2,2)),label="chave aberta"),
-               Line2D([],[],marker="s",ls="",color=EQUIPMENT["regulator"],ms=9,label="regulador de tensão"),
+    _map_frame(ax)
+    handles = [Line2D([],[],color="#3a3936",lw=2.6,label="three-phase line"),
+               Line2D([],[],color=MUTED,lw=1.6,label="two-phase line"),
+               Line2D([],[],color="#8a8984",lw=.9,label="single-phase line"),
+               Line2D([],[],color=INK,lw=1.4,label="closed switch"),
+               Line2D([],[],color=INK,lw=1.4,ls=(0,(2,2)),label="open switch"),
+               Line2D([],[],marker="s",ls="",color=EQUIPMENT["regulator"],ms=9,label="voltage regulator"),
                Line2D([],[],marker="D",ls="",color=EQUIPMENT["transformer"],ms=8,
-                      label=f'transformador {"/".join(kv(float(x)) for x in transformer.get("kv","").split("/"))} kV'),
-               Line2D([],[],marker="v",ls="",color=EQUIPMENT["capacitor"],ms=9,label="banco de capacitores"),
-               Line2D([],[],marker="*",ls="",color=INK,ms=13,label="subestação (fonte)")]
+                      label=f'transformer {transformer.get("kv","").replace(".0/","/")} kV'),
+               Line2D([],[],marker="v",ls="",color=EQUIPMENT["capacitor"],ms=9,label="capacitor bank"),
+               Line2D([],[],marker="*",ls="",color=INK,ms=13,label="substation (source)")]
     ax.legend(handles=handles,loc="lower left",fontsize=8,frameon=False,ncol=3)
     return ax
 
@@ -173,8 +196,8 @@ def plot_voltage_map(study, time=None, ax=None):
     graph = study["graph"]
     pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
     vmin = voltages_at(study,time).groupby("bus").v_pu.min()
-    ax = ax or plt.subplots(figsize=(11,8.5),layout="constrained")[1]
-    _style(ax,f"Tensão mínima por barra (pu) — {time:%H:%M}")
+    ax = ax or new_axes((11,8.5))
+    _style(ax,f"Minimum bus voltage at {time:%H:%M} (pu)")
     _edges(ax,graph,pos,emphasis=False)
     cmap = LinearSegmentedColormap.from_list("v",["#e34948","#f0efec","#2a78d6"])
     norm = TwoSlopeNorm(vcenter=1.,vmin=min(V_LIMITS[0],vmin.min()),vmax=max(V_LIMITS[1],vmin.max()))
@@ -182,104 +205,133 @@ def plot_voltage_map(study, time=None, ax=None):
     k = marker_scale(graph)
     points = ax.scatter(xy[:,0],xy[:,1],c=vmin.to_numpy(),cmap=cmap,norm=norm,s=46*k,edgecolor=MUTED,linewidth=.6*k,zorder=3)
     bar = plt.colorbar(points,ax=ax,shrink=.6,pad=.01)
-    bar.set_label("V mín. entre fases (pu)",color=MUTED); bar.ax.tick_params(colors=MUTED,labelsize=8)
+    bar.set_label("minimum phase voltage (pu)",color=MUTED); bar.ax.tick_params(colors=MUTED,labelsize=8)
     for bus in (vmin.idxmin(),vmin.idxmax()):
         ax.annotate(f"{bus}: {vmin[bus]:.3f} pu",pos[bus],xytext=(6,-12),textcoords="offset points",fontsize=8,color=INK,
                     bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
-    ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+    _map_frame(ax)
     return ax
 
 
-def plot_voltage_profile(study, times=None):
-    """Voltage vs. electrical distance from the substation, drawn along each feeder branch."""
-    import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
-    times = times or (study["peak"],study["valley"])
-    fig,axes = plt.subplots(1,len(times),figsize=(6.5*len(times),4.8),sharey=True,layout="constrained")
-    axes = np.atleast_1d(axes)
-    mult = dict(zip(study["flow"]["source"].time,study["multipliers"]))
+def plot_voltage_profile(study, time=None, ax=None):
+    """Voltage vs. electrical distance from the substation at one step, drawn along each feeder branch."""
     from matplotlib.collections import LineCollection
+    time = study["peak"] if time is None else time
+    ax = ax or new_axes((10,5.4))
+    mult = dict(zip(study["flow"]["source"].time,study["multipliers"]))
     k = marker_scale(study["graph"])
-    for ax,time in zip(axes,times):
-        _style(ax,f"{time:%H:%M} — carga {mult[time]:.0%} da nominal")
-        v = voltages_at(study,time).set_index(["bus","phase"])
-        for phase,style in PHASE_STYLE.items():
-            part = v.xs(phase,level="phase")
-            parents = [(p,phase) in v.index for p in part.parent]
-            child = part[parents]
-            parent = v.loc[[(p,phase) for p in child.parent]]
-            segments = np.stack([np.column_stack([parent.distance_km,parent.v_pu]),
-                                 np.column_stack([child.distance_km,child.v_pu])],axis=1)
-            ax.add_collection(LineCollection(segments,colors=style["color"],linewidths=1.2*max(k,.6),alpha=.85))
-            ax.scatter(part.distance_km,part.v_pu,s=18*k,color=style["color"],marker=style["marker"],
-                       edgecolor=SURFACE,linewidth=.5*k,zorder=3)
-        ax.autoscale_view()
-        for limit in V_LIMITS:
-            ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
-            ax.annotate(f"limite {limit:.2f} pu",(1,limit),xycoords=("axes fraction","data"),xytext=(-2,3),
-                        textcoords="offset points",fontsize=8,color=MUTED,ha="right")
-        # Vertical steps are regulator boosts (zero length, so same distance).
-        for u,w,d in study["graph"].edges(data=True):
-            if d["kind"] == "regulator" and len(d["phases"]) == 3:
-                at = v.xs(d["lv_bus"],level="bus")
-                ax.annotate(d["id"],(at.distance_km.iloc[0],at.v_pu.max()),xytext=(4,6),textcoords="offset points",
-                            fontsize=8,color=INK,bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
-        ax.set_xlabel("distância elétrica da subestação (km)",color=MUTED)
-    axes[0].set_ylabel("tensão (pu)",color=MUTED)
-    fig.legend(handles=[Line2D([],[],color=s["color"],marker=s["marker"],lw=1.2,label=f"fase {p}")
-                        for p,s in PHASE_STYLE.items()],frameon=False,fontsize=9,loc="outside lower center",ncol=3)
-    return fig
+    _style(ax,f"Voltage along the feeder at {time:%H:%M} (load {mult[time]:.0%} of nominal)")
+    v = voltages_at(study,time).set_index(["bus","phase"])
+    for phase,style in PHASE_STYLE.items():
+        part = v.xs(phase,level="phase")
+        parents = [(p,phase) in v.index for p in part.parent]
+        child = part[parents]
+        parent = v.loc[[(p,phase) for p in child.parent]]
+        segments = np.stack([np.column_stack([parent.distance_km,parent.v_pu]),
+                             np.column_stack([child.distance_km,child.v_pu])],axis=1)
+        ax.add_collection(LineCollection(segments,colors=style["color"],linewidths=1.2*max(k,.6),alpha=.85))
+        ax.scatter(part.distance_km,part.v_pu,s=18*k,color=style["color"],marker=style["marker"],
+                   edgecolor=SURFACE,linewidth=.5*k,zorder=3,label=f"phase {phase}")
+    ax.autoscale_view()
+    for limit in V_LIMITS:
+        ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
+        ax.annotate(f"limit {limit:.2f} pu",(1,limit),xycoords=("axes fraction","data"),xytext=(-2,3),
+                    textcoords="offset points",fontsize=8,color=MUTED,ha="right")
+    # Vertical steps are regulator boosts (zero length, so same distance).
+    for u,w,d in study["graph"].edges(data=True):
+        if d["kind"] == "regulator" and len(d["phases"]) == 3:
+            at = v.xs(d["lv_bus"],level="bus")
+            ax.annotate(d["id"],(at.distance_km.iloc[0],at.v_pu.max()),xytext=(4,6),textcoords="offset points",
+                        fontsize=8,color=INK,bbox=dict(boxstyle="round,pad=.15",fc=SURFACE,ec="none",alpha=.85))
+    ax.set_xlabel("electrical distance from the substation (km)",color=MUTED)
+    ax.set_ylabel("voltage (pu)",color=MUTED)
+    ax.legend(frameon=False,fontsize=9,loc="lower left",markerscale=2)
+    return ax
 
 
-def plot_daily(study):
-    """Hourly voltage envelope per phase and substation P/Q (same unit scale, one axis each panel)."""
-    import matplotlib.pyplot as plt
+def plot_voltage_envelope(study, ax=None):
+    """Lowest and highest voltage per phase over the day."""
     from matplotlib.lines import Line2D
     flow = study["flow"]
-    fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.6),layout="constrained")
+    ax = ax or new_axes((10,5))
     v = feeder_voltages(study)
     steps = len(flow["source"])
     hours = np.arange(steps)*24/steps  # time of day, any resolution
     every = max(1,steps//24)           # one marker per hour
-    _style(ax1,"Faixa de tensão por fase ao longo do dia")
+    _style(ax,"Voltage range per phase over the day")
     for phase,style in PHASE_STYLE.items():
         g = v[v.phase==phase].groupby("time").v_pu
-        ax1.fill_between(hours,g.min(),g.max(),color=style["color"],alpha=.06,linewidth=0)
-        ax1.plot(hours,g.min(),color=style["color"],marker=style["marker"],ms=4,markevery=every,lw=2,label=f"fase {phase} — mín.")
-        ax1.plot(hours,g.max(),color=style["color"],lw=1.2,ls=(0,(3,2)))
+        ax.fill_between(hours,g.min(),g.max(),color=style["color"],alpha=.06,linewidth=0)
+        ax.plot(hours,g.min(),color=style["color"],marker=style["marker"],ms=4,markevery=every,lw=2,label=f"phase {phase}, minimum")
+        ax.plot(hours,g.max(),color=style["color"],lw=1.2,ls=(0,(3,2)))
     for limit in V_LIMITS:
-        ax1.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
-    ax1.set_xlabel("hora",color=MUTED); ax1.set_ylabel("tensão (pu)",color=MUTED)
-    ax1.legend(handles=[*ax1.get_lines()[0:6:2],Line2D([],[],color=MUTED,lw=1.2,ls=(0,(3,2)),label="máx. (tracejado)")],
-               frameon=False,fontsize=8,loc="upper center",bbox_to_anchor=(.5,-.16),ncol=4)
-    _style(ax2,"Potência na subestação")
-    ax2.plot(hours,flow["source"].p_kw,color="#2a78d6",lw=2,marker="o",ms=4,markevery=every,label="P (kW)")
-    ax2.plot(hours,flow["source"].q_kvar,color="#eb6834",lw=2,marker="s",ms=4,markevery=every,label="Q (kvar)")
-    ax2.set_xlabel("hora",color=MUTED); ax2.set_ylabel("kW / kvar",color=MUTED)
-    ax2.legend(frameon=False,fontsize=9)
-    return fig
+        ax.axhline(limit,color=MUTED,lw=1,ls=(0,(4,3)))
+    ax.set_xlim(0,24); ax.set_xticks(range(0,25,3))
+    ax.set_xlabel("hour of day",color=MUTED); ax.set_ylabel("voltage (pu)",color=MUTED)
+    ax.legend(handles=[*ax.get_lines()[0:6:2],Line2D([],[],color=MUTED,lw=1.2,ls=(0,(3,2)),label="maximum (dashed)")],
+              frameon=False,fontsize=8,loc="lower left",ncol=2)
+    return ax
 
 
-def plot_linecodes(table=None, top=15):
-    """Positive-sequence R, X (and L = X/ω) and C per IEEE configuration (the `top` longest in use)."""
-    import matplotlib.pyplot as plt
+def plot_substation_power(study, ax=None):
+    """Active and reactive power at the substation over the day."""
+    flow = study["flow"]
+    ax = ax or new_axes((10,5))
+    steps = len(flow["source"])
+    hours = np.arange(steps)*24/steps
+    every = max(1,steps//24)
+    _style(ax,"Substation power over the day")
+    ax.plot(hours,flow["source"].p_kw,color="#2a78d6",lw=2,marker="o",ms=4,markevery=every,label="P (kW)")
+    ax.plot(hours,flow["source"].q_kvar,color="#eb6834",lw=2,marker="s",ms=4,markevery=every,label="Q (kvar)")
+    ax.set_xlim(0,24); ax.set_xticks(range(0,25,3))
+    ax.set_xlabel("hour of day",color=MUTED); ax.set_ylabel("kW / kvar",color=MUTED)
+    ax.legend(frameon=False,fontsize=9)
+    return ax
+
+
+def _linecode_axis(table, top):
     table = linecode_table() if table is None else table
     if len(table) > top:
         table = table.nlargest(top,"total_km").reset_index(drop=True)
-    fig,(ax1,ax2) = plt.subplots(1,2,figsize=(13,4.2),layout="constrained")
-    x = np.arange(len(table))
     names = [f"{c}\n{p}φ" for c,p in zip(table.linecode,table.phases)]
-    _style(ax1,"Impedância de sequência positiva por configuração")
-    ax1.bar(x-.2,table.r1_ohm_km,.38,color="#2a78d6",label="R1 (Ω/km)")
-    ax1.bar(x+.2,table.x1_ohm_km,.38,color="#eb6834",label="X1 (Ω/km)")
     rotation = dict(rotation=60,ha="right",fontsize=7) if max(map(len,table.linecode)) > 6 else {}
-    ax1.set_xticks(x,names,**rotation); ax1.set_ylabel("Ω/km",color=MUTED); ax1.legend(frameon=False,fontsize=9)
-    _style(ax2,"Capacitância de sequência positiva")
-    ax2.bar(x,table.c1_nf_km,.6,color="#2a78d6")
+    return table,np.arange(len(table)),names,rotation
+
+
+def plot_linecode_impedance(table=None, top=15, ax=None):
+    """Positive-sequence R and X per line configuration (the `top` longest in use)."""
+    table,x,names,rotation = _linecode_axis(table,top)
+    ax = ax or new_axes((11,5))
+    _style(ax,"Positive-sequence impedance per line configuration")
+    ax.bar(x-.2,table.r1_ohm_km,.38,color="#2a78d6",label="R1 (Ω/km)")
+    ax.bar(x+.2,table.x1_ohm_km,.38,color="#eb6834",label="X1 (Ω/km)")
+    ax.set_xticks(x,names,**rotation); ax.set_ylabel("Ω/km",color=MUTED); ax.legend(frameon=False,fontsize=9)
+    return ax
+
+
+def plot_linecode_capacitance(table=None, top=15, ax=None):
+    """Positive-sequence capacitance per line configuration."""
+    table,x,names,rotation = _linecode_axis(table,top)
+    ax = ax or new_axes((11,5))
+    _style(ax,"Positive-sequence capacitance per line configuration")
+    ax.bar(x,table.c1_nf_km,.6,color="#2a78d6")
     for i,c in enumerate(table.c1_nf_km):
-        ax2.annotate(f"{c:.0f}",(i,c),xytext=(0,3),textcoords="offset points",ha="center",fontsize=8,color=INK)
-    ax2.set_xticks(x,names,**rotation); ax2.set_ylabel("C1 (nF/km)",color=MUTED)
-    return fig
+        ax.annotate(f"{c:.0f}",(i,c),xytext=(0,3),textcoords="offset points",ha="center",fontsize=8,color=INK)
+    ax.set_xticks(x,names,**rotation); ax.set_ylabel("C1 (nF/km)",color=MUTED)
+    return ax
+
+
+def s0_figures(study, data):
+    """Every S0 figure, one plot each: {file name: Figure}."""
+    codes = linecode_table(data)
+    return {"network_topology": plot_topology(study).figure,
+            "voltage_map_peak": plot_voltage_map(study).figure,
+            "voltage_profile_peak": plot_voltage_profile(study,study["peak"]).figure,
+            "voltage_profile_valley": plot_voltage_profile(study,study["valley"]).figure,
+            "voltage_range_day": plot_voltage_envelope(study).figure,
+            "demand_substation_power_day": plot_substation_power(study).figure,
+            "lines_impedance": plot_linecode_impedance(codes).figure,
+            "lines_capacitance": plot_linecode_capacitance(codes).figure}
 
 
 def summary(study):
@@ -323,12 +375,7 @@ def export_s0(output=None, config_dir="configs", feeder=None):
         table.to_csv(tables/f"inventory_{name}.csv",index=name=="totals")
     for table in ("voltages","branches","source"):
         study["flow"][table].to_csv(tables/f"{table}.csv",index=False)
-    figures = {"topology": plot_topology(study).figure, "voltage_map": plot_voltage_map(study).figure,
-               "voltage_profile": plot_voltage_profile(study), "daily": plot_daily(study),
-               "linecodes": plot_linecodes(linecode_table(data))}
-    for name,fig in figures.items():
-        fig.savefig(output/f"{name}.png",dpi=200,facecolor=SURFACE)
-        plt.close(fig)
+    save_figures(s0_figures(study,data),output,clean=True)
     result = summary(study)
     (output/"summary.json").write_text(json.dumps(result,indent=2,default=str)+"\n",encoding="utf-8")
     return result

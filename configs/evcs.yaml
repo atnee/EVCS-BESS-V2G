@@ -44,13 +44,16 @@ independent_demand_kw:
 # Placeholders until Honduras data replaces them; the screening also sweeps `evs`.
 planning:
   candidate_spacing_m: 250  # screening candidates: three-phase buses at least this far apart (0 = all)
+  ac_siting: full_coverage  # eletropostos: full_coverage = optimal set covering every load within the radius
+                            # (three-phase `ac` + single-phase `ac1`), greedy = maximal coverage with the sized count
+  min_served_share: 0.95    # full_coverage: add AC charging capacity until 95% of the AC sessions are served
   seed: 42                  # same seed -> same sessions (reproducible)
   resolution_min: 15        # intraday power-flow step (minutes); sessions are simulated per minute
   charger_efficiency: 0.95  # grid power = charging power / efficiency
   sizing_quantile: 0.95     # chargers = 95th percentile of unconstrained simultaneous sessions
   fleet:
     evs: 2000               # electric cars in the feeder area (base case; sensitivity 2000-5000)
-    battery_kwh: 60.0       # average usable battery
+    battery_kwh: 44.9       # average usable battery (e.g. BYD Dolphin, 44.9 kWh)
     battery_std_kwh: 15.0   # spread of battery sizes
     daily_km: 35.0          # km per car per day (urban use)
     kwh_per_km: 0.18
@@ -70,7 +73,20 @@ planning:
       coverage_radius_m: 500.0
       min_spacing_m: 400.0
       arrival_shape: [0, 0, 0, 0, 0, 0, 1, 3, 5, 5, 4, 4, 4, 4, 4, 4, 5, 6, 6, 5, 3, 2, 1, 0]
-      capex_usd: 60000.0    # per site, 6 x 22 kW installed (hypothesis)
+      capex_usd: 60000.0    # per site: 20k fixed (land, connection, works) + 300 USD/kW x 132 kW (hypothesis)
+    ac1:
+      name: eletroposto monofásico
+      charger_kw: 7.4       # single-phase 32 A charger
+      chargers_per_site: 2
+      share: 0.0            # no sessions of its own: it serves the AC sessions together with `ac`
+      serves: ac
+      phases: 1             # connects to one phase of a single-phase/two-phase lateral
+      target_soc: 0.9
+      max_wait_min: 30
+      coverage_radius_m: 500.0
+      min_spacing_m: 0.0
+      arrival_shape: [0, 0, 0, 0, 0, 0, 1, 3, 5, 5, 4, 4, 4, 4, 4, 4, 5, 6, 6, 5, 3, 2, 1, 0]
+      capex_usd: 24000.0    # per site: 20k fixed + 300 USD/kW x 14.8 kW (hypothesis)
     dc:
       name: hub
       charger_kw: 150.0
@@ -83,17 +99,135 @@ planning:
       arrival_shape: [1, 0, 0, 0, 0, 1, 2, 4, 5, 4, 3, 3, 4, 3, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1]
       capex_usd: 400000.0   # per site, 4 x 150 kW installed (hypothesis)
 # Public stations in the S0-S4 integration (S1-S4), simulated with the sessions of `planning:` at the integration
-# step. Stress case: 5000 cars, sites chosen by the screening (results/ieee8500/evcs_screening, 5000 cars).
-# Remove this block to go back to the single host station.
+# step. S1 must load the network: 10000 cars, sites from the full-coverage screening
+# (results/ieee8500/evcs_screening, 10000 cars). Remove this block to go back to the single host station.
 integration:
-  evs: 5000
+  evs: 10000
   sites:
     m1125976: dc
     n1136365: dc
-    m1108379: ac
-    m1186063: ac
-    n1144668: ac
-    m1026724: ac
-    l2879070: ac
-    e182746: ac
-    m1047490: ac
+    l2673309: ac1
+    l2973163: ac1
+    l3120376: ac1
+    m1026667: ac1
+    m1026972: ac1
+    m1026646: ac1
+    m1026330: ac
+    l3160865: ac
+    m1047318: ac1
+    l2879767: ac1
+    m1108295: ac
+    l2891575: ac1
+    m1069175: ac
+    m1089189: ac1
+    l3142078: ac1
+    m1069629: ac1
+    m3037537: ac1
+    l3104850: ac1
+    l3233353: ac1
+    m1069213: ac1
+    l2955006: ac1
+    m1126005: ac1
+    m1026844: ac
+    m1209787: ac
+    l2785520: ac1
+    l3029520: ac1
+    m1047410: ac1
+    m1027001: ac1
+    m1089165: ac1
+    l2820583: ac1
+    l2954346: ac1
+    m1047580: ac
+    l2860491: ac
+    l3727710: ac1
+    n1144666: ac1
+    l2898495: ac
+    n1139552: ac
+    l3214069: ac
+    n1134475: ac
+    m1166402: ac1
+    l3010563: ac1
+    l3178973: ac1
+    221-311359: ac
+    l3254210: ac1
+    l2785516: ac1
+    m1026820: ac1
+    m1026977: ac
+    l3157710: ac1
+    l3253570: ac1
+    l2935556: ac1
+    l2766715: ac1
+    l2730108: ac1
+    m1026354: ac
+    l2991910: ac1
+    l3160107: ac
+    m1069488: ac1
+    m1089199: ac
+    l3085410: ac1
+    l3645811: ac1
+    l3217064: ac1
+    l2917333: ac1
+    l0247160: ac1
+    m1069348: ac1
+    l2726975: ac1
+    l3216339: ac1
+    l3235245: ac1
+    l2989571: ac1
+    l2822860: ac1
+    l2764403: ac1
+    m1027110: ac1
+    d5956499-2_int: ac
+  phases:                   # phase of each single-phase eletroposto
+    l2673309: C
+    l2973163: B
+    l3120376: A
+    m1026667: A
+    m1026972: B
+    m1026646: A
+    m1047318: C
+    l2879767: B
+    l2891575: C
+    m1089189: C
+    l3142078: B
+    m1069629: B
+    m3037537: B
+    l3104850: C
+    l3233353: A
+    m1069213: C
+    l2955006: C
+    m1126005: A
+    l2785520: B
+    l3029520: B
+    m1047410: A
+    m1027001: B
+    m1089165: C
+    l2820583: C
+    l2954346: B
+    l3727710: A
+    n1144666: C
+    m1166402: C
+    l3010563: A
+    l3178973: A
+    l3254210: C
+    l2785516: B
+    m1026820: A
+    l3157710: B
+    l3253570: C
+    l2935556: B
+    l2766715: B
+    l2730108: C
+    l2991910: B
+    m1069488: C
+    l3085410: B
+    l3645811: C
+    l3217064: B
+    l2917333: A
+    l0247160: B
+    m1069348: C
+    l2726975: B
+    l3216339: B
+    l3235245: C
+    l2989571: A
+    l2822860: B
+    l2764403: A
+    m1027110: A

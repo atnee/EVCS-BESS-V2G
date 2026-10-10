@@ -98,10 +98,10 @@ def site_kinds(detail):
 
 
 def export_impact(output, details):
-    """impact_<Sx>.png and impact.csv: each scenario against S0 (integration.impact)."""
-    import matplotlib.pyplot as plt
+    """<Sx>/impact_*.png, <Sx>/network_*.png (one plot per file) and impact.csv: each scenario against S0."""
     from network.topology import feeder_graph, bus_table
-    from integration.impact import plot_impact, impact_summary, plot_network_state
+    from integration.impact import impact_figures, impact_summary, network_state_figures
+    from integration.s0_study import save_figures
     network = details["S0"]["network"]
     graph = feeder_graph(network.equipment["feeder_data"][0])
     buses = bus_table(graph)
@@ -110,14 +110,13 @@ def export_impact(output, details):
         if name == "S0":
             continue
         assets = sorted(set(d["profile"].data.bus)-{network.slack_bus})
-        fig = plot_impact(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,frozen=d.get("frozen"),
-                          sites={b: b for b in assets},label=name,demand_kw=-d["profile"].total_injection())
-        fig.savefig(output/f"impact_{name}.png",dpi=200)
-        plt.close(fig)
-        fig = plot_network_state(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,
-                                 site_kinds(d),label=name,title=f"Rede no S0 e no {name}")
-        fig.savefig(output/f"network_state_{name}.png",dpi=170)
-        plt.close(fig)
+        figures = {**impact_figures(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,d.get("frozen"),
+                                    {b: b for b in assets},name,-d["profile"].total_injection()),
+                   **network_state_figures(details["S0"]["flow"],d["flow"],buses,graph,network.slack_bus,site_kinds(d),name)}
+        save_figures(figures,output/name,clean=True)
+        if "frozen" in d:  # frozen-tap solution kept for redrawing
+            for table in ("voltages","branches","source"):
+                d["frozen"][table].to_csv(output/"dados"/f"{name}_frozen_taps_{table}.csv",index=False)
         s = impact_summary(details["S0"]["flow"],d["flow"],buses,network.slack_bus,d.get("frozen"))
         row = {"scenario": name, **{k: v for k,v in s.items() if not isinstance(v,dict)}}
         for view in ("regulated","frozen_taps"):
@@ -151,14 +150,18 @@ def export_results(output="results/demo", config_dir="configs", frozen_taps=Fals
                 tables=tables,input_files=Path(config_dir).glob("*.yaml"))
         for table in ("voltages","branches","source","native_loads"):
             d["flow"][table].to_csv(output/"dados"/f"{name}_{table}.csv",index=False)
-        ax.plot(np.arange(len(d["flow"]["source"])),d["flow"]["source"].p_kw,label=name,linewidth=1.8)
+        steps = len(d["flow"]["source"])
+        ax.plot(np.arange(steps)*24/steps,d["flow"]["source"].p_kw,label=name,linewidth=1.8)
         if "bess" in d["modules"]:
             d["modules"]["bess"][1]["soc"].to_csv(output/"dados"/f"{name}_bess_soc.csv",index=False)
         if "v2g" in d["modules"]:
             (output/"dados"/f"{name}_fleet.json").write_text(json.dumps(d["modules"]["v2g"][0].metadata,indent=2))
-    ax.set(xlabel="Time step",ylabel="Source active power (kW)",title=f"{details['S0']['network'].name}: EVCS–BESS–V2G")
-    ax.legend(ncol=5);ax.grid(alpha=.2)
-    fig.savefig(output/"scenario_power.png",dpi=300)
+    ax.set(xlabel="hour of day",ylabel="substation active power (kW)",
+           title=f"Substation active power per scenario ({details['S0']['network'].name})")
+    ax.legend(ncol=5);ax.grid(alpha=.2);ax.set_xlim(0,24);ax.set_xticks(range(0,25,3))
+    for old in output.glob("*.png"):  # figures of older versions (now one folder per scenario)
+        old.unlink()
+    fig.savefig(output/"demand_substation_power_per_scenario.png",dpi=200)
     plt.close(fig)
     manifest={"python":platform.python_version(),"seed":0,"stochastic":False,
               "network":details["S0"]["network"].name,"solver":"pandapower.runpp_3ph",

@@ -60,9 +60,11 @@ def run_integrated(config_dir, grid):
     if public:
         power,sessions = public
         params = from_config(config)
+        phases = {str(b): ph for b,ph in config["integration"].get("phases",{}).items()}
         for bus,kw in power.items():
-            for ph in "ABC":  # balanced three-phase stations
-                parts.append(pd.DataFrame({"time":grid.index,"bus":bus,"phase":ph,"p_kw":-kw/3,"q_kvar":0.}))
+            ph = phases.get(bus,"ABC")  # single-phase eletropostos on their phase, the rest balanced
+            for one in ph:
+                parts.append(pd.DataFrame({"time":grid.index,"bus":bus,"phase":one,"p_kw":-kw/len(ph),"q_kvar":0.}))
         energy_grid = sessions.energy_kwh/params.charger_efficiency  # grid-side energy requested
         requested += float(energy_grid.sum())
         served += float(energy_grid[sessions.served].sum())

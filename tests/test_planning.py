@@ -86,3 +86,35 @@ class TestHosting(unittest.TestCase):
         self.assertTrue(study.evaluate("67",result["hosting_kw"])["ok"])
         self.assertFalse(study.evaluate("67",result["hosting_kw"]+60)["ok"])
         self.assertTrue(study.check({"67": 10.})["ok"])
+
+
+class TestFullCoverage(unittest.TestCase):
+    """optimal_coverage (set covering with capacity) and single-phase `ac1` eletropostos."""
+    def test_covers_everything_at_minimum_cost(self):
+        from evcs.planning import optimal_coverage
+        ft = 1/.3048  # coordinates in feet
+        candidates = pd.DataFrame(dict(bus=list("abcd"),x=[0,600*ft,1200*ft,600*ft],y=[0,0,0,10*ft]))
+        demand = pd.DataFrame(dict(bus=list("pqr"),x=[0,600*ft,1200*ft],y=[0,0,0],weight=[1.,1.,1.]))
+        chosen,covered,uncovered = optimal_coverage(candidates,demand,500.,cost=[1,1,1,1],capacity_kw=[10]*4)
+        self.assertEqual(covered,1.)
+        self.assertEqual(len(chosen),3)  # each point needs its own site 600 m apart
+        self.assertTrue(uncovered.empty)
+        # Capacity requirement forces a fourth site.
+        chosen,_,_ = optimal_coverage(candidates,demand,500.,cost=[1,1,1,1],capacity_kw=[10]*4,min_capacity_kw=40)
+        self.assertEqual(len(chosen),4)
+
+    def test_unreachable_demand_is_reported(self):
+        from evcs.planning import optimal_coverage
+        candidates = pd.DataFrame(dict(bus=["a"],x=[0],y=[0]))
+        demand = pd.DataFrame(dict(bus=["p","far"],x=[0,1e5],y=[0,0],weight=[1.,1.]))
+        chosen,covered,uncovered = optimal_coverage(candidates,demand,500.,cost=[1],capacity_kw=[10])
+        self.assertEqual(list(uncovered.bus),["far"])
+        self.assertAlmostEqual(covered,.5)
+
+    def test_single_phase_sites_serve_ac_sessions_at_their_power(self):
+        p = with_fleet(from_config(read_parameters(ROOT/"configs/evcs.yaml")),2000)
+        sessions,power = simulate(p,{"x": "ac1"})
+        ac = sessions[sessions.type=="ac"]
+        self.assertTrue(ac.served.any())
+        self.assertTrue((ac.loc[ac.served,"power_kw"] == p.charging_kw("ac1")).all())
+        self.assertLessEqual(power["x"].max(),2*p.charging_kw("ac1")/p.charger_efficiency+1e-9)

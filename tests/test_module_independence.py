@@ -94,7 +94,7 @@ import_module(module+'.runner').export(root,Path(root)/'out')
         <module>.runner.run_integrated, plus the EVCS planning API used by the siting screening."""
         import ast
         contracts = {f"{m}.runner": {"run_integrated"} for m in MODULES}
-        contracts["evcs.planning"] = {"from_config","with_fleet","generate_sessions","size_sites","simulate","resample","greedy_coverage","thin_candidates"}
+        contracts["evcs.planning"] = {"from_config","with_fleet","generate_sessions","size_sites","simulate","resample","greedy_coverage","thin_candidates","optimal_coverage"}
         for path in (ROOT/"src/integration").glob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node,ast.Import):
