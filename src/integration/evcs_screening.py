@@ -19,7 +19,7 @@ from network.topology import feeder_graph, bus_table
 from integration.s0_study import _style, _edges, save_figures, INK, MUTED, SURFACE
 from integration.scenarios import study_feeder
 
-FLEETS = (2000, 3000, 4000, 5000, 10000)   # sensitivity range (cars in the feeder area)
+FLEETS = (1000, 1500, 2000, 2500, 3000)    # sensitivity range (vehicles of the mixed fleet, 9-27 MWh/day at the stations)
 TYPE_STYLE = {"dc": dict(color="#4a3aa7",marker="H",label="DC hub"),
               "ac": dict(color="#eb6834",marker="P",label="three-phase AC station"),
               "ac1": dict(color="#1baf7a",marker="o",label="single-phase AC station")}

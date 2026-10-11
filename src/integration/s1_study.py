@@ -1,8 +1,8 @@
 """S1 study: hubs and eletropostos from the screening, minute-level charging sessions and an
 intraday power flow (planning.resolution_min, 15 min by default) compared with S0 at the same resolution.
 
-python -m integration.s1_study                     # fleets: every fleet of the screening (sensitivity 2000-5000)
-python -m integration.s1_study --evs 2000 5000
+python -m integration.s1_study                     # fleets: every fleet of the screening (mixed fleet, 1000-3000 vehicles)
+python -m integration.s1_study --evs 1000 3000
 python -m integration.s1_study --intraday-only      # redraw intraday_sensitivity.png from saved results
 Reads results/<feeder>/evcs_screening/ (python -m integration.evcs_screening) and writes
 results/<feeder>/s1/; the feeder comes from configs/network.yaml.

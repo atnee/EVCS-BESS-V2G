@@ -5,17 +5,17 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from core.artifacts import read_profile_bundle
 from core.schemas import TimeGrid,make_profile
-from integration.scenarios import synthetic_network
+from test_network import small_network
 from integration.coordinator import combine,run_scenarios,export_results
 
 class TestIntegration(unittest.TestCase):
     def test_duplicate_ids(self):
-        g=TimeGrid(steps=1);n=synthetic_network()
+        g=TimeGrid(steps=1);n=small_network()
         a=make_profile(g,"a","n1","A",[-1],vehicle_ids=["v"])
         b=make_profile(g,"b","n2","A",[1],vehicle_ids=["v"])
         with self.assertRaises(ValueError): combine([a,b],n)
     def test_horizon_mismatch(self):
-        with self.assertRaises(ValueError): combine([make_profile(TimeGrid(steps=1),"a","n1","A",[-1]),make_profile(TimeGrid(steps=2),"b","n1","A",[-1,-1])],synthetic_network())
+        with self.assertRaises(ValueError): combine([make_profile(TimeGrid(steps=1),"a","n1","A",[-1]),make_profile(TimeGrid(steps=2),"b","n1","A",[-1,-1])],small_network())
     def test_all_scenarios_and_end_states(self):
         root=Path(__file__).resolve().parents[1]
         summary,details=run_scenarios(root/"configs")

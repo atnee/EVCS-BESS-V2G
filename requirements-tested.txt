@@ -1,6 +1,8 @@
-# IEEE123 versions exercised on Windows / Python 3.13.5.
+# Versions exercised on Windows / Python 3.13.5 with the IEEE 8500 studies (docs/validation.md).
 numpy==2.3.3
 pandas==2.3.3
+scipy==1.16.1
+networkx==3.6.1
 PyYAML==6.0.3
 openpyxl==3.1.5
 matplotlib==3.10.7

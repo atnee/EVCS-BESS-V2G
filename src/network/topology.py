@@ -1,5 +1,5 @@
 """Feeder topology (NetworkX), line parameters and electrical inventory; no power flow.
-Functions take the normalized dataset (network.feeder_loader.read_feeder_data); default IEEE123."""
+Functions take the normalized dataset (network.feeder_loader.read_feeder_data); default IEEE 8500."""
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -17,7 +17,7 @@ def _matrix_stats(m, per_km=1/.3048):
 def sequence_parameters(code, per_km=1/.3048):
     """Per-km sequence values exactly as create_pandapower_network builds them.
     One/two-phase codes are uncoupled there, so their mutual terms are dropped.
-    per_km: 1 / length unit of the matrices in km (IEEE123: per 1000 ft)."""
+    per_km: 1 / length unit of the matrices in km (default: per 1000 ft)."""
     out = {}
     for key,symbol in (("rmatrix","r"),("xmatrix","x"),("cmatrix","c")):
         self_value,mutual = _matrix_stats(code[key],per_km)

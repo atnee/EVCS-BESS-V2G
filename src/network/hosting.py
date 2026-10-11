@@ -19,7 +19,7 @@ class HostingStudy:
     """
 
     def __init__(self, network=None, multiplier=1.0, v_min=.95, line_limit_pct=100., equipment_limit_pct=100., pf=1.0,
-                 feeder="ieee123", tolerance_mw=1e-8):
+                 feeder="ieee8500", tolerance_mw=1e-8):
         self.network = load_feeder(feeder) if network is None else network
         self.tolerance_mw = tolerance_mw
         self.net = create_pandapower_network(self.network)

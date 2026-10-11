@@ -2,7 +2,7 @@
 
 > **Comece por `ieee8500/resumo/`**: os 8 gráficos principais, numerados na ordem de leitura, e um `LEIA-ME.md` de uma página com a tabela S0 × S1 e a integração. Ele é atualizado sozinho ao fim do S1 e da integração (ou com `python -m integration.resumo`).
 
-Tudo aqui é **gerado pelos comandos** e não vai para o Git (exceto `demo_reference/` e este arquivo). Em cada estudo, as **figuras e o `summary.json` ficam na pasta**, e as **tabelas CSV ficam na subpasta `dados/`**.
+Tudo aqui é **gerado pelos comandos** e não vai para o Git (exceto este arquivo). Em cada estudo, as **figuras e o `summary.json` ficam na pasta**, e as **tabelas CSV ficam na subpasta `dados/`**.
 
 ```
 results/
@@ -10,6 +10,7 @@ results/
 │   ├── resumo/                ← COMECE AQUI: 8 gráficos numerados + LEIA-ME.md
 │   ├── s0_vs_s1/              só o caso base × S1 (maior frota): ANALISE.md (S0, S1 e S0 × S1, qualidade de
 │   │                          energia), metrics.csv, composição das estações, quality_*, network_*
+│   ├── zoneamento/            regiões residencial, comercial e industrial (hipótese): LEIA-ME.md, zones_*
 │   ├── s0/                    caso base: network_topology, voltage_map_peak, voltage_profile_peak/valley,
 │   │                          voltage_range_day, demand_substation_power_day, lines_impedance/capacitance
 │   ├── evcs_screening/        hosting_capacity_map, stations_<n>_evs (onde ficam as estações de cada frota)
@@ -28,8 +29,7 @@ results/
 │       ├── S1/ S2/ S3/ S4/    impact_*.png e network_*.png de cada cenário × S0
 │       ├── summary.csv, impact.csv    números por cenário
 │       └── modules/<módulo>/<cenário>/   contribuição de cada módulo
-├── modules/                   execução independente de cada módulo (python -m evcs | bess | v2g)
-└── demo_reference/            resultados sintéticos históricos da versão inicial (versionado)
+└── modules/                   execução independente de cada módulo (python -m evcs | bess | v2g)
 ```
 
 Todos os gráficos estão em inglês, um por arquivo. Para refazer só as figuras a partir dos resultados salvos (sem rodar fluxo de potência): `python -m integration.redraw` (~3 min).
@@ -42,6 +42,7 @@ Todos os gráficos estão em inglês, um por arquivo. Para refazer só as figura
 | `ieee8500/integration/` | `python -m integration.coordinator --output results/ieee8500/integration --frozen-taps` | ~15 min |
 | `ieee8500/resumo/` | `python -m integration.resumo` (também roda sozinho ao fim do S1 e da integração) | segundos |
 | `ieee8500/s0_vs_s1/` | `python -m integration.analysis` (`--evs 5000` para outra frota; também roda ao fim do S1) | ~15 s |
+| `ieee8500/zoneamento/` | `python -m integration.zoning` (critérios em `configs/ieee8500.yaml` → `zoning:`) | ~10 s |
 | `modules/` | `python -m evcs`, `python -m bess`, `python -m v2g` | segundos |
 
 A pasta do alimentador segue `feeder` em `configs/network.yaml` (hoje `ieee8500`).

@@ -42,7 +42,7 @@ O EVCS também publica `evcs.planning` (`from_config`, `with_fleet`, `generate_s
 
 Na execução integrada, infraestrutura EVCS e demanda atendida são entradas do V2G; demanda nominal da rede mais EVCS/frota alimenta o BESS. Portanto, resultados integrados podem mudar quando outro módulo muda. O alvo é independência de implementação, testes e arquivos, preservando coerência elétrica. Os horizontes dos três YAML devem coincidir para integrar; divergências geram erro explícito. O bloco `standalone` do V2G e a curva `standalone_demand_kw` do BESS não são usados pelo coordenador.
 
-Antes de entregar: executar testes do próprio módulo e `python -m pytest tests/test_module_independence.py -q`. A integração final deve passar pela suíte completa e pelo fluxo IEEE123.
+Antes de entregar: executar testes do próprio módulo e `python -m pytest tests/test_module_independence.py -q`. A integração final deve passar pela suíte completa e pelo fluxo no IEEE 8500.
 
 ## Iniciar
 O repositório está em https://github.com/atnee/EVCS-BESS-V2G, com `main` e as três branches. Cada colaborador clona sua própria cópia e trabalha na sua branch; os comandos de instalação estão em [ONBOARDING.md](../ONBOARDING.md).
@@ -69,4 +69,4 @@ Proteger main com Pull Requests, check `tests` aprovado e revisão. Preencher e 
 Ayrton: validar população de veículos independente, demanda horária, filas e critérios de seleção de barras. Evoluir dimensionamento EVCS.
 Kenia: avaliar dimensionamento P/E, objetivos, tarifa, degradação e política de SOC terminal. Substituir heurística por despacho otimizado.
 Cesar: definir disponibilidade, necessidades de viagem, sessões e degradação V2G. Refinar compartilhamento de carregadores preservando IDs únicos.
-Todos: aprovar contrato, licença e hipóteses econômicas; validar o equivalente pandapower do IEEE123 contra resultados publicados; acordar interface XLSX com a concessionária e regras de confidencialidade.
+Todos: aprovar contrato, licença e hipóteses econômicas; validar o equivalente pandapower do IEEE 8500 contra resultados publicados; acordar interface XLSX com a concessionária e regras de confidencialidade.

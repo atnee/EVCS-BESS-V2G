@@ -2,6 +2,8 @@
 
 [English](#english) · [Español](#español) · [Português](#português)
 
+**VS Code + AI assistant / asistente de IA / assistente de IA → [docs/tutorial_vscode_ia.md](docs/tutorial_vscode_ia.md)** (rules for the AI: [AGENTS.md](AGENTS.md))
+
 | Owner / Responsable / Responsável | Branch | Code / Código | Config | Notebook |
 |---|---|---|---|---|
 | Ayrton (EVCS) | `feature/evcs-ayrton` | `src/evcs/` | `configs/evcs.yaml` | `notebooks/01_evcs_ayrton.ipynb` |

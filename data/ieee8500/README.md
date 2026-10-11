@@ -2,11 +2,11 @@
 
 Alimentador de todos os estudos (integração S0–S4 com EVCS, BESS e V2G, e os estudos S0/triagem/S1 do EVCS), escolhido em `configs/network.yaml` (`feeder: ieee8500`).
 
-Como no IEEE123, não há motor OpenDSS: os arquivos de texto públicos são usados **somente como fonte de dados**, normalizados para JSON por `scripts/build_ieee8500_data.py`.
+A simulação usa `pandapower.runpp_3ph`; não há motor OpenDSS. Os arquivos de texto públicos são usados **somente como fonte de dados**, normalizados para JSON por `scripts/build_ieee8500_data.py`, sem conversor DSS.
 
 ## Proveniência e reprodução
-- Fonte: https://github.com/tshort/OpenDSS/tree/5005c668a72d20775f4c2d060feebb2866ba1d38/Distrib/IEEETestCases/8500-Node (mesmo commit do IEEE123), caso de **carga equilibrada** (`Master.dss`).
-- Obtenção: 09/10/2026. Originais em `source/`, licença EPRI BSD em `source/License.txt` (o repositório não traz licença na pasta do 8500; é a mesma licença da distribuição OpenDSS usada para o IEEE123).
+- Fonte: https://github.com/tshort/OpenDSS/tree/5005c668a72d20775f4c2d060feebb2866ba1d38/Distrib/IEEETestCases/8500-Node , caso de **carga equilibrada** (`Master.dss`).
+- Obtenção: 09/10/2026. Originais em `source/`, licença EPRI BSD em `source/License.txt` (o repositório não traz licença na pasta do 8500; é a licença da distribuição OpenDSS do mesmo commit).
 - Dados de execução: `src/network/data/ieee8500.json`; SHA256 de cada fonte em `provenance.sha256`.
 - Reconstrução offline: `python scripts/build_ieee8500_data.py` (inclui o ajuste dos taps, ~1 min).
 
@@ -22,7 +22,7 @@ Como no IEEE123, não há motor OpenDSS: os arquivos de texto públicos são usa
 | Capacitores | 4 bancos, 3.900 kvar |
 | Extensão | ~11 × 12 km; maior distância elétrica da subestação 17 km |
 
-Coordenadas em pés (mesma unidade do IEEE123). 63 barras de chaves sem coordenada no arquivo-fonte recebem a da barra vizinha mais próxima.
+Coordenadas e comprimentos em pés (1 unidade das matrizes = 1.000 pés = 0,3048 km). 63 barras de chaves sem coordenada no arquivo-fonte recebem a da barra vizinha mais próxima.
 
 ## ⚠️ Ajustes do estudo (diferem dos dados de referência IEEE)
 
@@ -44,9 +44,23 @@ Efeito no caso base S0 (dia com a curva de `configs/ieee8500.yaml`):
 
 O alimentador continua carregado na ponta: o tronco sul em 2/0 ACSR fica em ~95 % e trechos do 397 ACSR acima de 90 %.
 
-## Simplificações (além das do IEEE123)
+## O que o pandapower calcula
+- Fluxo AC trifásico assimétrico, com cargas por fase.
+- Cargas de potência, corrente ou impedância constante: um laço externo atualiza P e Q a partir da tensão nos terminais.
+- Capacitores por fase, com Q proporcional ao quadrado da tensão.
+- Controle dos taps dos reguladores a cada passo (ver abaixo).
+- Tensões, correntes, perdas de linhas e transformadores e potência na subestação.
+
+As matrizes completas R/X/C e as conexões originais ficam no JSON; `Network.lines` guarda só metadados de topologia. O cálculo elétrico usa a rede montada por `create_pandapower_network()`.
+
+## Simplificações
+O resultado é uma **aproximação do IEEE 8500 no pandapower nativo**, não uma reprodução certificada dos resultados publicados. O solver nativo usa componentes de sequência (https://pandapower.readthedocs.io/en/v3.3.3/powerflow/ac_3ph.html).
+
 | Componente | Representação |
 |---|---|
+| Linhas trifásicas | Médias das impedâncias próprias e mútuas: Z1 = Zprópria − Zmútua, Z0 = Zprópria + 2 Zmútua (o mesmo para C). O acoplamento assimétrico original é perdido. |
+| Linhas mono e bifásicas | Equivalentes trifásicos desacoplados. As fases auxiliares existem no cálculo; tensões e carregamentos usam só as fases físicas. |
+| Chaves fechadas | Conexões ideais. |
 | Rede secundária | Cada transformador de serviço monofásico (7,2 kV / 120-240 V), seu ramal triplex e a carga são substituídos por uma carga PQ na barra e fase primárias do transformador. Perdas e impedâncias do transformador e do secundário são desprezadas. |
 | Reguladores | Bancos de três unidades monofásicas tratados como um tap comum (média das fases). O controle (`vreg`, banda de 2 V em 120 V) é emulado dentro do fluxo de potência: a cada passo, o banco mais a montante fora da faixa move até 4 taps e o fluxo é resolvido de novo; os taps passam de um passo de tempo para o seguinte. Sem atrasos de tempo nem compensação de queda na linha. Reatância de 0,1 % mantida. |
 | Capacitores | Sempre ligados; o controle por kvar (`CapControl`) não é modelado. |

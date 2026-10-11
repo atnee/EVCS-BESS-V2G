@@ -1,7 +1,7 @@
 """S0 vs S1 analysis: network and power-quality metrics of the base case and of S1, side by side.
 
-python -m integration.analysis                # S1 fleet = the largest simulated (default 10 000 cars)
-python -m integration.analysis --evs 5000
+python -m integration.analysis                # S1 fleet = the largest simulated (the main S1 case)
+python -m integration.analysis --evs 2000
 Reads the saved S1 study (results/<feeder>/s1, 15 min) and writes results/<feeder>/s0_vs_s1/:
 one plot per figure (English) and ANALISE.md (Portuguese report with S0, S1 and S0 x S1). No power flow.
 
@@ -349,12 +349,12 @@ def report(m0, m1, evs, sites, params, feeder):
                 f"mais carregado {_fmt('{:.1f}',m['equipment_max_pct'])} %.",
                 f"- **Reguladores:** {m['tap_operations']} operações de tap no dia."]
     return "\n".join([
-        f"# Análise S0 × S1 — {feeder.upper()}, {_fmt('{:,d}',evs)} carros elétricos","",
+        f"# Análise S0 × S1 — {feeder.upper()}, {_fmt('{:,d}',evs)} veículos elétricos","",
         "Gerado por `python -m integration.analysis` a partir dos resultados salvos do estudo S1 (passo de 15 min, um dia). "
         "Os gráficos (um por arquivo, em inglês) estão nesta pasta.","",
         "## O que é comparado","",
         "- **S0 — caso base:** o alimentador IEEE 8500 com as cargas existentes e a curva diária, sem veículos elétricos.",
-        f"- **S1 — com recarga de veículos elétricos:** o mesmo dia com {evs:,} carros recarregando em {len(sites)} estações: "
+        f"- **S1 — com recarga de veículos elétricos:** o mesmo dia com {evs:,} veículos (frota mista) recarregando em {len(sites)} estações: "
         f"{n['dc']} hubs DC, {n['ac']} eletropostos trifásicos e {n['ac1']} eletropostos monofásicos, "
         f"{_fmt('{:,.0f}',kw)} kW instalados (alocação por cobertura total; gráficos `stations_composition*.png`).".replace(f"{evs:,}",_fmt('{:,d}',evs)),
         "- **Critérios de qualidade de energia** (referências de comparação, nenhuma é a norma de Honduras): faixas A e B da "

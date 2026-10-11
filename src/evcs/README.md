@@ -4,8 +4,8 @@ Responsável: **Ayrton** · branch `feature/evcs-ayrton` · configuração `conf
 
 Este módulo modela a recarga pública de veículos elétricos no alimentador **IEEE 8500** (redução de média tensão: ~11 × 12 km, 170 km de linhas, 2.521 barras, 10,8 MW na ponta). Ele faz três coisas:
 
-1. Simula **sessões de recarga** minuto a minuto: cada carro tem uma bateria, chega com um SOC, espera na fila se preciso e carrega até uma meta.
-2. **Dimensiona e aloca** dois tipos de estação, eletropostos AC e hubs DC, respeitando a capacidade da rede.
+1. Simula **sessões de recarga** minuto a minuto de uma **frota mista** (carros particulares e táxis/aplicativo): cada veículo tem uma bateria, chega com um SOC, espera na fila se preciso e carrega até uma meta.
+2. **Dimensiona e aloca** três tipos de estação: hubs DC, eletropostos AC trifásicos e eletropostos AC monofásicos. Os hubs são alocados por cobertura máxima; os eletropostos, por uma otimização (MILP) que cobre toda a carga com o menor custo.
 3. Calcula as **curvas diárias e intradiárias (15 min)** de demanda e o impacto na rede, comparando com o **caso base S0** (sem estações).
 
 > ⚠️ **Dois ajustes em relação aos dados IEEE 8500** (detalhes em [`data/ieee8500/README.md`](../../data/ieee8500/README.md), seção *Ajustes do estudo*):
@@ -14,19 +14,18 @@ Este módulo modela a recarga pública de veículos elétricos no alimentador **
 >
 > Com eles o caso base S0 fica dentro de 0,95–1,05 pu e sem sobrecargas relevantes.
 
-> Todos os valores de `planning:` no `evcs.yaml` são **hipóteses** até termos dados de Honduras. O algoritmo de otimização da alocação **ainda não foi definido**: a escolha de locais atual é uma triagem simples, que serve de referência para comparar com ele.
+> Todos os valores de `planning:` no `evcs.yaml` são **hipóteses** até termos dados de Honduras. A formulação completa (frota, sessões, MILP de alocação, indicadores, solvers) está em [docs/metodologia.md](../../docs/metodologia.md).
 
-> A integração S0–S4 com BESS e V2G (Kenia e Cesar) também roda no IEEE 8500. A estação da integração (`station.bus`), a BESS e o V2G ficam na barra `m1125976`, local do hub DC que a triagem escolhe para 2000 carros.
+> A integração S0–S4 com BESS e V2G (Kenia e Cesar) também roda no IEEE 8500. A estação da integração (`station.bus`), a BESS e o V2G ficam na barra `m1125976`, local de um dos hubs DC que a triagem escolhe.
 
 ## Arquivos
 
 | Arquivo | O que faz |
 |---|---|
-| `planning.py` | Frota, tipos de estação, sessões, fila, dimensionamento e escolha de locais por cobertura. Não depende da rede. |
+| `planning.py` | Frota mista, tipos de estação, sessões, fila, dimensionamento e escolha de locais: hubs por cobertura máxima, eletropostos pela otimização de cobertura total (MILP). Não depende da rede. |
 | `strategies.py` | Estratégias de demanda para a integração S0–S4 (`fixed`, `template`). |
 | `runner.py` | `python -m evcs` (execução independente) e `run_integrated` (contrato com o coordenador). |
-| `model.py`, `candidates.py` | Perfil de demanda limitado pela estação; barras candidatas por fase. |
-| `optimization.py` | Lugar reservado para a otimização (ainda `NotImplementedError`). |
+| `model.py` | Perfil de demanda da estação anfitriã do V2G, limitado pela potência da estação. |
 
 Estudos que usam o módulo, em `src/integration/`:
 
@@ -35,26 +34,32 @@ Estudos que usam o módulo, em `src/integration/`:
 
 ## Como uma sessão de recarga é calculada
 
-Para cada tipo de estação, sorteiam-se sessões até somar a energia pública diária daquele tipo:
+A frota é **mista**, com duas classes de veículo (`fleet.classes`):
+- **particulares:** 85 % dos veículos, muitos sem garagem;
+- **táxis e aplicativo:** 15 %, com 200 km/dia e toda a recarga em estação pública.
+
+Para cada classe e cada serviço (AC ou DC), sorteiam-se sessões até somar a energia pública diária daquela classe naquele serviço:
 
 ```
-energia pública/dia = carros × km/dia × kWh/km × parcela pública
-energia do tipo     = energia pública × share do tipo           (AC 60 %, DC 40 %)
+energia pública/dia da classe = veículos × share da classe × km/dia × kWh/km × parcela pública
+energia da classe no serviço  = energia pública da classe × services (particulares AC 60 % / DC 40 %; táxis AC 20 % / DC 80 %)
 ```
+
+São 9,07 kWh por veículo por dia nas estações, em média: 1.000 a 3.000 veículos pedem de 9,1 a 27,2 MWh/dia. Na rede, o que importa é essa energia, não o número de veículos: com a mesma energia por classe e serviço, as sessões são idênticas. Uma frota só de carros particulares com 30 % de recarga pública precisaria de ~10.000 carros para pedir ~19 MWh/dia, de 2 a 4 por domicílio, o que não é plausível.
 
 Cada sessão:
 
 | Grandeza | Como sai |
 |---|---|
-| Bateria | Normal(`battery_kwh`, `battery_std_kwh`), mínimo 10 kWh |
-| SOC de chegada | Normal(`arrival_soc_mean`, `arrival_soc_std`), entre 5 % e a meta − 5 % |
+| Bateria | Normal(`battery_kwh`, `battery_std_kwh`) da classe, mínimo 10 kWh |
+| SOC de chegada | Normal(`arrival_soc_mean`, `arrival_soc_std`) da classe, entre 5 % e a meta − 5 % |
 | Energia | bateria × (`target_soc` − SOC de chegada) |
 | Potência de recarga | mín(potência do carregador, limite do carro): `max_ac_kw` no AC, `max_dc_kw` no DC |
 | **Tempo de recarga** | **energia ÷ potência** (arredondado para cima, em minutos) |
 | Potência na rede | potência de recarga ÷ `charger_efficiency` |
-| Hora de chegada | sorteada com os 24 pesos de `arrival_shape` do tipo, minuto uniforme dentro da hora |
+| Hora de chegada | sorteada com os 24 pesos de `arrival_shape` (da classe, se ela tiver; senão, do tipo de estação), minuto uniforme dentro da hora |
 
-**Fila:** as sessões são distribuídas entre as estações do mesmo tipo. Se todos os carregadores estiverem ocupados, o carro espera. Se a espera passar de `max_wait_min`, ele desiste e a energia conta como **não atendida**. O dia é periódico: uma recarga que passa da meia-noite continua no início do dia.
+**Fila:** as sessões são distribuídas entre as estações do mesmo tipo. Se todos os carregadores estiverem ocupados, o carro espera. Se a espera passar de `max_wait_min`, ele desiste e a energia conta como **não atendida**. O dia é periódico: uma recarga que passa da meia-noite continua no início do dia e ocupa o carregador ali. Para isso, a fila de um dia de aquecimento é simulada antes do dia estudado.
 
 **Dimensionamento:** os carregadores de cada tipo são o percentil `sizing_quantile` (95 %) do número de carros carregando ao mesmo tempo, sem limite de carregadores. O número de estações é esse total dividido por `chargers_per_site`, arredondado para cima.
 
@@ -83,14 +88,22 @@ Cada sessão AC vai para um dos eletropostos (trifásico ou monofásico) com pro
 | `seed` | 42 | Semente: mesma semente → mesmas sessões |
 | `charger_efficiency` | 0,95 | Rendimento do carregador |
 | `sizing_quantile` | 0,95 | Percentil de simultaneidade usado para dimensionar carregadores |
-| `fleet.evs` | 2000 | Quantidade de carros elétricos na área (caso base; sensibilidade de 2000 a 5000) |
-| `fleet.battery_kwh` | 44,9 | **Bateria média** (kWh úteis; ex.: BYD Dolphin) |
-| `fleet.battery_std_kwh` | 15 | Variação do tamanho das baterias |
-| `fleet.daily_km` / `kwh_per_km` | 35 / 0,18 | Uso diário e consumo |
-| `fleet.public_share` | 0,30 | Parcela da energia recarregada fora de casa |
-| `fleet.arrival_soc_mean` / `_std` | 0,30 / 0,10 | SOC com que o carro chega à estação |
+| `fleet.evs` | 3000 | Veículos elétricos que recarregam na área (caso principal do S1; sensibilidade de 1000 a 3000) |
 | `fleet.max_ac_kw` | 11 | Carregador de bordo: limita a recarga AC |
-| `fleet.max_dc_kw` | 100 | Limite DC do carro: limita a recarga no hub |
+| `fleet.max_dc_kw` | 100 | Limite DC do veículo: limita a recarga no hub |
+
+Classes (`fleet.classes`), todas hipóteses:
+
+| Parâmetro | Particulares (`private`) | Táxis e aplicativo (`taxi`) |
+|---|---|---|
+| `share` (fração dos veículos) | 0,85 | 0,15 |
+| `battery_kwh` ± `battery_std_kwh` | **44,9** ± 15 (ex.: BYD Dolphin) | 60 ± 10 |
+| `daily_km` / `kwh_per_km` | 40 / 0,18 | 200 / 0,18 |
+| `public_share` | 0,6 (muitos sem garagem) | 1,0 |
+| `arrival_soc_mean` ± `_std` | 0,30 ± 0,10 | 0,25 ± 0,08 |
+| `services` (AC / DC) | 0,6 / 0,4 | 0,2 / 0,8 |
+| `arrival_shape` | do tipo de estação | próprio: DC entre corridas (almoço, troca de turno às 18–19 h), AC à noite |
+| Energia pública por veículo | 4,32 kWh/dia | 36 kWh/dia |
 
 | Tipo | Carregadores por estação | `share` | `target_soc` | `max_wait_min` | Raio / espaçamento |
 |---|---|---|---|---|---|
@@ -110,126 +123,126 @@ Tudo em Python (pandapower); não precisa de OpenDSS. Na raiz do repositório:
 ```powershell
 $env:PYTHONPATH="src"          # Linux/macOS: export PYTHONPATH=src
 python -m integration.s0_study                    # caso base S0 (~2 min)            -> results/ieee8500/s0/
-python -m integration.evcs_screening              # triagem (1ª vez ~1,5 h)          -> results/ieee8500/evcs_screening/
-python -m integration.s1_study                    # S1, ~12 min por frota            -> results/ieee8500/s1/
+python -m integration.evcs_screening              # triagem (~9 min; 1ª vez ~1,5 h)  -> results/ieee8500/evcs_screening/
+python -m integration.s1_study                    # S1, 5 frotas em paralelo (~40 min) -> results/ieee8500/s1/
+python -m integration.analysis                    # análise S0 × S1 (~15 s)          -> results/ieee8500/s0_vs_s1/
+python -m integration.zoning                      # regiões residencial/comercial/industrial (~10 s) -> results/ieee8500/zoneamento/
 python -m integration.redraw                      # só refaz os gráficos a partir dos resultados salvos (~3 min)
-python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_ieee8500.py -q
+python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_zoning.py tests/test_ieee8500.py -q
 ```
 
 - A **varredura de capacidade** (parte demorada da triagem) fica salva em `dados/hosting_capacity.csv` e é reaproveitada enquanto as candidatas forem as mesmas; `--resweep` força refazer (necessário se a rede mudar).
-- O alimentador de todos os estudos (inclusive a integração S0–S4) é escolhido em `configs/network.yaml` (`ieee8500`; `ieee123` ainda funciona). Os dados da rede vêm de `src/network/data/ieee8500.json`, gerado por `scripts/build_ieee8500_data.py` (só precisa rodar se os arquivos-fonte mudarem).
+- O alimentador de todos os estudos (inclusive a integração S0–S4) é o IEEE 8500 (`configs/network.yaml`). Os dados da rede vêm de `src/network/data/ieee8500.json`, gerado por `scripts/build_ieee8500_data.py` (só precisa rodar se os arquivos-fonte mudarem).
 - O notebook `notebooks/01_evcs_ayrton.ipynb` mostra os resultados salvos e tem uma célula para rodar tudo de novo.
 - `results/` não vai para o Git. As figuras deste README estão copiadas em `docs/evcs/figures/`.
 
 ### Saídas
 
-**Comece por `results/ieee8500/resumo/`**: as 4 figuras principais e um `LEIA-ME.md` de uma página com a tabela S0 × S1 (atualizado ao fim do S1 e da integração, ou com `python -m integration.resumo`). Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`; figuras na pasta, tabelas CSV na subpasta `dados/`. Mapa completo em [`results/README.md`](../../results/README.md).
+**Comece por `results/ieee8500/resumo/`**: as 8 figuras principais e um `LEIA-ME.md` de uma página com a tabela S0 × S1 (atualizado ao fim do S1 e da integração, ou com `python -m integration.resumo`). Sem `--output`, cada estudo grava em `results/<alimentador>/<estudo>/`; figuras na pasta, tabelas CSV na subpasta `dados/`. Mapa completo em [`results/README.md`](../../results/README.md).
 
 | Pasta / arquivo | Conteúdo |
 |---|---|
-| `results/ieee8500/resumo/` | **Comece aqui**: 4 figuras numeradas + `LEIA-ME.md` com a tabela S0 × S1 e a integração |
-| `results/ieee8500/s0/` | Caso base: `topology.png`, `voltage_profile.png`, `voltage_map.png`, `daily.png`; tabelas de linhas, barras e inventário em `dados/` |
-| `results/ieee8500/evcs_screening/` | `hosting_map.png` (capacidade por barra), `coverage_<n>_evs.png`; em `dados/`: `hosting_capacity.csv`, `fleet_scenarios.csv` |
-| `results/ieee8500/s1/intraday_sensitivity.png` | **Curvas intradiárias de todas as frotas × S0** (demanda, subestação, tensão, carregamento) |
-| `results/ieee8500/s1/sobrecarga_por_frota.png` | **Sobrecarga S0 × S1 conforme a quantidade de carros** (ponta, linha mais carregada, tensão, queda, perdas); tabela em `dados/sobrecarga_por_frota.csv` |
-| `results/ieee8500/s1/impact_sensitivity.png` | **Impacto S1 × S0 por frota**: queda causada pelas estações, barras afetadas, tensão mínima, operações de tap |
-| `results/ieee8500/s1/dados/s0_intraday.csv`, `evs_<n>/dados/intraday.csv` | Os mesmos indicadores a cada 15 min, mais os taps dos reguladores |
-| `results/ieee8500/s1/evs_<n>/` | Por frota: **`network_state.png`** (rede no S0 e no S1 lado a lado), **`impact_s0_s1.png`** (variação de tensão S1 − S0 com e sem a ação dos reguladores, mapa, taps), `curves_intraday.png` (1 min / 15 min / 1 h), `voltage_intraday.png`, `allocation.png`, `sessions.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes) em `dados/` |
+| `results/ieee8500/resumo/` | **Comece aqui**: 8 figuras numeradas + `LEIA-ME.md` com a tabela S0 × S1 por frota |
+| `results/ieee8500/s0_vs_s1/` | `ANALISE.md` (S0, S1 e S0 × S1 com qualidade de energia), `metrics.csv`, `stations_composition*.png`, `quality_*.png`, `network_*.png` |
+| `results/ieee8500/s0/` | Caso base: `network_topology.png`, `voltage_map_peak.png`, `voltage_profile_peak/valley.png`, `voltage_range_day.png`, `demand_substation_power_day.png`, `lines_*.png`; tabelas em `dados/` |
+| `results/ieee8500/evcs_screening/` | `hosting_capacity_map.png`, `hosting_capacity_voltage_only_map.png`, `stations_<n>_evs.png`; em `dados/`: `hosting_capacity.csv`, `fleet_scenarios.csv` |
+| `results/ieee8500/s1/` | Todas as frotas × S0: `overload_*.png` (indicador conforme a frota) e `sensitivity_*.png` (curvas do dia); tabelas em `dados/` |
+| `results/ieee8500/s1/evs_<n>/` | Por frota: `demand_*`, `voltage_*`, `impact_*` (com os reguladores atuando e com os taps travados), `network_*` (S0 e S1 na ponta), `sessions_*`, `stations_map.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes, `intraday.csv`) em `dados/` |
+| `results/ieee8500/zoneamento/` | Regiões residencial, comercial e industrial (hipótese): `zones_*.png`, `LEIA-ME.md`, classe de cada consumidor em `dados/customers.csv` |
 
-## Resultados atuais (IEEE 8500 com os ajustes)
+## Resultados atuais (IEEE 8500, frota mista)
 
-> ⚠️ **As tabelas e figuras desta seção são da rodada anterior** (bateria média de 60 kWh, 2000–5000 carros, eletropostos escolhidos pelo método guloso). A rodada atual usa **bateria de 44,9 kWh, 2000–10.000 carros e a otimização de cobertura total**; os números atualizados estão em `results/ieee8500/resumo/LEIA-ME.md` (gerado localmente). Esta seção será refeita com eles.
->
-> Rodada atual, em resumo: ~73 locais cobrem 100 % da carga em todas as frotas; a rede **passa a ficar sobrecarregada a partir de 4.000 carros** (linha-tronco acima de 100 % e tensão abaixo de 0,95 pu mesmo com os reguladores); com 10.000 carros a linha chega a 108 %, a tensão a 0,936 pu (3 h por dia abaixo do limite), a ponta sobe 17 % e as perdas 19 %.
+Frota mista de 1.000 a 3.000 veículos: 85 % particulares e 15 % táxis/aplicativo, de 9 a 27 MWh/dia nas estações. O caso principal é o de 3.000 veículos. Passo de 15 min, um dia.
 
-Sensibilidade à quantidade de carros (rodada anterior): 2000 a 5000.
+Números completos em `results/ieee8500/resumo/LEIA-ME.md` e `results/ieee8500/s0_vs_s1/ANALISE.md`, que são gerados localmente; o método está em [docs/metodologia.md](../../docs/metodologia.md).
 
 ### Caso base S0
 
-Ponta de 11.750 kW às 18h; tensão entre 0,951 e 1,043 pu no dia. O alimentador já está carregado na ponta: tronco sul em 2/0 ACSR a 96 % e trechos do tronco 397 ACSR a ~92 %.
+- Ponta de 11.750 kW às 18:30; tensão entre 0,951 e 1,048 pu no dia.
+- O alimentador já está carregado na ponta: tronco sul em 2/0 ACSR a 97 % e tronco da saída em 397 ACSR a ~91 %.
 
 ![Topologia do IEEE 8500](../../docs/evcs/figures/s0_topology.png)
 
-![Perfil de tensão do S0 na ponta e no vale](../../docs/evcs/figures/s0_voltage_profile.png)
+![Perfil de tensão do S0 na ponta](../../docs/evcs/figures/s0_voltage_profile_peak.png)
 
-### Curvas intradiárias (15 min): todas as frotas × S0
+### Estações por frota
 
-![Curvas intradiárias das frotas de 2000 a 5000 carros comparadas com o caso base](../../docs/evcs/figures/intraday_sensitivity.png)
+| | 1.000 | 1.500 | 2.000 | 2.500 | **3.000** |
+|---|---|---|---|---|---|
+| Energia pública (MWh/dia) | 9,1 | 13,6 | 18,1 | 22,7 | **27,2** |
+| Sessões/dia | 303 | 457 | 608 | 762 | **915** |
+| Hubs DC + eletropostos trifásicos + monofásicos | 2 + 0 + 73 | 2 + 8 + 63 | 3 + 9 + 62 | 4 + 6 + 65 | **4 + 9 + 62** |
+| Carregadores DC / AC | 6 / 25 | 8 / 32 | 11 / 39 | 13 / 52 | **16 / 59** |
+| Potência instalada (kW) | 2.280 | 3.188 | 3.906 | 4.154 | **4.506** |
+| CAPEX (milhões de USD, hipótese) | 2,55 | 2,79 | 3,23 | 3,52 | **3,63** |
+| Pico das estações: 1 min / 15 min / 1 h (kW) | 1.064 / 955 / 767 | 1.168 / 1.121 / 949 | 1.663 / 1.566 / 1.298 | 2.188 / 1.947 / 1.752 | **2.289 / 2.105 / 1.885** |
+| Recargas atendidas | 99 % | 98 % | 98 % | 98 % | **97 %** |
+| Cobertura da carga: hubs (1,5 km) / eletropostos (500 m) | 29 % / 100 % | 29 % / 100 % | 38 % / 100 % | 46 % / 100 % | **46 % / 100 %** |
 
-- A demanda das estações tem picos curtos (hubs DC) de manhã, perto das 13h e entre 18h e 20h, que é também a ponta do alimentador.
-- Na ponta, a subestação passa de 11.750 kW (S0) para até 12.725 kW (5000 carros).
-- A tensão mínima já encosta em 0,95 pu no S0 entre 17h e 20h; as estações quase não a mudam porque os reguladores sobem o tap.
-- O que aperta é a **linha**: com 4000–5000 carros o trecho mais carregado chega a **100 % entre 18h e 20h**.
+- Os eletropostos cobrem toda a carga em todas as frotas. Por isso o número de locais fica em ~75 e só a composição muda.
+- Os hubs vão de 2 a 4, porque os táxis fazem 80 % da recarga em carregador rápido.
 
-Detalhe da frota de 5000 carros (demanda a 1 min, 15 min e 1 h; tensão a cada passo):
+![Composição das estações por frota](../../docs/evcs/figures/stations_composition_by_fleet.png)
 
-![Demanda intradiária das estações e potência na subestação, 5000 carros](../../docs/evcs/figures/curves_intraday_5000_evs.png)
+![Hubs e eletropostos para 3.000 veículos, com raio de cobertura](../../docs/evcs/figures/stations_map_3000.png)
 
-![Tensão mínima intradiária e queda causada pelas estações, 5000 carros](../../docs/evcs/figures/voltage_intraday_5000_evs.png)
+![Estações sobre as regiões residencial, comercial e industrial](../../docs/evcs/figures/zones_with_stations.png)
 
-### Como a rede fica no S0 e no S1 (5000 carros)
+### Sobrecarga conforme a frota
 
-Mesma escala nos dois lados, cada um na sua ponta: tensão por barra, carregamento das linhas com os hubs e eletropostos, transformador/reguladores/linhas mais carregadas e quantas barras e linhas há em cada faixa.
+| | S0 | 1.000 | 1.500 | 2.000 | 2.500 | **3.000** |
+|---|---|---|---|---|---|---|
+| Ponta na subestação | 11.750 kW | +5,6 % | +9,1 % | +12,2 % | +18,0 % | **+18,7 % (13.946 kW)** |
+| Linha mais carregada | 96,7 % | 98,9 % | 100,2 % | 103,2 % | 108,4 % | **108,9 %** |
+| Tensão mínima, reguladores atuando | 0,951 pu | 0,949 | 0,943 | 0,940 | 0,936 | **0,933 pu** |
+| Tensão mínima, taps travados no S0 | 0,951 pu | 0,942 | 0,936 | 0,930 | 0,928 | **0,924 pu** |
+| Maior queda causada pelas estações | — | 1,8 % | 2,8 % | 3,1 % | 3,7 % | **4,0 %** |
+| Perdas no dia | 14,3 MWh | +8,5 % | +12 % | +18 % | +20 % | **+24 %** |
 
-![Rede no S0 e no S1 com 5000 carros](../../docs/evcs/figures/network_state_5000_evs.png)
+![Ponta da subestação conforme a frota](../../docs/evcs/figures/overload_substation_peak.png)
 
-- O **norte/oeste**, onde fica a maior parte dos eletropostos e um dos hubs, é a região que mais perde tensão; a ponta passa das 18h30 para as 19h.
-- As linhas que já eram as mais carregadas no S0 (troncos 2/0 ACSR que levam ao sul e ao hub do norte) chegam a **100 %**.
-- Transformador da subestação: 43 → 47 %; regulador VREG3, que alimenta o norte: 66 → 72 %. Nenhum transformador limita.
+![Linha mais carregada conforme a frota](../../docs/evcs/figures/overload_line_loading.png)
 
-### Impacto S1 × S0: o que as estações fazem com a tensão
+![Tensão mínima conforme a frota, com e sem os reguladores](../../docs/evcs/figures/overload_min_voltage.png)
 
-Os perfis de tensão do S0 e do S1 parecem iguais porque **os reguladores compensam**: quando as estações puxam a tensão para baixo, eles sobem o tap. Para separar os dois efeitos, cada S1 é resolvido duas vezes: com os reguladores atuando e com os **taps travados nos valores do S0** (o efeito das estações sozinhas).
+- **A tensão é o primeiro limite.** Com os reguladores atuando, ela já fica abaixo de 0,95 pu com 1.000 veículos.
+- **A linha passa de 100 % a partir de 1.500 veículos.** As sobrecargas estão no tronco da saída da subestação (397 ACSR, `ln5513564-1` e vizinhas) e no tronco sul (2/0 ACSR), das 17h às 20h.
+- **Os reguladores escondem parte do efeito.** Eles sobem o tap quando as estações puxam a tensão para baixo. Por isso cada S1 é resolvido também com os taps travados nos valores do S0, o que mostra o efeito das estações sozinhas. Bus a bus, a visão regulada mistura a banda morta dos reguladores.
 
-![Impacto S1 × S0 por frota](../../docs/evcs/figures/impact_sensitivity.png)
+### O dia com 3.000 veículos
 
-| | 2000 | 3000 | 4000 | 5000 |
-|---|---|---|---|---|
-| Maior queda causada pelas estações (taps do S0) | 0,90 % | 1,16 % | 1,39 % | **2,17 %** |
-| Barras com queda acima de 1 % (taps do S0) | 0 | 652 | 1.360 | **2.080** |
-| Tensão mínima sem a ação dos reguladores (S0: 0,951 pu) | 0,948 pu | 0,945 pu | 0,944 pu | **0,943 pu** |
-| Tensão mínima com os reguladores atuando | 0,951 pu | 0,951 pu | **0,949 pu** | 0,951 pu |
-| Operações de tap no dia (S0: 56) | 48 | 49 | 62 | 57 |
-| Perdas no dia, S0 → S1 (15 min) | 14,3 → 14,8 MWh | → 15,0 MWh | → 15,2 MWh | → 15,6 MWh (+9 %) |
+![Demanda das estações ao longo do dia, 3.000 veículos](../../docs/evcs/figures/demand_ev_intraday_3000.png)
 
-- **Sem os reguladores, a partir de 2000 carros a tensão já sairia da faixa** (abaixo de 0,95 pu). São eles que mantêm o alimentador dentro do limite, e com 4000 carros nem isso basta (0,949 pu).
-- A queda é maior **longe da subestação e no norte/oeste**, onde ficam a maioria dos eletropostos; perto da subestação a tensão até sobe (+1,1 %), porque o regulador da subestação sobe o tap.
-- Bus a bus, a comparação "com reguladores" mistura a **banda morta** dos reguladores (um banco pode parar um tap abaixo do que estava no S0); por isso o efeito das estações é medido com os taps travados, e o caso regulado pela tensão mínima que de fato ocorre.
+- A demanda das estações tem dois patamares: ~1,9 MW das 12h às 15h (táxis no almoço) e até 2,1 MW das 18h às 21h, quando coincide com a ponta do alimentador.
+- Os hubs DC respondem pela maior parte da potência e pelos picos.
+- Os eletropostos AC somam ~0,3 MW cada tipo, quase constantes.
 
-Detalhe para 5000 carros:
+![Linha mais carregada ao longo do dia, S0 e cada frota](../../docs/evcs/figures/day_line_loading.png)
 
-![Variação de tensão S1 − S0, mapa da queda e taps, 5000 carros](../../docs/evcs/figures/impact_s0_s1_5000_evs.png)
+![Tensão mínima ao longo do dia, S0 e cada frota](../../docs/evcs/figures/day_min_voltage.png)
 
-### S1 na integração S0–S4
+![Carregamento das linhas na ponta do S1, 3.000 veículos](../../docs/evcs/figures/line_loading_S1_3000.png)
 
-A integração (`python -m integration.coordinator`, passo de 1 h) usa as mesmas estações para **5000 carros** (bloco `integration:` do `evcs.yaml`): 2 hubs DC + 7 eletropostos, pico de 913 kW às 19h, mais a estação anfitriã do V2G (`station:`, 88 kW). Em relação ao S0: ponta da subestação **11.783 → 12.573 kW** (e passa das 18h para as 19h), perdas **+9 %**, tronco sul 2/0 ACSR **96 → 100,5 %** (às 18h), tensão mínima com taps travados **0,938 pu**. É o ponto de partida do S2 (BESS) e do S3 (V2G): ver [`docs/escopo_S2_S3.md`](../../docs/escopo_S2_S3.md).
+![Queda de tensão causada pelas estações às 18h, taps travados, 3.000 veículos](../../docs/evcs/figures/impact_voltage_drop_map_3000.png)
 
-### Tabela por frota
+- A queda é maior **longe da subestação, no oeste e no sul**, chegando a ~3,6 % às 18h.
+- Perto da subestação a queda fica abaixo de 1,5 %.
 
-| | 2000 | 3000 | 4000 | 5000 |
-|---|---|---|---|---|
-| Hubs DC + eletropostos AC | 1 + 4 | 1 + 5 | 1 + 6 | 2 + 7 |
-| Carregadores DC / AC | 2 / 20 | 3 / 28 | 4 / 36 | 5 / 40 |
-| Sessões/dia | 111 | 166 | 221 | 276 |
-| Pico das estações: 1 min / 15 min / 1 h (kW) | 560 / 501 / 407 | 699 / 669 / 500 | 792 / 762 / 730 | 1238 / 1058 / 869 |
-| Ponta da subestação S0 → S1, 15 min (kW) | 11.750 → 12.222 | → 12.172 | → 12.462 | → 12.725 |
-| Maior queda de tensão causada pelas estações (S1) | 1,5 % | 1,6 % | 1,3 % | 1,7 % |
-| Tensão mínima S1 (S0: 0,9505 pu) | 0,951 pu | 0,951 pu | 0,949 pu | 0,951 pu |
-| Recargas atendidas | 95 % | 95 % | 92 % | 93 % |
-| Cobertura da carga: hubs / eletropostos | 15 % / 18 % | 15 % / 22 % | 15 % / 25 % | 29 % / 27 % |
-| Maior carregamento de regulador/transformador (triagem) | 67 % | 68 % | 69 % | 74 % |
-| A rede aceita? (triagem: todas as estações no pico, na ponta) | sim | não: linha 2/0 | não: linha 2/0 | não: tensão e linha 397 |
+### Capacidade da rede
 
-### Capacidade da rede e alocação
+![Capacidade de hospedagem por barra na ponta](../../docs/evcs/figures/hosting_capacity_map.png)
 
-![Capacidade de hospedagem por barra na ponta](../../docs/evcs/figures/hosting_map.png)
+- **Capacidade por barra:** mediana de 475 kW (de 129 a 1.178 kW) nas 101 candidatas.
+- **O que limita:**
+  - o tronco 2/0 ACSR do sul (`ln5835160-1`) em 42 candidatas;
+  - o 397 ACSR da saída (`ln5513564-1`) em 30;
+  - a tensão mínima (0,95 pu) em 25.
 
-![Hubs e eletropostos para 5000 carros, com raio de cobertura](../../docs/evcs/figures/coverage_5000_evs.png)
+  Reguladores e subestação não limitam.
+- **A rede não aceita a alocação em nenhuma frota** quando todas as estações estão no pico, na ponta: há tensão abaixo de 0,95 pu e linha acima de 100 %. É o que o S1 deve mostrar, para o S2 (BESS) e o S3 (V2G) aliviarem.
+- **Recarga em casa** (40 % da energia dos particulares) ainda não entra na rede, porque ocorre na baixa tensão; incluí-la piora todos os cenários.
 
-- **Capacidade por barra:** mediana de 475 kW (129 a 1.178 kW) nas 101 candidatas. O que limita é o **tronco**, já carregado no caso base: a linha 2/0 ACSR do sul (`ln5835160-1`) em 42 candidatas, o 397 ACSR (`ln5513564-1`) em 30 e a tensão mínima (0,95 pu) em 25. Reguladores e subestação ficam abaixo de 75 %.
-- **A rede aceita até ~2000 carros** pela triagem (critério conservador). No S1, ao longo do dia, os picos das estações não coincidem, mas a linha mais carregada chega a 100 % com 4000–5000 carros. Frotas maiores dependem de BESS/V2G aliviarem a ponta ou de reforço do tronco.
-- **A cobertura é baixa:** o número de estações sai da energia da frota, e poucos eletropostos com raio de 500 m cobrem só 18–27 % da carga. No IEEE 8500 a cobertura passa a ser uma restrição relevante para a otimização.
-- **Recarga em casa** (70 % da energia) ainda não entra na rede; incluí-la piora todos os cenários.
+**Integração S0–S4 (passo de 1 h):** usa as 75 estações de 3.000 veículos (bloco `integration:` do `evcs.yaml`) mais a estação anfitriã do V2G. Ela ainda não foi rodada com a frota mista e será refeita quando BESS e V2G estiverem prontos; ver [`docs/S2_BESS_Kenia.md`](../../docs/S2_BESS_Kenia.md) e [`docs/S3_V2G_Cesar.md`](../../docs/S3_V2G_Cesar.md).
 
 ## Tempo de execução
 
@@ -238,11 +251,12 @@ A otimização leva menos de 2 s; o tempo está no fluxo de potência trifásico
 | Etapa | Tempo hoje |
 |---|---|
 | Varredura de capacidade da rede (só na 1ª vez; fica salva) | ~1,5 h |
-| Triagem com a otimização (5 frotas) | ~4 min |
-| S1, 5 frotas × 96 passos × 2 soluções (reguladores atuando e taps travados), em paralelo | ~35 min (antes ~65 min em sequência) |
+| Triagem com a otimização (5 frotas) | ~9 min |
+| S1, 5 frotas × 96 passos × 2 soluções (reguladores atuando e taps travados), em paralelo | ~35–41 min (~65 min em sequência) |
 | Integração S0–S4 com `--frozen-taps` | ~15 min |
 | Refazer só os gráficos (`python -m integration.redraw`) | ~3 min |
 | Análise S0 × S1 com qualidade de energia (`python -m integration.analysis`) | ~15 s |
+| Zoneamento residencial / comercial / industrial (`python -m integration.zoning`) | ~10 s |
 
 Testes feitos (Ryzen 5 3600, 6 núcleos, 16 GB): o **numba** acelera só ~6 % (não vale torná-lo obrigatório); o **paralelismo** (um processo por frota, um núcleo por processo: `OMP_NUM_THREADS=1`) roda 5 tarefas em 96 s contra 225 s em sequência, **~2,3× mais rápido**. Depende do número de núcleos do processador, não da placa de vídeo. Implementado (`integration/parallel.py`): o S1 roda uma frota por processo e a varredura de capacidade divide as barras entre os processos; o número de processos é o de núcleos físicos menos um (`--workers` ou a variável `EVCS_WORKERS` mudam isso). Os resultados são idênticos aos da execução em sequência.
 

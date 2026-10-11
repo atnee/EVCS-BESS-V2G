@@ -1,6 +1,6 @@
 """Redraw every figure from results already saved, without solving any power flow (seconds to minutes).
 
-python -m integration.redraw                  # feeder of configs/network.yaml: S0, screening, S1, integration, resumo
+python -m integration.redraw                  # feeder of configs/network.yaml: S0, screening, S1, integration, resumo, zoning
 Use after changing plots. Studies that were not run are skipped. Frozen-tap views (taps held at the S0 values)
 are drawn only where their tables were saved (dados/*frozen_taps*); otherwise only the regulated view appears.
 """
@@ -129,6 +129,10 @@ def redraw(config_dir="configs", results="results"):
     done.append("resumo")
     if export_analysis(root,config_dir):
         done.append("s0_vs_s1")
+    if (root/"zoneamento").exists():
+        from integration.zoning import export_zoning
+        export_zoning(root/"zoneamento",config_dir)
+        done.append("zoneamento")
     return done
 
 

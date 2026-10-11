@@ -1,46 +1,37 @@
-"""IEEE test feeders (normalized JSON) and native pandapower sequence approximation; no DSS engine.
+"""IEEE 8500 test feeder (normalized JSON) and native pandapower sequence approximation; no DSS engine.
 
-Available feeders: FEEDERS keys ('ieee123', 'ieee8500'). Datasets are built by scripts/build_<name>_data.py."""
+Available feeders: FEEDERS keys. The dataset is built by scripts/build_ieee8500_data.py."""
 from pathlib import Path
 import json
 import numpy as np
 from core.schemas import Bus, Line, Network
 
 DATA_DIR = Path(__file__).parent / "data"
-COMMON_LIMITATIONS = [
-    "Three-phase line matrices replaced by averaged self/mutual sequence parameters.",
-    "One/two-phase lines represented by uncoupled three-phase lines; unused phases excluded from reporting.",
-    "Regulator banks use fixed mean reference taps, without independent phase controls.",
-    "No comparison with published IEEE phase voltages has established numerical equivalence.",
-]
 FEEDERS = {
-    "ieee123": dict(name="IEEE 123", file="ieee123.json",
-        fidelity="IEEE123 topology; pandapower sequence approximation; fixed mean regulator taps",
-        limitations=COMMON_LIMITATIONS[:3]+[
-            "Regulator leakage is regularized to 0.05 percent for numerical conditioning.",
-            "Unloaded Dd0 transformer represented by a grounded YNyn equivalent.",
-            "Line ampacity is an assumed 400 A, not a validated IEEE thermal rating.",
-        ]+COMMON_LIMITATIONS[3:]),
     "ieee8500": dict(name="IEEE 8500", file="ieee8500.json",
         fidelity="IEEE8500 medium-voltage reduction; pandapower sequence approximation; regulator taps controlled per step (ganged)",
-        limitations=COMMON_LIMITATIONS[:3]+[
+        limitations=[
+            "Three-phase line matrices replaced by averaged self/mutual sequence parameters.",
+            "One/two-phase lines represented by uncoupled three-phase lines; unused phases excluded from reporting.",
+            "Regulator banks share one tap (mean of the phases), without independent phase controls.",
             "Service transformers, triplex secondaries and 120/240 V loads lumped as PQ loads on the primary bus.",
             "Regulator taps follow an emulated RegControl (vreg, band; ganged banks, no time delays).",
             "Capacitor banks always in service (CapControls not modelled).",
             "Delta-wye substation transformer represented by a grounded YNyn equivalent.",
             "STUDY ADJUSTMENT: line ampacity = typical rating of the phase conductor (not IEEE data).",
             "STUDY ADJUSTMENT: source 1.0 pu and regulator vreg 1.03 pu (reference 1.05 / 1.054 / 1.042 pu).",
-        ]+COMMON_LIMITATIONS[3:]),
+            "No comparison with published IEEE phase voltages has established numerical equivalence.",
+        ]),
 }
 
 
-def feeder_info(feeder="ieee123"):
+def feeder_info(feeder="ieee8500"):
     if feeder not in FEEDERS:
         raise ValueError(f"Unknown feeder {feeder!r}; available: {sorted(FEEDERS)}")
     return FEEDERS[feeder]
 
 
-def read_feeder_data(feeder="ieee123", path=None):
+def read_feeder_data(feeder="ieee8500", path=None):
     info = feeder_info(feeder)
     path = DATA_DIR/info["file"] if path is None else Path(path)
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -54,11 +45,11 @@ def _feeder_key(data):
 
 
 def unit_km(data):
-    """Length unit of the linecode matrices, in km (IEEE123: per 1000 ft)."""
+    """Length unit of the linecode matrices, in km (default: per 1000 ft)."""
     return data.get("linecode_unit_km",.3048)
 
 
-def load_feeder(feeder="ieee123", path: str | Path | None = None) -> Network:
+def load_feeder(feeder="ieee8500", path: str | Path | None = None) -> Network:
     data = read_feeder_data(feeder,path)
     buses = [Bus(b["id"], b["phases"], b["vn_kv"]*1000/np.sqrt(3),
                  *(b["xy"] or [None,None])) for b in data["buses"]]

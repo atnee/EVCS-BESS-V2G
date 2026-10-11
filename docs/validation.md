@@ -1,44 +1,47 @@
-# Validação IEEE123 / pandapower — 08/10/2026
+# Validação — IEEE 8500
 
-Ambiente: Windows, Python 3.13.5, pandapower 3.4.0. Versões diretas em `requirements-tested.txt`.
+O que foi verificado no código e nos resultados, e o que **ainda não** foi. Atualizado em 11/10/2026, branch `feature/ieee8500`.
 
-- `python -m pip install -e ".[dev]"`: concluído.
-- `python -m pytest -q`: **34 testes aprovados**, 78,65 s.
-- `python -m integration.coordinator --output results/ieee123`: S0–S4, 24 intervalos cada, concluídos com resultados finitos. CSV/JSON/PNG exportados; gráfico inspecionado.
-- Wheel construído com `pip wheel . --no-deps` e carregado fora da raiz do projeto: JSON IEEE123 e licença presentes; 130 barras computacionais e 118 linhas carregadas sem acesso à fonte externa.
-- Os cinco notebooks foram executados integralmente com kernel Jupyter via `nbclient`. Cópias com saídas estão em `results/ieee123/notebooks/`; os originais permanecem sem saídas. Houve avisos do transporte/encerramento ZMQ no Windows, sem falha nas células.
+## Ambiente
 
-Os novos testes verificam hashes dos dados-fonte, total nominal 3.490 kW / 1.920 kvar, fases, comprimento/impedâncias, chaves, cargas delta, PQ/I/Z e capacitores. Verificam ainda resposta ao sinal das injeções, ausência de estado residual entre cenários, rejeição de fases inválidas, não finitude mesmo quando o backend informa convergência e balanço ativo com tolerância absoluta de 0,001 kW em todos os cenários. Os testes anteriores de EVCS, BESS, V2G e XLSX continuam aprovados.
+| Item | Versão |
+|---|---|
+| Sistema | Windows 11, AMD Ryzen 5 3600 (6 núcleos), 16 GB de RAM; a GPU não é usada |
+| Python | 3.13.5 |
+| Bibliotecas | pandapower 3.4.0, numpy 2.3.3, pandas 2.3.3, scipy 1.16.1 (HiGHS), networkx 3.6.1, matplotlib 3.10.7, PyYAML 6.0.3, pytest 9.1.1 |
 
-Snapshot nominal sem DER: P_fonte = 3.618,079 kW; V_min = 0,997795 pu e V_max = 1,043661 pu. Estes números descrevem o equivalente implementado; **não são uma comparação independente com a solução publicada pelo IEEE**.
+As versões estão fixadas em `requirements-tested.txt`. O GitHub Actions (`.github/workflows/`) roda a suíte em Python 3.12 e 3.13.
 
-Na curva diária assumida, taps fixos geram sobretensões em carga leve (máximo próximo de 1,0713 pu). Os indicadores térmicos usam a hipótese de 400 A nas linhas. Portanto, convergência e balanço não certificam fidelidade integral nem viabilidade operacional. Veja `data/ieee123/README.md` para todas as aproximações.
+## Testes automatizados
 
----
+`python -m pytest -q`: **75 testes aprovados (mais 22 subtestes) em ~11 min**. A maior parte do tempo é o teste da integração S0–S4.
 
-# Validação
+| Arquivo | O que verifica |
+|---|---|
+| `test_ieee8500.py` | Hash SHA-256 dos dados de origem, contagens (barras, linhas, cargas, potência nominal), rede radial e conectada, fluxo nominal, reguladores baixando o tap em carga leve, seleção de candidatas |
+| `test_s0.py` | Topologia, inventário elétrico e tabelas do caso base |
+| `test_planning.py` | Energia diária por classe de veículo e serviço, limites de potência dos carros, reprodutibilidade, conservação de energia na fila, fila com poucos carregadores, sessões que passam da meia-noite ocupando o carregador, MILP de cobertura total (custo mínimo, capacidade, pontos inalcançáveis), eletropostos monofásicos, capacidade de hospedagem |
+| `test_impact.py` | Variação de tensão S1 − S0, perdas integradas no tempo (`dt_h`), PVUR e faixas do PRODIST |
+| `test_zoning.py` | Classe do consumidor pelo transformador de serviço, regra das regiões, transformador para todas as 1.177 cargas |
+| `test_evcs.py`, `test_bess.py`, `test_v2g.py`, `test_strategies.py` | Limites, SOC, reserva de mobilidade, portas e contrato de cada estratégia registrada |
+| `test_integration.py` | S0–S4 no IEEE 8500 com resultados finitos e **balanço ativo fechando em 0,001 kW** em todos os passos e cenários |
+| `test_module_independence.py` | Cada módulo roda sozinho, a integração só usa os contratos públicos, pacotes de saída detectam adulteração |
+| `test_network.py`, `test_xlsx.py` | Validação de fases dos perfis, recusa de redes de teste pelo modelo pandapower, importador XLSX |
 
-## Histórico da demonstração sintética — 08/10/2026
+## Verificações feitas nos estudos
 
-Python 3.12.14, Linux. `python -m pytest -q`: **29 testes aprovados**.
-Instalação editável do pacote aprovada com `python -m pip install -e . --no-deps --no-build-isolation`, usando as dependências existentes. O comando completo de instalação com extras e ambiente virtual é fornecido no README, mas não foi repetido em ambiente limpo. CI foi preparado para 3.12/3.13 e não foi executado no GitHub.
+- **Paralelismo:** a execução em vários processos dá resultados idênticos à sequencial, na varredura de capacidade e no S1.
+- **Frota mista:** o modelo por classes de veículo, configurado com uma única classe, reproduziu exatamente as sessões da rodada anterior (753 sessões, mesma energia).
+- **Correção da fila periódica:** a simulação com dia de aquecimento não mudou os resultados da rodada anterior, que quase não tinha recarga noturna (atendimento 97,7 % e pico de 1.746,7 kW iguais).
+- **Alocação:** o MILP fecha o ótimo (gap 0) no nó raiz em 1,4 s com 3.000 veículos (2.515 variáveis binárias).
+- **Notebook 01 do EVCS:** executado de ponta a ponta sem erros com os resultados atuais.
+- **Perdas:** a energia de perdas usa a duração do passo (`dt_h`); a versão anterior somava as potências de 15 min como se fossem horas, o que dava 4 vezes mais. Está corrigida e coberta por teste.
 
-Cobertura: conservação de energia, eficiências, SOC/potência, SOC terminal, disponibilidade V2G, mobilidade inviável, duplicação de veículos, reserva de portas/potência, importação preliminar, identificadores, fases, horizonte temporal, topologia, balanço de potência e perdas, caso analítico de uma linha, fluxo reverso, bloqueio do backend para redes reais e execução S0–S4.
+## O que ainda não foi validado
 
-As células Python dos cinco notebooks foram executadas sequencialmente na raiz, em namespaces independentes, sem erro. A inicialização de kernel Jupyter via nbclient falhou por restrições do ambiente a sockets TCP/IPC (Operation not permitted). Portanto, execução completa via kernel e interface Jupyter permanece a verificar em computador local. Os notebooks entregues estão sem outputs.
+- **Comparação com o OpenDSS:** tensões e perdas do IEEE 8500 no caso de referência (sem os dois ajustes do estudo) ainda não foram comparadas com a solução publicada. Convergência e balanço de potência não provam fidelidade.
+- **Aproximação por componentes de sequência:** o erro que ela introduz nas linhas desequilibradas não foi quantificado.
+- **Hipóteses sem dados locais:** frota, curva de carga, custos e as classes de consumidor não vêm de dados de Honduras.
+- **Robustez estatística:** cada estudo usa uma semente; falta repetir com várias sementes e reportar intervalos de confiança.
 
-O modelo XLSX foi exportado e suas 11 abas renderizadas e inspecionadas. É intencionalmente vazio e sem fórmulas. O teste confirma que o importador recusa a rede vazia. Tabelas normalizadas válidas foram testadas em memória; importação de dados reais da concessionária não foi validada.
-
-S0–S4 foram executados e CSV/JSON/PNG gerados em results/demo_reference. O gráfico foi inspecionado. BESS e V2G reduzem picos no exemplo, mas aumentam energia comprada devido às perdas. Estes resultados não validam IEEE123 nem estimam benefícios da rede real.
-
-## Dependências usadas nesta execução
-- numpy: 2.3.5
-- pandas: 2.2.3
-- PyYAML: 6.0.3
-- openpyxl: 3.1.5
-- matplotlib: 3.10.8
-- pytest: 9.1.1
-- nbclient: 0.11.0
-- nbformat: 5.11.1
-- ipykernel: 7.4.0
-- setuptools: 84.0.0
+O alimentador IEEE 123 e a demonstração sintética de 4 barras, da primeira fase, foram retirados do projeto; ficam no histórico do Git (até o commit `06a15c1`).

@@ -47,7 +47,7 @@ class TestIEEE8500(unittest.TestCase):
         graph = feeder_graph(self.data)
         self.assertTrue(nx.is_tree(energized(graph)))
         km = bus_table(graph).distance_km.max()
-        self.assertGreater(km,15.)  # much longer than the IEEE123 (~2 km)
+        self.assertGreater(km,15.)  # city-scale feeder
 
     def test_nominal_power_flow(self):
         v = self.net.res_bus_3ph[[f"vm_{p}_pu" for p in "abc"]].to_numpy()

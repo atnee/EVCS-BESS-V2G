@@ -1,7 +1,6 @@
 """S0 baseline study: feeder without DER — topology, line parameters and voltage profile.
 
 python -m integration.s0_study                      # feeder of configs/network.yaml (IEEE 8500) -> results/ieee8500/s0/
-python -m integration.s0_study --feeder ieee123     # -> results/ieee123/s0/
 """
 from pathlib import Path
 import argparse
@@ -80,7 +79,7 @@ def _style(ax, title=None):
 
 
 def marker_scale(graph):
-    """1 on the IEEE123; smaller markers on feeders with many buses (IEEE8500: ~0.25)."""
+    """1 on feeders of ~150 buses; smaller markers on feeders with many buses (IEEE 8500: ~0.25)."""
     return float(min(1.,np.sqrt(150/max(graph.number_of_nodes(),1))))
 
 
@@ -132,13 +131,13 @@ def _map_frame(ax):
 
 def plot_topology(study, highlight=None, ax=None):
     """Feeder drawn at the IEEE bus coordinates with NetworkX graph data.
-    highlight: buses to circle (default: bus 67, the EVCS/BESS bus of the IEEE123 integration)."""
+    highlight: buses to circle (default: none)."""
     from matplotlib.lines import Line2D
     graph, buses = study["graph"], study["buses"].set_index("bus")
     pos = {n: d["xy"] for n,d in graph.nodes(data=True)}
     ax = ax or new_axes((11,8.5))
     k = marker_scale(graph)
-    highlight = [b for b in (("67",) if highlight is None else highlight) if b in graph] if graph.graph["name"] == "IEEE 123" or highlight else []
+    highlight = [b for b in (highlight or ()) if b in graph]
     _style(ax,f'{graph.graph["name"]} feeder topology')
     _edges(ax,graph,pos)
     xy = np.array([pos[n] for n in graph])
@@ -385,7 +384,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--output",help="default: results/<feeder>/s0")
     parser.add_argument("--configs",default="configs")
-    parser.add_argument("--feeder",help="ieee8500 or ieee123 (default: configs/network.yaml)")
+    parser.add_argument("--feeder",help="feeder key (default: configs/network.yaml)")
     args = parser.parse_args()
     print(json.dumps(export_s0(args.output,args.configs,args.feeder),indent=2,default=str))
 

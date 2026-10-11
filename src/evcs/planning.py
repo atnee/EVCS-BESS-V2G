@@ -10,34 +10,67 @@ import math
 import numpy as np
 import pandas as pd
 
-FT_TO_M = .3048  # IEEE123 and IEEE8500 bus coordinates are in feet
+FT_TO_M = .3048  # IEEE 8500 bus coordinates are in feet
 MINUTES = 1440
 
 
 @dataclass(frozen=True)
-class Fleet:
-    evs: int                    # electric cars in the feeder area
+class VehicleClass:
+    """One kind of vehicle in the fleet, e.g. private cars or taxis/ride-hailing."""
+    name: str
+    share: float                # fraction of the fleet's vehicles
     battery_kwh: float          # average usable battery
     battery_std_kwh: float      # spread of battery sizes (0 = all equal)
-    daily_km: float             # km per car per day
+    daily_km: float             # km per vehicle per day
     kwh_per_km: float
-    public_share: float         # fraction of the energy charged at public stations (rest at home)
+    public_share: float         # fraction of the energy charged at public stations (rest at home/depot)
     arrival_soc_mean: float
     arrival_soc_std: float
-    max_ac_kw: float            # on-board charger limit
-    max_dc_kw: float            # car DC acceptance limit
+    services: tuple = ()        # ((service, share of this class's public energy), ...); () = station type shares
+    arrival_shape: tuple = ()   # ((service, 24 hourly weights), ...); default: the station type's shape
 
     def __post_init__(self):
-        if self.evs < 0 or self.battery_kwh <= 0 or self.battery_std_kwh < 0 or self.daily_km < 0 or self.kwh_per_km <= 0:
-            raise ValueError("Invalid fleet")
+        if not self.name or not 0 < self.share <= 1:
+            raise ValueError("Invalid vehicle class name/share")
+        if self.battery_kwh <= 0 or self.battery_std_kwh < 0 or self.daily_km < 0 or self.kwh_per_km <= 0:
+            raise ValueError("Invalid vehicle class")
         if not 0 < self.public_share <= 1 or not 0 < self.arrival_soc_mean < 1 or self.arrival_soc_std < 0:
-            raise ValueError("Invalid fleet shares/SOC")
+            raise ValueError("Invalid vehicle class shares/SOC")
+        if self.services and (abs(sum(s for _,s in self.services)-1) > 1e-9 or any(s < 0 for _,s in self.services)):
+            raise ValueError("Service shares of a vehicle class must be non-negative and add up to 1")
+        for _,shape in self.arrival_shape:
+            shape = np.asarray(shape,float)
+            if shape.shape != (24,) or (shape < 0).any() or shape.sum() == 0:
+                raise ValueError("arrival_shape needs 24 non-negative weights")
+
+
+@dataclass(frozen=True)
+class Fleet:
+    evs: int                    # electric vehicles that charge in the feeder area (all classes)
+    max_ac_kw: float            # on-board charger limit
+    max_dc_kw: float            # vehicle DC acceptance limit
+    classes: tuple              # VehicleClass; vehicle shares add up to 1
+
+    def __post_init__(self):
+        if self.evs < 0 or not self.classes:
+            raise ValueError("Invalid fleet")
+        if abs(sum(c.share for c in self.classes)-1) > 1e-9 or len({c.name for c in self.classes}) != len(self.classes):
+            raise ValueError("Vehicle class shares must add up to 1, with unique names")
         if self.max_ac_kw <= 0 or self.max_dc_kw <= 0:
             raise ValueError("Invalid car charging limits")
 
+    def public_kwh(self, c: VehicleClass):
+        """Daily energy that one class asks from public stations (kWh)."""
+        return self.evs*c.share*c.daily_km*c.kwh_per_km*c.public_share
+
     @property
     def daily_public_kwh(self):
-        return self.evs*self.daily_km*self.kwh_per_km*self.public_share
+        return sum(self.public_kwh(c) for c in self.classes)
+
+    @property
+    def battery_kwh(self):
+        """Vehicle-weighted average battery (kWh)."""
+        return sum(c.share*c.battery_kwh for c in self.classes)
 
 
 @dataclass(frozen=True)
@@ -106,9 +139,26 @@ class PlanningParameters:
         return min(self.types[key].charger_kw,self.car_limit(key))
 
 
+CLASS_FIELDS = ("battery_kwh","battery_std_kwh","daily_km","kwh_per_km","public_share","arrival_soc_mean","arrival_soc_std")
+
+
+def _fleet(f):
+    """Fleet from evcs.yaml `fleet:` with its vehicle `classes:`."""
+    f = dict(f)
+    if "classes" not in f:
+        raise ValueError("evcs.yaml fleet needs `classes:` (vehicle classes of the mixed fleet)")
+    classes = []
+    for name,c in f.pop("classes").items():
+        c = dict(c)
+        classes.append(VehicleClass(name=name,**{k: c.pop(k) for k in ("share",*CLASS_FIELDS)},
+                                    services=tuple(c.pop("services",{}).items()),
+                                    arrival_shape=tuple((k,tuple(v)) for k,v in c.pop("arrival_shape",{}).items()),**c))
+    return Fleet(classes=tuple(classes),**f)
+
+
 def from_config(config):
     p = dict(config["planning"])
-    fleet = Fleet(**p.pop("fleet"))
+    fleet = _fleet(p.pop("fleet"))
     types = {k: StationType(key=k,**{**v,"arrival_shape": tuple(v["arrival_shape"])})
              for k,v in p.pop("station_types").items()}
     return PlanningParameters(fleet=fleet,types=types,**p)
@@ -120,24 +170,32 @@ def with_fleet(p: PlanningParameters, evs):
 
 
 def generate_sessions(p: PlanningParameters):
-    """Charging requests for one representative day (no charger limits yet)."""
+    """Charging requests for one representative day (no charger limits yet).
+
+    Each vehicle class asks its daily public energy from each service (AC/DC) in its own proportion
+    (default: the station type shares), with its own battery, arrival SOC and, optionally, arrival times."""
     rng = np.random.default_rng(p.seed)
     f, rows = p.fleet, []
-    for key,t in p.types.items():
-        energy_goal, energy = f.daily_public_kwh*t.share, 0.
-        weights = np.asarray(t.arrival_shape,float)/sum(t.arrival_shape)
-        while energy < energy_goal-1e-9:
-            battery = max(10.,rng.normal(f.battery_kwh,f.battery_std_kwh)) if f.battery_std_kwh else f.battery_kwh
-            soc = float(np.clip(rng.normal(f.arrival_soc_mean,f.arrival_soc_std),.05,t.target_soc-.05))
-            need = min(battery*(t.target_soc-soc),energy_goal-energy)  # last session tops up the daily total
-            power = min(t.charger_kw,p.car_limit(key))
-            arrival = int(rng.choice(24,p=weights))*60+int(rng.integers(60))
-            rows.append(dict(type=key,arrival_min=arrival,battery_kwh=battery,soc_arrival=soc,energy_kwh=need,
-                             power_kw=power,grid_kw=power/p.charger_efficiency,
-                             duration_min=max(1,math.ceil(need/power*60))))
-            energy += need
-    sessions = pd.DataFrame(rows,columns=["type","arrival_min","battery_kwh","soc_arrival","energy_kwh","power_kw",
-                                          "grid_kw","duration_min"])
+    for c in f.classes:
+        services = c.services or tuple((k,t.share) for k,t in p.types.items())
+        shapes = dict(c.arrival_shape)
+        for key,share in services:
+            t = p.types[key]
+            energy_goal, energy = f.public_kwh(c)*share, 0.
+            shape = np.asarray(shapes.get(key,t.arrival_shape),float)
+            weights = shape/shape.sum()
+            while energy < energy_goal-1e-9:
+                battery = max(10.,rng.normal(c.battery_kwh,c.battery_std_kwh)) if c.battery_std_kwh else c.battery_kwh
+                soc = float(np.clip(rng.normal(c.arrival_soc_mean,c.arrival_soc_std),.05,t.target_soc-.05))
+                need = min(battery*(t.target_soc-soc),energy_goal-energy)  # last session tops up the daily total
+                power = min(t.charger_kw,p.car_limit(key))
+                arrival = int(rng.choice(24,p=weights))*60+int(rng.integers(60))
+                rows.append(dict(type=key,vehicle_class=c.name,arrival_min=arrival,battery_kwh=battery,soc_arrival=soc,
+                                 energy_kwh=need,power_kw=power,grid_kw=power/p.charger_efficiency,
+                                 duration_min=max(1,math.ceil(need/power*60))))
+                energy += need
+    sessions = pd.DataFrame(rows,columns=["type","vehicle_class","arrival_min","battery_kwh","soc_arrival","energy_kwh",
+                                          "power_kw","grid_kw","duration_min"])
     return sessions.sort_values("arrival_min",kind="stable").reset_index(drop=True)
 
 
@@ -189,22 +247,28 @@ def simulate(p: PlanningParameters, sites, sessions=None):
         for bus in buses:
             t, key = p.types[sites[bus]], sites[bus]
             kw_car = p.charging_kw(key)
-            free = np.zeros(t.chargers_per_site)
-            for i in sessions.index[(sessions.type==service) & (sessions.site==bus)]:
-                row = sessions.loc[i]
-                charger = int(free.argmin())
-                start = max(row.arrival_min,free[charger])
-                if start-row.arrival_min > max_wait:
-                    continue  # gave up: unserved
-                duration = max(1,math.ceil(row.energy_kwh/kw_car*60))
-                free[charger] = start+duration
-                sessions.loc[i,["start_min","wait_min","served","duration_min","power_kw","grid_kw"]] = [
-                    start,start-row.arrival_min,True,duration,kw_car,kw_car/p.charger_efficiency]
-                minutes = (np.arange(duration)+int(start)) % MINUTES
-                # Last minute charges only the remaining energy.
-                kw = np.full(len(minutes),kw_car/p.charger_efficiency)
-                kw[-1] = kw[-1]*(row.energy_kwh/kw_car*60-(len(minutes)-1))
-                np.add.at(power[bus],minutes,kw)
+            free = np.full(t.chargers_per_site,-float(MINUTES))  # free from the start of the warm-up day
+            rows = sessions.loc[(sessions.type==service) & (sessions.site==bus)]
+            # The day repeats: a warm-up copy of the previous day (-1) occupies the chargers with the
+            # sessions that run past midnight, so the studied day (0) starts with them already charging.
+            for day in (-1,0):
+                for i,row in rows.iterrows():
+                    arrival = row.arrival_min+day*MINUTES
+                    charger = int(free.argmin())
+                    start = max(arrival,free[charger])
+                    if start-arrival > max_wait:
+                        continue  # gave up: unserved
+                    duration = max(1,math.ceil(row.energy_kwh/kw_car*60))
+                    free[charger] = start+duration
+                    if day < 0:
+                        continue
+                    sessions.loc[i,["start_min","wait_min","served","duration_min","power_kw","grid_kw"]] = [
+                        start,start-arrival,True,duration,kw_car,kw_car/p.charger_efficiency]
+                    minutes = (np.arange(duration)+int(start)) % MINUTES
+                    # Last minute charges only the remaining energy.
+                    kw = np.full(len(minutes),kw_car/p.charger_efficiency)
+                    kw[-1] = kw[-1]*(row.energy_kwh/kw_car*60-(len(minutes)-1))
+                    np.add.at(power[bus],minutes,kw)
     return sessions, power
 
 

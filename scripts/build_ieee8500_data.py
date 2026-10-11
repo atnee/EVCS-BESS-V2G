@@ -244,7 +244,7 @@ def build():
     TARGET.write_text(json.dumps(data,indent=1)+"\n",encoding="utf-8")
     data["regulators"] = regulate(TARGET)
     TARGET.write_text(json.dumps(data,indent=1)+"\n",encoding="utf-8")
-    (TARGET.parent/"IEEE8500-LICENSE.txt").write_bytes((ROOT/"data/ieee123/source/License.txt").read_bytes())
+    (TARGET.parent/"IEEE8500-LICENSE.txt").write_bytes((SOURCE/"License.txt").read_bytes())
     print(f"{len(data['buses'])} buses, {len(lines)} lines, {len(switches)} switches, {len(loads)} loads, "
           f"{len(missing)} buses with coordinates copied from the nearest bus")
     print(f"Nominal demand: {sum(l['p_kw'] for l in loads):.0f} kW, {sum(l['q_kvar'] for l in loads):.0f} kvar")

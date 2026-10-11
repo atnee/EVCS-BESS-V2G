@@ -13,7 +13,7 @@ Os números do S1 são da execução de 10/10/2026 (`results/ieee8500/`).
 
 ## 1. Problema e hipótese
 
-**Pergunta.** Quanto uma frota urbana de carros elétricos, recarregando em estações públicas distribuídas para atender toda a área do alimentador, degrada a operação da rede de média tensão? Em que medida uma BESS e o V2G recuperam essa operação?
+**Pergunta.** Quanto uma frota urbana de veículos elétricos (carros particulares, táxis e aplicativo), recarregando em estações públicas distribuídas para atender toda a área do alimentador, degrada a operação da rede de média tensão? Em que medida uma BESS e o V2G recuperam essa operação?
 
 **Hipótese de trabalho.**
 - O cenário S1 eleva a demanda de ponta e leva a rede a violar limites térmicos e de tensão.
@@ -22,7 +22,7 @@ Os números do S1 são da execução de 10/10/2026 (`results/ieee8500/`).
 | Cenário | Conteúdo | Papel no estudo | Estado |
 |---|---|---|---|
 | S0 | Alimentador com as cargas existentes e a curva diária | Caso base (referência de todas as comparações) | ✅ |
-| S1 | S0 + estações de recarga (hubs DC e eletropostos AC), frota de $N_{EV}$ carros | Problematiza a rede | ✅ |
+| S1 | S0 + estações de recarga (hubs DC e eletropostos AC), frota mista de $N_{EV}$ veículos | Problematiza a rede | ✅ |
 | S2 | S1 + BESS | Mitiga a sobrecarga do S1 | 🔶 heurística de corte de ponta existe; formulação na §11.1 |
 | S3 | S1 + V2G | Mitiga com a própria frota | 🔶 heurística existe; formulação na §11.2 |
 | S4 | S1 + BESS + V2G | Operação coordenada | 🔶 §11.3, depois de S2 e S3 |
@@ -156,30 +156,52 @@ A variação de tensão causada pelas estações é $\Delta V_{b\phi t} = V^{S1,
 
 ## 5. Frota e demanda de recarga ✅
 
-### 5.1 Energia pública diária
+### 5.1 Frota mista e energia pública diária
+
+A frota tem $N_{EV}$ veículos divididos em classes $c \in \mathcal C$, com fração $\theta_c$ dos veículos:
+
+- **Particulares** ($\theta$ = 0,85): carros de moradores, muitos sem garagem, que fazem 60 % da recarga em estações públicas.
+- **Táxis e aplicativo** ($\theta$ = 0,15): 200 km/dia em dois turnos, toda a recarga pública. Não precisam morar na área do alimentador; recarregam onde estão os hubs.
+
+A energia que cada classe pede às estações públicas, e a sua divisão entre os serviços AC e DC, é:
 
 $$
-E^{pub} = N_{EV}\, D\, e\, \rho, \qquad E^{pub}_k = \beta_k\, E^{pub}
+E^{pub}_c = N_{EV}\,\theta_c\, D_c\, e_c\, \rho_c, \qquad
+E^{pub}_{c,k} = \beta_{c,k}\, E^{pub}_c, \qquad
+E^{pub} = \sum_c E^{pub}_c
 $$
 
-A energia é dividida entre os tipos de serviço AC ($\beta_{ac}$ = 0,6) e DC ($\beta_{dc}$ = 0,4). Com 10.000 carros, $E^{pub}$ = 10.000 × 35 × 0,18 × 0,3 = **18.900 kWh/dia**. A recarga residencial (70 %) fica fora do estudo, porque ocorre na baixa tensão, que não está modelada.
+| Classe | $\theta_c$ | $D_c$ (km/dia) | $e_c$ (kWh/km) | $\rho_c$ | $\beta_{c,ac}$ / $\beta_{c,dc}$ | $E^{pub}_c / (N_{EV}\theta_c)$ |
+|---|---|---|---|---|---|---|
+| Particulares | 0,85 | 40 | 0,18 | 0,6 | 0,6 / 0,4 | 4,32 kWh/veículo/dia |
+| Táxis e aplicativo | 0,15 | 200 | 0,18 | 1,0 | 0,2 / 0,8 | 36 kWh/veículo/dia |
+
+Em média, são **9,07 kWh por veículo por dia** nas estações públicas. A sensibilidade varre $N_{EV}$ de 1.000 a 3.000 veículos, com $E^{pub}$ de 9,1 a 27,2 MWh/dia. O caso principal do S1 é $N_{EV}$ = 3.000, com 27,2 MWh/dia, e é o caso que o S2 deve mitigar. A recarga em casa fica fora do estudo, porque ocorre na baixa tensão, que não está modelada.
+
+**Por que frota mista.** O IEEE 8500 tem 1.177 consumidores, cada um a carga de um transformador de serviço (9,15 kW em média). Supondo de 2 a 4 kW por domicílio na ponta, são de 2.500 a 6.000 domicílios (hipótese). Uma frota só de carros particulares com 30 % de recarga pública precisaria de ~10.000 carros para pedir ~19 MWh/dia (1,9 kWh/carro/dia), de 2 a 4 carros por domicílio, o que não é plausível. A frota mista chega a uma demanda pública maior com menos veículos.
+
+**Equivalência.** No modelo, o impacto na rede depende de $N_{EV}$ só por meio de $E^{pub}_{c,k}$: com a mesma energia por classe e serviço e a mesma semente, as sessões são idênticas.
 
 ### 5.2 Geração das sessões (Monte Carlo)
 
-Para cada serviço $k$, as sessões $s$ são sorteadas até completar $E^{pub}_k$:
+Para cada classe $c$ e serviço $k$, as sessões $s$ são sorteadas até completar $E^{pub}_{c,k}$:
 
 $$
 \begin{aligned}
-B_s &= \max\big(10,\ \mathcal N(\bar B, \sigma_B^2)\big) &&\text{[kWh]}\\
-\mathrm{SOC}^{arr}_s &= \operatorname{clip}\big(\mathcal N(\mu_{SOC}, \sigma_{SOC}^2),\ 0{,}05,\ \mathrm{SOC}^{tgt}_k - 0{,}05\big) &&\text{[–]}\\
-E_s &= \min\Big(B_s\big(\mathrm{SOC}^{tgt}_k - \mathrm{SOC}^{arr}_s\big),\ E^{pub}_k - \textstyle\sum_{s' < s} E_{s'}\Big) &&\text{[kWh]}\\
-h_s &\sim \operatorname{Cat}\big(w_{k,h} / \textstyle\sum_{h'} w_{k,h'}\big),\quad a_s = 60\,h_s + \mathcal U\{0,\dots,59\} &&\text{[min]}
+B_s &= \max\big(10,\ \mathcal N(\bar B_c, \sigma_{B,c}^2)\big) &&\text{[kWh]}\
+\mathrm{SOC}^{arr}_s &= \operatorname{clip}\big(\mathcal N(\mu_{SOC,c}, \sigma_{SOC,c}^2),\ 0{,}05,\ \mathrm{SOC}^{tgt}_k - 0{,}05\big) &&\text{[–]}\
+E_s &= \min\Big(B_s\big(\mathrm{SOC}^{tgt}_k - \mathrm{SOC}^{arr}_s\big),\ E^{pub}_{c,k} - \textstyle\sum_{s' < s} E_{s'}\Big) &&\text{[kWh]}\
+h_s &\sim \operatorname{Cat}\big(w_{c,k,h} / \textstyle\sum_{h'} w_{c,k,h'}\big),\quad a_s = 60\,h_s + \mathcal U\{0,\dots,59\} &&\text{[min]}
 \end{aligned}
 $$
 
-- $w_{k,h}$ são os pesos horários de chegada de [evcs.yaml](../configs/evcs.yaml): picos às 8–9 h e às 17–18 h.
-- A semente é fixa ($\text{seed}$ = 42), o que torna as sessões reproduzíveis.
-- Com 10.000 carros, o sorteio gera 753 sessões: 422 AC e 331 DC.
+- **Pesos horários de chegada** $w_{c,k,h}$, em [evcs.yaml](../configs/evcs.yaml):
+  - particulares usam os pesos do tipo de estação, com picos às 8–9 h e às 17–18 h;
+  - táxis no DC chegam entre corridas, com picos no almoço e na troca de turno (18–19 h);
+  - táxis no AC recarregam à noite.
+- **Baterias:** 44,9 ± 15 kWh nos particulares e 60 ± 10 kWh nos táxis.
+- **Reprodutibilidade:** a semente é fixa ($\text{seed}$ = 42).
+- **Caso principal:** com 3.000 veículos, o sorteio gera 915 sessões.
 
 ### 5.3 Dimensionamento do número de carregadores
 
@@ -197,7 +219,7 @@ N^{ch}_k = \max\Big(1,\ \big\lceil Q_{q}\big(C_k\big) \big\rceil\Big), \qquad
 K_k = \Big\lceil N^{ch}_k / n_k \Big\rceil
 $$
 
-$Q_q$ é o quantil $q$ = 0,95 da simultaneidade ao longo do dia. Com 10.000 carros: $N^{ch}_{dc}$ = 8 carregadores (2 hubs) e $N^{ch}_{ac}$ = 89 carregadores.
+$Q_q$ é o quantil $q$ = 0,95 da simultaneidade ao longo do dia. Com 3.000 veículos: $N^{ch}_{dc}$ = 16 carregadores (4 hubs) e $N^{ch}_{ac}$ = 59 carregadores.
 
 ## 6. Capacidade de hospedagem ✅
 
@@ -240,7 +262,7 @@ $$
 
 Valores resultantes: 400 kW por hub, 66 kW por eletroposto trifásico e 14,8 kW por eletroposto monofásico.
 
-A demanda é representada por pontos $j \in \mathcal J$: as 1.138 barras com carga, com peso $w_j$ igual à carga nominal (kW). Supõe-se que os carros estão onde estão as cargas. Distâncias são euclidianas, a partir das coordenadas do IEEE 8500:
+A demanda é representada por pontos $j \in \mathcal J$: as 1.138 barras com carga, com peso $w_j$ igual à carga nominal (kW). Supõe-se que a demanda de recarga está onde estão as cargas. Distâncias são euclidianas, a partir das coordenadas do IEEE 8500:
 
 $$
 \mathcal N_j = \{\, i \in \mathcal I : d_{ij} \le R \,\}
@@ -263,7 +285,7 @@ $$
 
 - **Método:** heurística gulosa. A cada passo entra o candidato elegível que cobre mais demanda ainda descoberta.
 - Sem as restrições de espaçamento, o guloso tem garantia de $1 - 1/e$ do ótimo (Nemhauser et al., 1978).
-- Com 10.000 carros: 2 hubs, cobrindo 29 % da carga num raio de 1,5 km.
+- Com 3.000 veículos: 4 hubs, cobrindo 46 % da carga num raio de 1,5 km.
 
 ### 7.2 Eletropostos: cobertura total de custo mínimo (MILP)
 
@@ -287,19 +309,19 @@ $$
 - $\mathcal J^{reach} = \{ j : \mathcal N^{ac}_j \neq \emptyset \}$. Pontos sem nenhum candidato no raio seriam reportados como não cobríveis; no IEEE 8500 todos os 1.138 são alcançáveis.
 - $\varphi \ge 1$ é o fator de capacidade ajustado pelo laço externo (§7.3).
 
-**Tamanho do problema e solução com 10.000 carros:**
+**Tamanho do problema e solução com 3.000 veículos:**
 
 | Item | Valor |
 |---|---|
-| Variáveis binárias | 2.517 (644 `ac` + 1.873 `ac1`) |
+| Variáveis binárias | 2.515 (642 `ac` + 1.873 `ac1`) |
 | Restrições | 1.138 de cobertura + 1 de capacidade |
-| Elementos não nulos | 50.684 |
-| Capacidade exigida | 1.969 kW ($\varphi$ = 2,01) |
-| Tempo de solução | 4,3 s |
+| Elementos não nulos | 50.645 |
+| Capacidade exigida | 1.501 kW ($\varphi$ = 2,31) |
+| Tempo de solução | 1,4 s |
 | Ótimo | Gap 0, no nó raiz |
-| Limite da relaxação linear | 2.340.304 USD |
-| Ótimo inteiro | 2.352.000 USD |
-| Solução | 71 eletropostos (18 trifásicos + 53 monofásicos) |
+| Limite da relaxação linear | 2.009.796 USD |
+| Ótimo inteiro | 2.028.000 USD |
+| Solução | 71 eletropostos (9 trifásicos + 62 monofásicos) |
 
 ### 7.3 Laço externo: rede e nível de serviço
 
@@ -316,7 +338,7 @@ repita
     φ ← 1,15 φ
 ```
 
-Os valores de $\varphi$ obtidos por frota foram: 1,00 com 2.000 e 3.000 carros, 3,52 com 4.000, 3,06 com 5.000 e 2,01 com 10.000.
+Os valores de $\varphi$ obtidos por frota foram: 1,00 com 1.000 veículos, 4,05 com 1.500, 3,52 com 2.000 e 2,31 com 2.500 e 3.000.
 
 ### 7.4 Verificação conjunta
 
@@ -325,7 +347,7 @@ As capacidades individuais não se somam. A alocação final é testada num úni
 1. **Pico simulado:** cada estação no seu maior valor médio de 15 min. É conservador, porque os picos das estações não coincidem necessariamente.
 2. **Potência instalada:** o pior caso teórico.
 
-Para todas as frotas de 2.000 a 10.000 carros, a rede **não aceita** a alocação: há tensão abaixo de 0,95 pu e sobrecarga na linha `ln5473414-1`. É o resultado procurado para o S1.
+Para todas as frotas de 1.000 a 3.000 veículos, a rede **não aceita** a alocação: há tensão abaixo de 0,95 pu e sobrecarga na linha `ln5473414-1`. É o resultado procurado para o S1.
 
 ## 8. Simulação da operação das estações ✅
 
@@ -347,6 +369,7 @@ $$
 - Uma sessão atendida ($u_s$ = 1) ocupa o carregador até $t^0_s + d_s$, com $d_s = \lceil 60\,E_s / p_{s} \rceil$ e $p_s = \min(P^{ch}_{k(i)}, P^{car})$ na potência do site escolhido.
 - Uma sessão não atendida ($u_s$ = 0) desiste.
 - A paciência é de 30 min no AC e de 15 min no DC.
+- **Dia periódico.** Antes do dia estudado, a mesma fila é simulada num dia de aquecimento (chegadas em $a_s - 1440$). Assim, as sessões que passam da meia-noite já ocupam os carregadores na madrugada do dia estudado, e um site nunca tem mais recargas simultâneas que carregadores. Só as sessões do dia estudado entram em $u_s$, $w_s$ e na potência.
 
 **Potência na rede, por minuto e por site.** O último minuto de cada sessão carrega só a energia restante; o dia é periódico.
 
@@ -401,13 +424,15 @@ Os indicadores são calculados para S0 e S1 com os mesmos 96 passos. Notação:
 - O PRODIST define DRP e DRC sobre 1.008 leituras semanais; aqui são aplicados a um dia de 96 leituras.
 - O fator de desequilíbrio do PRODIST usa componentes de sequência. O PVUR usa magnitudes de fase (Pillay e Manyage, 2001).
 
-**Resultados de referência (10.000 carros, S0 → S1).**
-- Ponta: 11.750 → 13.723 kW.
-- Linha mais carregada: 96,7 → 108,0 %; 41 linhas acima de 100 %.
-- Tensão mínima: 0,951 → 0,936 pu com os reguladores atuando e 0,926 pu com os taps travados.
+**Resultados de referência (3.000 veículos, 75 estações, S0 → S1).**
+- Ponta: 11.750 → 13.946 kW (+18,7 %).
+- Linha mais carregada: 96,7 → 108,9 %; 37 linhas acima de 100 % (89,2 linha-horas).
+- Tensão mínima: 0,951 → 0,933 pu com os reguladores atuando e 0,924 pu com os taps travados; 236 barras e 137 consumidores abaixo de 0,95 pu em algum momento.
 - Leituras na faixa adequada do PRODIST: 100 % nos dois casos.
-- Perdas: +19,2 %.
-- Operações de tap: 56 → 77.
+- Barras trifásicas com PVUR 95 % acima de 2 %: 87 → 139.
+- Perdas: +24,4 %.
+- Operações de tap: 56 → 59.
+- Na sensibilidade, a linha passa de 100 % a partir de 1.500 veículos (13,6 MWh/dia) e a tensão mínima regulada fica abaixo de 0,95 pu já com 1.000.
 
 Detalhes em `results/ieee8500/s0_vs_s1/ANALISE.md`.
 
@@ -425,7 +450,7 @@ Detalhes em `results/ieee8500/s0_vs_s1/ANALISE.md`.
 
 **Paralelismo.** Frotas e blocos de barras da varredura de hospedagem são estudos independentes. Rodam em processos separados (`concurrent.futures.ProcessPoolExecutor`, BLAS com uma *thread* por processo), e os resultados são idênticos aos da execução sequencial.
 
-**Ambiente.** Python 3.13.5; AMD Ryzen 5 3600 (6 núcleos), 16 GB de RAM; a GPU não é usada. Tempo do S1 completo (5 frotas × 96 passos × 2 visões): 35 min com 5 processos, contra ~65 min em sequência.
+**Ambiente.** Python 3.13.5; AMD Ryzen 5 3600 (6 núcleos), 16 GB de RAM; a GPU não é usada. Tempo do S1 completo (5 frotas × 96 passos × 2 visões): 35–41 min com 5 processos, contra ~65 min em sequência.
 
 ## 11. Mitigação: formulação proposta 🔶
 
@@ -529,7 +554,7 @@ $$
 - As folgas $\xi$, com penalidade $M$ grande, garantem a viabilidade e medem a violação residual.
 - Fixando $z$, $\bar E$ e $\bar P$, o problema se reduz ao despacho diário. A heurística `peak_shave` atual é a linha de base para comparação.
 
-**Candidatos.** As barras a jusante do trecho sobrecarregado aliviam a linha; as próximas da subestação aliviam só a ponta (ver [escopo_S2_S3.md](escopo_S2_S3.md)).
+**Candidatos.** As barras a jusante do trecho sobrecarregado aliviam a linha; as próximas da subestação aliviam só a ponta (ver [S2_BESS_Kenia.md](S2_BESS_Kenia.md)).
 
 ### 11.2 S3: V2G
 
@@ -584,6 +609,7 @@ O S4 é a união das variáveis e restrições de §11.1 e §11.2 com uma única
 | $i \in \mathcal I$; $\mathcal I^{dc}$, $\mathcal I^{ac}$ | Candidatos a estação: hubs; eletropostos trifásicos e monofásicos |
 | $\mathcal N_j$ | Candidatos a até $R$ do ponto $j$ |
 | $k \in \{dc, ac, ac1\}$; $\sigma(k) \in \{AC, DC\}$ | Tipo de estação; serviço que ele presta |
+| $c \in \mathcal C$ | Classes de veículo (particulares; táxis e aplicativo) |
 | $s \in \mathcal S$; $\mathcal S_k$ | Sessões de recarga; sessões do serviço $k$ |
 | $v \in \mathcal V$ | Veículos V2G (🔶) |
 
@@ -591,15 +617,16 @@ O S4 é a união das variáveis e restrições de §11.1 e §11.2 com uma única
 
 | Símbolo | Descrição | Valor adotado | Unidade | Origem |
 |---|---|---|---|---|
-| $N_{EV}$ | Carros elétricos na área do alimentador | 2.000; 3.000; 4.000; 5.000; **10.000** | veículos | cenário (sensibilidade) |
-| $\bar B$, $\sigma_B$ | Bateria útil média e desvio | 44,9; 15 | kWh | hipótese; BYD Dolphin como exemplo |
-| $D$ | Distância diária por carro | 35 | km/dia | hipótese (uso urbano) |
-| $e$ | Consumo específico | 0,18 | kWh/km | hipótese |
-| $\rho$ | Fração da energia em recarga pública | 0,30 | – | hipótese |
-| $\beta_{ac}$, $\beta_{dc}$ | Divisão da energia pública | 0,6; 0,4 | – | hipótese |
-| $\mu_{SOC}$, $\sigma_{SOC}$ | SOC na chegada | 0,30; 0,10 | – | hipótese |
+| $N_{EV}$ | Veículos elétricos que recarregam na área (frota mista) | 1.000; 1.500; 2.000; 2.500; **3.000** | veículos | cenário (sensibilidade) |
+| $\theta_c$ | Fração dos veículos por classe | 0,85 (particulares); 0,15 (táxis/aplicativo) | – | hipótese |
+| $\bar B_c$, $\sigma_{B,c}$ | Bateria útil média e desvio | 44,9 ± 15 (particulares; BYD Dolphin como exemplo); 60 ± 10 (táxis) | kWh | hipótese |
+| $D_c$ | Distância diária | 40 (particulares); 200 (táxis) | km/dia | hipótese |
+| $e_c$ | Consumo específico | 0,18 | kWh/km | hipótese |
+| $\rho_c$ | Fração da energia em recarga pública | 0,6 (particulares, muitos sem garagem); 1,0 (táxis) | – | hipótese |
+| $\beta_{c,ac}$, $\beta_{c,dc}$ | Divisão da energia pública entre AC e DC | 0,6 / 0,4 (particulares); 0,2 / 0,8 (táxis) | – | hipótese |
+| $\mu_{SOC,c}$, $\sigma_{SOC,c}$ | SOC na chegada | 0,30 ± 0,10 (particulares); 0,25 ± 0,08 (táxis) | – | hipótese |
+| $w_{c,k,h}$ | Pesos horários de chegada | particulares: os do tipo de estação; táxis: próprios (DC entre corridas, AC à noite) | – | hipótese ([evcs.yaml](../configs/evcs.yaml)) |
 | $\mathrm{SOC}^{tgt}_k$ | SOC alvo | 0,9 (AC); 0,8 (DC) | – | hipótese |
-| $w_{k,h}$ | Pesos horários de chegada | [evcs.yaml](../configs/evcs.yaml) | – | hipótese |
 | $P^{car}_{AC}$, $P^{car}_{DC}$ | Limite do carro em AC e DC | 11; 100 | kW | hipótese |
 | $P^{ch}_k$ | Potência do carregador | 150; 22; 7,4 | kW | tipos comerciais |
 | $n_k$ | Carregadores por site | 4; 6; 2 | – | hipótese |
@@ -661,8 +688,8 @@ O S4 é a união das variáveis e restrições de §11.1 e §11.2 com uma única
 
 1. **Caso base.** Resolver o S0 com 96 passos e verificar que não há violações novas (✅: 0,951–1,048 pu; linha mais carregada em 96,7 %).
 2. **Triagem.** Varredura de hospedagem nos 101 candidatos e alocação por frota (✅).
-3. **Impacto.** S1 para $N_{EV}$ ∈ {2.000; 3.000; 4.000; 5.000; 10.000}, nas duas visões de taps (✅). O caso de estresse é o de 10.000 carros.
-4. **Mitigação.** S2 e S3 contra o S1 de 10.000 carros, com os mesmos critérios (🔶). Critério de sucesso:
+3. **Impacto.** S1 para $N_{EV}$ ∈ {1.000; 1.500; 2.000; 2.500; 3.000} veículos da frota mista (9,1 a 27,2 MWh/dia), nas duas visões de taps (✅). O caso principal é o de 3.000 veículos.
+4. **Mitigação.** S2 e S3 contra o S1 de 3.000 veículos, com os mesmos critérios (🔶). Critério de sucesso:
    - ponta menor;
    - nenhuma linha acima de 100 %;
    - $V \ge 0{,}95$ pu com os taps travados;
@@ -687,7 +714,7 @@ O S4 é a união das variáveis e restrições de §11.1 e §11.2 com uma única
 - **Configuração:** todos os parâmetros em `configs/*.yaml` e todas as tabelas de resultado em CSV (`results/<feeder>/<estudo>/dados/`).
 - **Determinismo:** sementes fixas. A execução paralela reproduz exatamente a sequencial.
 - **Proveniência:** SHA-256 dos dados de origem em `data/ieee8500/provenance.sha256`.
-- **Testes:** `python -m pytest -q` (79 testes, incluindo métricas de qualidade e perdas).
+- **Testes:** `python -m pytest -q` (ver [validation.md](validation.md): o que os testes cobrem e o que ainda não foi validado).
 - **Figuras:** podem ser refeitas sem rodar fluxo de potência: `python -m integration.redraw`.
 
 ## 15. Limitações

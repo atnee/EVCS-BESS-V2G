@@ -1,7 +1,7 @@
 """One-page summary of the studies of a feeder: results/<feeder>/resumo/ with the main figures and LEIA-ME.md.
 
 python -m integration.resumo                 # feeder of configs/network.yaml
-python -m integration.resumo --evs 4000      # fleet shown in the S0 x S1 table (default: the largest)
+python -m integration.resumo --evs 2000      # fleet shown in the S0 x S1 table (default: the largest)
 Built from files already saved by the S1 study and the integration; runs in seconds.
 Called automatically at the end of integration.s1_study and integration.coordinator.
 """
@@ -15,11 +15,11 @@ from integration.scenarios import study_feeder
 
 FIGURES = [  # (source relative to results/<feeder>, name in resumo/, what it shows) — one plot per file
     ("s1/overload_substation_peak.png","1_overload_substation_peak.png",
-     "Ponta da subestação conforme a quantidade de carros (S0 = 0 carros)."),
+     "Ponta da subestação conforme a quantidade de veículos (S0 = 0 veículos)."),
     ("s1/overload_line_loading.png","2_overload_line_loading.png",
-     "Linha mais carregada conforme a quantidade de carros, com as horas acima de 95 %."),
+     "Linha mais carregada conforme a quantidade de veículos, com as horas acima de 95 %."),
     ("s1/overload_min_voltage.png","3_overload_min_voltage.png",
-     "Tensão mínima do dia conforme a quantidade de carros, com e sem a ação dos reguladores."),
+     "Tensão mínima do dia conforme a quantidade de veículos, com e sem a ação dos reguladores."),
     ("s1/sensitivity_line_loading.png","4_day_line_loading.png",
      "Linha mais carregada ao longo do dia, S0 e cada frota (15 min)."),
     ("s1/sensitivity_min_voltage.png","5_day_min_voltage.png",
@@ -72,7 +72,7 @@ def overload_table(s1_dir, dt_h=.25):
 
 def overload_markdown(t):
     s0 = t.iloc[0]
-    cols = ["S0"]+[f"{int(c)} carros" for c in t.carros[1:]]
+    cols = ["S0"]+[f"{int(c)} veículos" for c in t.carros[1:]]
     def line(label, values):
         return f"| {label} | "+" | ".join(values)+" |"
     pct = lambda x,ref: "" if x == ref else f" ({'+' if x >= ref else ''}{_num(100*(x/ref-1),1)} %)"
@@ -238,20 +238,20 @@ def export_resumo(feeder_dir, evs=None):
            "Comece por aqui. Figuras numeradas na ordem de leitura; as tabelas completas estão nas pastas de cada estudo "
            "(`s0/`, `evcs_screening/`, `s1/`, `integration/`), em subpastas `dados/`.",""]
     if overload is not None:
-        doc += ["## Sobrecarga: S0 × S1 conforme a quantidade de carros (passo de 15 min)","",
-                "A quantidade de carros é a demanda de EV acrescentada à rede; S0 é o caso sem carros.","",
+        doc += ["## Sobrecarga: S0 × S1 conforme a quantidade de veículos elétricos (passo de 15 min)","",
+                "A quantidade de veículos (frota mista: particulares e táxis/aplicativo) define a demanda de EV acrescentada à rede; S0 é o caso sem veículos elétricos.","",
                 overload_markdown(overload),"",
                 "Linhas em negrito: ponta da subestação, linha mais carregada e tensão mínima sem a ação dos reguladores "
                 "são os indicadores que mais respondem à demanda de EV.",""]
     if evs is not None and (s1_dir/"dados"/"s0_intraday.csv").exists():
-        doc += [f"## S0 × S1 com {evs} carros (estudo do EVCS, passo de 15 min)","",s0_s1_table(s1_dir,evs),"",
+        doc += [f"## S0 × S1 com {evs} veículos (estudo do EVCS, passo de 15 min)","",s0_s1_table(s1_dir,evs),"",
                 "Os reguladores sobem o tap e escondem boa parte do efeito na tensão; a linha \"sem a ação dos reguladores\" "
                 "mostra o que as estações fazem sozinhas.",""]
     else:
         doc += ["## S0 × S1","","Estudo S1 ainda não rodado: `python -m integration.s1_study`.",""]
     if (integration_dir/"summary.csv").exists():
         doc += ["## Integração S0–S4 (passo de 1 h)","",integration_table(integration_dir),"",
-                "S2 = S1 + BESS, S3 = S1 com V2G, S4 = tudo junto. Escopo do S2 e do S3: `docs/escopo_S2_S3.md`.",""]
+                "S2 = S1 + BESS, S3 = S1 com V2G, S4 = tudo junto. O que o S2 e o S3 devem entregar: `docs/S2_BESS_Kenia.md` e `docs/S3_V2G_Cesar.md`.",""]
     doc += ["## Figuras",""]+[f"{i}. **`{n}`** — {t}" for i,(n,t) in enumerate(shown,1)]+[""]
     (out/"LEIA-ME.md").write_text("\n".join(doc),encoding="utf-8")
     return out

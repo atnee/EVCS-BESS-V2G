@@ -12,13 +12,13 @@ battery:
   capex: 50000.0
   degradation_per_kwh: 0.03
   currency: USD
-target_kw: 10650.0           # IEEE 8500 peak ~10.8 MW (IEEE123: 3450 kW, same 99 % of the nominal peak)
+target_kw: 10650.0           # 99 % of the IEEE 8500 nominal peak (~10.8 MW)
 time:
   start: '2026-01-01T00:00:00-06:00'
   steps: 24
   dt_h: 1.0
 connection:
-  bus: m1125976             # IEEE 8500, same bus as the EVCS station (IEEE123: '67')
+  bus: m1125976             # IEEE 8500, same bus as the V2G host station (one of the DC hubs)
   phases: ABC
 standalone_demand_kw:              # IEEE 8500 nominal 10773 kW x configs/ieee8500.yaml curve
 - 6463.9

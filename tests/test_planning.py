@@ -15,11 +15,20 @@ class TestSessions(unittest.TestCase):
         self.p = with_fleet(from_config(read_parameters(ROOT/"configs/evcs.yaml")),500)
         self.s = generate_sessions(self.p)
 
-    def test_daily_energy_split_by_type(self):
+    def test_daily_energy_split_by_class_and_service(self):
         f = self.p.fleet
-        self.assertAlmostEqual(self.s.energy_kwh.sum(),f.evs*f.daily_km*f.kwh_per_km*f.public_share)
-        for key,t in self.p.types.items():
-            self.assertAlmostEqual(self.s[self.s.type==key].energy_kwh.sum(),f.daily_public_kwh*t.share)
+        self.assertAlmostEqual(self.s.energy_kwh.sum(),sum(f.evs*c.share*c.daily_km*c.kwh_per_km*c.public_share
+                                                           for c in f.classes))
+        for c in f.classes:
+            for key,share in (c.services or [(k,t.share) for k,t in self.p.types.items()]):
+                part = self.s[(self.s.vehicle_class==c.name) & (self.s.type==key)]
+                self.assertAlmostEqual(part.energy_kwh.sum(),f.public_kwh(c)*share)
+
+    def test_class_arrival_shape_is_used(self):
+        for c in self.p.fleet.classes:
+            for key,shape in c.arrival_shape:
+                hours = self.s[(self.s.vehicle_class==c.name) & (self.s.type==key)].arrival_min//60
+                self.assertTrue(set(hours) <= {h for h,w in enumerate(shape) if w > 0})
 
     def test_charging_time_and_car_limits(self):
         for key,t in self.p.types.items():
@@ -51,6 +60,19 @@ class TestSessions(unittest.TestCase):
         self.assertLessEqual(count.max(),self.p.types["ac"].chargers_per_site)
         self.assertFalse(served[served.type=="ac"].served.all())
 
+    def test_sessions_past_midnight_hold_their_charger(self):
+        """The day is periodic: an evening session that runs past midnight keeps its charger busy
+        in the early hours of the same simulated day."""
+        p = dataclasses.replace(self.p,types={k: dataclasses.replace(t,chargers_per_site=1) for k,t in self.p.types.items()})
+        late = pd.DataFrame([dict(type="ac",vehicle_class="car",arrival_min=1380,battery_kwh=60.,soc_arrival=.1,
+                                  energy_kwh=33.,power_kw=11.,grid_kw=11/.95,duration_min=180),
+                             dict(type="ac",vehicle_class="car",arrival_min=30,battery_kwh=60.,soc_arrival=.1,
+                                  energy_kwh=5.,power_kw=11.,grid_kw=11/.95,duration_min=28)]).sort_values("arrival_min")
+        served,power = simulate(p,{"x": "ac"},late.reset_index(drop=True))
+        # The 23:00 session (3 h) still holds the only charger at 00:30: the early car waits past its patience.
+        self.assertEqual(served.set_index("arrival_min").served.to_dict(),{30: False,1380: True})
+        self.assertLessEqual(power["x"].max(),p.charging_kw("ac")/p.charger_efficiency+1e-9)
+
     def test_resample_preserves_energy(self):
         minute = np.random.default_rng(0).random(MINUTES)
         for res in (1,15,60):
@@ -61,6 +83,10 @@ class TestSessions(unittest.TestCase):
             dataclasses.replace(self.p.types["ac"],share=1.5)
         with self.assertRaises(ValueError):
             dataclasses.replace(self.p,resolution_min=7)
+        with self.assertRaises(ValueError):  # vehicle shares must add up to 1
+            dataclasses.replace(self.p.fleet,classes=self.p.fleet.classes[:1])
+        with self.assertRaises(ValueError):  # service shares of a class must add up to 1
+            dataclasses.replace(self.p.fleet.classes[0],services=(("ac",.5),("dc",.2)))
 
 
 class TestSiting(unittest.TestCase):
@@ -79,13 +105,14 @@ class TestSiting(unittest.TestCase):
 class TestHosting(unittest.TestCase):
     def test_capacity_is_feasible_and_bounded(self):
         from network.hosting import HostingStudy
-        study = HostingStudy()
+        study = HostingStudy(feeder="ieee8500",tolerance_mw=1e-5)
         self.assertTrue(study.base["ok"] or study.preexisting)
-        result = study.capacity("67",max_kw=2000,tol_kw=50)
+        bus = "l2804249"  # three-phase candidate limited by a line at ~620 kW in the screening
+        result = study.capacity(bus,max_kw=1500,tol_kw=100)
         self.assertGreater(result["hosting_kw"],0)
-        self.assertTrue(study.evaluate("67",result["hosting_kw"])["ok"])
-        self.assertFalse(study.evaluate("67",result["hosting_kw"]+60)["ok"])
-        self.assertTrue(study.check({"67": 10.})["ok"])
+        self.assertTrue(study.evaluate(bus,result["hosting_kw"])["ok"])
+        self.assertFalse(study.evaluate(bus,result["hosting_kw"]+110)["ok"])
+        self.assertTrue(study.check({bus: 10.})["ok"])
 
 
 class TestFullCoverage(unittest.TestCase):
