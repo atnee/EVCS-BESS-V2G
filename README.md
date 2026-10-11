@@ -88,8 +88,7 @@ The fleet has the same starting energy in S1–S4. Each asset is aggregated only
 - `data/honduras/templates/honduras_template.xlsx`: empty spreadsheet.
 - `results/`: generated outputs, map in [results/README.md](results/README.md).
 - `results/demo_reference/`: historical synthetic results, kept for comparison.
-- `docs/mathematical_formulation.md`: equations and accounting boundaries.
-- `docs/methodology.md`: sources and limitations.
+- `docs/metodologia.md`: methodology — network model, siting optimization (MILP), variables and units, solvers, indicators, limitations (Portuguese).
 - `docs/collaboration_guide.md`: branches, PRs and next tasks.
 - `docs/validation.md`: tests and runtime environment.
 
@@ -148,8 +147,7 @@ La flota tiene la misma energía inicial en S1–S4. Cada activo se agrega una s
 - `data/honduras/templates/honduras_template.xlsx`: planilla vacía.
 - `results/`: salidas generadas, mapa en [results/README.md](results/README.md).
 - `results/demo_reference/`: resultados sintéticos históricos, conservados para comparación.
-- `docs/mathematical_formulation.md`: ecuaciones y fronteras de contabilización.
-- `docs/methodology.md`: fuentes y limitaciones.
+- `docs/metodologia.md`: metodología — modelo de la red, optimización de la ubicación (MILP), variables y unidades, solvers, indicadores, limitaciones (en portugués).
 - `docs/collaboration_guide.md`: branches, PR y próximas tareas.
 - `docs/validation.md`: pruebas y entorno de ejecución.
 
@@ -208,8 +206,7 @@ A frota tem a mesma energia de partida em S1–S4. Cada ativo é agregado uma ú
 - `data/honduras/templates/honduras_template.xlsx`: planilha vazia.
 - `results/`: saídas geradas, mapa em [results/README.md](results/README.md).
 - `results/demo_reference/`: resultados sintéticos históricos, preservados para comparação.
-- `docs/mathematical_formulation.md`: equações e fronteiras de contabilização.
-- `docs/methodology.md`: fontes e limitações.
+- `docs/metodologia.md`: metodologia — modelo da rede, otimização da alocação (MILP), variáveis e unidades, solvers, indicadores, limitações.
 - `docs/collaboration_guide.md`: branches, PR e próximas tarefas.
 - `docs/validation.md`: testes e ambiente de execução.
 

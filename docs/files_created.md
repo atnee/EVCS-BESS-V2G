@@ -17,8 +17,7 @@
 - `data/synthetic/README.md`
 - `docs/collaboration_guide.md`
 - `docs/data_dictionary.md`
-- `docs/mathematical_formulation.md`
-- `docs/methodology.md`
+- `docs/metodologia.md`
 - `docs/validation.md`
 - `docs/xlsx_schema.json`
 - `notebooks/01_evcs_ayrton.ipynb`
