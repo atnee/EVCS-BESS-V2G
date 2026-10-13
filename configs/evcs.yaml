@@ -262,3 +262,10 @@ integration:
     l2764403: A
     m1027110: A
     l2801949: B
+# Service transformers in the S1 figures (python -m integration.service_transformers). The IEEE 8500 MV reduction
+# lumps each service transformer on its primary bus; kVA ratings come from data/ieee8500/source/LoadXfmrs.dss (data).
+service_transformers:
+  share_single_phase_eletropostos: true   # hypothesis: a single-phase eletroposto at a customer bus is served by that
+                                          # customer's transformer (same phase); three-phase AC and DC hubs get their own
+  most_loaded: 5                          # presentation choice: transformers shown in the intraday figures
+  least_loaded: 3

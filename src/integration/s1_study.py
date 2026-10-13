@@ -299,22 +299,29 @@ def fleet_figures(s1, s0, base=None, frozen=None, case=None):
     return figures
 
 
-def summary(s1):
-    study, s0, s, p = s1["study"], s1["s0"], s1["sessions"], s1["params"]
-    d = delta_v(s1)
-    worst = d.loc[d.dv_pu.idxmin()]
-    b = study["flow"]["branches"]; b = b[b.physical_phase & (b.time==study["peak"])]
-    total = sum(s1["power"].values())
+def sessions_by_station_type(sessions, sites, types):
+    """Sessions per station type (hub, eletroposto, single-phase eletroposto), by the site where each one charges.
+    sessions.type is the service (ac/dc): AC sessions are shared by three-phase and single-phase eletropostos."""
     per_type = {}
-    for key,t in p.types.items():
-        part = s[s.type==key]
-        per_type[t.name] = dict(sites=[bus for bus,k in s1["sites"].items() if k==key],
-                                chargers_per_site=t.chargers_per_site,charger_kw=t.charger_kw,sessions=len(part),
+    for key,t in types.items():
+        buses = [bus for bus,k in sites.items() if k==key]
+        part = sessions[sessions.site.isin(buses)]
+        per_type[t.name] = dict(sites=buses,chargers_per_site=t.chargers_per_site,charger_kw=t.charger_kw,sessions=len(part),
                                 served_share=float(part.served.mean()) if len(part) else 1.,
                                 energy_kwh=float(part.energy_kwh.sum()),
                                 unserved_kwh=float(part.loc[~part.served,"energy_kwh"].sum()),
                                 mean_duration_min=float(part.duration_min.mean()) if len(part) else 0.,
                                 mean_wait_min=float(part.wait_min.mean()) if part.served.any() else 0.)
+    return per_type
+
+
+def summary(s1):
+    study, s0, p = s1["study"], s1["s0"], s1["params"]
+    d = delta_v(s1)
+    worst = d.loc[d.dv_pu.idxmin()]
+    b = study["flow"]["branches"]; b = b[b.physical_phase & (b.time==study["peak"])]
+    total = sum(s1["power"].values())
+    per_type = sessions_by_station_type(s1["sessions"],s1["sites"],p.types)
     (e0,l0),(e1,l1) = energy_kwh(s0),energy_kwh(study)
     return {"evs": s1["evs"], "battery_kwh_mean": p.fleet.battery_kwh, "resolution_min": p.resolution_min,
             "daily_public_kwh": p.fleet.daily_public_kwh, "types": per_type,
@@ -385,8 +392,10 @@ def export_s1(output=None, config_dir="configs", screening_dir=None, fleets=None
     if Path(output).name == "s1":  # default layout results/<feeder>/s1: refresh the summary and the S0 x S1 analysis
         from integration.resumo import export_resumo
         from integration.analysis import export_analysis
+        from integration.service_transformers import export_transformers
         export_resumo(Path(output).parent)
         export_analysis(Path(output).parent,config_dir)
+        export_transformers(Path(output).parent,config_dir,fleets)
     return results
 
 

@@ -37,6 +37,13 @@ def _num(x, digits=0):
     return f"{x:,.{digits}f}".replace(",","X").replace(".",",").replace("X",".")
 
 
+def loading_label(pct):
+    """Verdict on the most loaded line against the 100 % limit, as printed in the S0 x S1 table."""
+    if pct > 100.5:
+        return "**acima do limite**"
+    return "no limite" if pct >= 99.5 else "abaixo do limite"
+
+
 def _peak(table):
     i = int(table.p_kw.idxmax())
     return table.p_kw.iloc[i], pd.Timestamp(table.time.iloc[i])
@@ -179,7 +186,7 @@ def s0_s1_table(s1_dir, evs):
     rows = [
         ("Ponta na subestação",f"{_num(p0)} kW às {t0:%H:%M}",f"**{_num(p1)} kW às {t1:%H:%M}**",f"+{_num(100*(p1/p0-1),1)} %"),
         ("Linha mais carregada (sem sobrecargas que já existiam)",f"{_num(line0)} %",f"**{_num(line1)} %**",
-         "no limite" if line1 >= 99.5 else "abaixo do limite"),
+         loading_label(line1)),
         ("Transformador/regulador mais carregado",f"{_num(eq0)} %",f"{_num(eq1)} %","não limita" if eq1 < 90 else "perto do limite"),
         ("Tensão mínima, com os reguladores atuando",f"{_num(m['v_min_pu_s0'],3)} pu",f"{_num(m['regulated']['v_min_pu'],3)} pu",
          "dentro de 0,95" if m["regulated"]["v_min_pu"] >= .95 else "**abaixo de 0,95**"),
@@ -252,6 +259,11 @@ def export_resumo(feeder_dir, evs=None):
     if (integration_dir/"summary.csv").exists():
         doc += ["## Integração S0–S4 (passo de 1 h)","",integration_table(integration_dir),"",
                 "S2 = S1 + BESS, S3 = S1 com V2G, S4 = tudo junto. O que o S2 e o S3 devem entregar: `docs/S2_BESS_Kenia.md` e `docs/S3_V2G_Cesar.md`.",""]
+    else:
+        doc += ["## Integração S0–S4 (passo de 1 h)","",
+                "Ainda não rodada: aguarda o S2 (BESS, Kenia) e o S3 (V2G, Cesar); o S4 vem depois dos dois. "
+                "O que cada um deve entregar: `docs/S2_BESS_Kenia.md` e `docs/S3_V2G_Cesar.md`. "
+                f"Comando, quando estiverem prontos: `python -m integration.coordinator --output results/{feeder_dir.name}/integration --frozen-taps` (~15 min).",""]
     doc += ["## Figuras",""]+[f"{i}. **`{n}`** — {t}" for i,(n,t) in enumerate(shown,1)]+[""]
     (out/"LEIA-ME.md").write_text("\n".join(doc),encoding="utf-8")
     return out

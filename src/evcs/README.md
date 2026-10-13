@@ -31,6 +31,7 @@ Estudos que usam o módulo, em `src/integration/`:
 
 - `evcs_screening.py`: capacidade da rede por barra × frota × cobertura.
 - `s1_study.py`: S1 intradiário com as estações escolhidas.
+- `service_transformers.py`: carregamento dos 1.177 transformadores de serviço no S0 e no S1 (sem fluxo de potência).
 
 ## Como uma sessão de recarga é calculada
 
@@ -126,6 +127,7 @@ python -m integration.s0_study                    # caso base S0 (~2 min)       
 python -m integration.evcs_screening              # triagem (~9 min; 1ª vez ~1,5 h)  -> results/ieee8500/evcs_screening/
 python -m integration.s1_study                    # S1, 5 frotas em paralelo (~40 min) -> results/ieee8500/s1/
 python -m integration.analysis                    # análise S0 × S1 (~15 s)          -> results/ieee8500/s0_vs_s1/
+python -m integration.service_transformers       # transformadores de serviço (~10 s) -> results/ieee8500/s1/evs_<n>/transformers_*
 python -m integration.zoning                      # regiões residencial/comercial/industrial (~10 s) -> results/ieee8500/zoneamento/
 python -m integration.redraw                      # só refaz os gráficos a partir dos resultados salvos (~3 min)
 python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_zoning.py tests/test_ieee8500.py -q
@@ -147,7 +149,7 @@ python -m pytest tests/test_planning.py tests/test_evcs.py tests/test_zoning.py 
 | `results/ieee8500/s0/` | Caso base: `network_topology.png`, `voltage_map_peak.png`, `voltage_profile_peak/valley.png`, `voltage_range_day.png`, `demand_substation_power_day.png`, `lines_*.png`; tabelas em `dados/` |
 | `results/ieee8500/evcs_screening/` | `hosting_capacity_map.png`, `hosting_capacity_voltage_only_map.png`, `stations_<n>_evs.png`; em `dados/`: `hosting_capacity.csv`, `fleet_scenarios.csv` |
 | `results/ieee8500/s1/` | Todas as frotas × S0: `overload_*.png` (indicador conforme a frota) e `sensitivity_*.png` (curvas do dia); tabelas em `dados/` |
-| `results/ieee8500/s1/evs_<n>/` | Por frota: `demand_*`, `voltage_*`, `impact_*` (com os reguladores atuando e com os taps travados), `network_*` (S0 e S1 na ponta), `sessions_*`, `stations_map.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes, `intraday.csv`) em `dados/` |
+| `results/ieee8500/s1/evs_<n>/` | Por frota: `demand_*`, `voltage_*`, `impact_*` (com os reguladores atuando e com os taps travados), `network_*` (S0 e S1 na ponta), `sessions_*`, `transformers_*` (transformadores de serviço), `stations_map.png`, `summary.json`; tabelas (sessões, potência por estação, tensões, correntes, `intraday.csv`, `service_transformers*.csv`) em `dados/` |
 | `results/ieee8500/zoneamento/` | Regiões residencial, comercial e industrial (hipótese): `zones_*.png`, `LEIA-ME.md`, classe de cada consumidor em `dados/customers.csv` |
 
 ## Resultados atuais (IEEE 8500, frota mista)
@@ -227,6 +229,25 @@ Números completos em `results/ieee8500/resumo/LEIA-ME.md` e `results/ieee8500/s
 
 - A queda é maior **longe da subestação, no oeste e no sul**, chegando a ~3,6 % às 18h.
 - Perto da subestação a queda fica abaixo de 1,5 %.
+
+### Transformadores de serviço
+
+A redução de média tensão junta cada transformador de serviço com o seu consumidor na barra primária, então o fluxo de potência não enxerga esses transformadores. O carregamento deles é refeito a partir dos resultados salvos (`python -m integration.service_transformers`):
+
+- **Demanda do consumidor:** P e Q nominais × curva diária no passo de 15 min. As cargas do IEEE 8500 são de potência constante, então é a mesma demanda que o fluxo usou.
+- **Estação no transformador (hipótese, `service_transformers:` no `evcs.yaml`):** um eletroposto monofásico numa barra de consumidor é atendido pelo transformador desse consumidor, na mesma fase. Eletropostos trifásicos e hubs DC têm transformador próprio, que não existe nos dados do IEEE, e ficam fora.
+- **Carregamento:** potência aparente ÷ kVA do transformador (`LoadXfmrs.dss`); carregadores com fator de potência 1.
+
+![Carregamento na ponta dos 5 transformadores de serviço mais carregados e dos 3 menos carregados, 3.000 veículos](../../docs/evcs/figures/transformers_loading_selected_3000.png)
+
+- **No S0 todos ficam entre 36 % e 42 %:** nos dados do IEEE 8500 a carga de cada consumidor é 35–41 % do kVA do seu transformador, e todos seguem a mesma curva diária.
+- **Com 3.000 veículos,** 44 transformadores atendem um eletroposto monofásico; **16 passam de 100 %** na ponta e 13 ficam entre 80 % e 100 %.
+- **Os piores são de 10 kVA:** chegam a 194 % (`330121b0`, barra `l3142078`) e ficam até 14 h acima de 100 % no dia (`355843a0`). Os 3 menos carregados (5 kVA, sem estação) ficam em 36 %, com curvas idênticas.
+- **Por frota** (transformadores acima de 100 %): 10 com 1.000 e 1.500 veículos, 14 com 2.000 e 16 com 2.500 e 3.000.
+
+![Demanda ao longo do dia dos 5 transformadores de serviço mais carregados, 3.000 veículos](../../docs/evcs/figures/transformers_intraday_most_loaded_3000.png)
+
+**Cuidados:** o resultado depende da hipótese de o eletroposto usar o transformador do consumidor; com um transformador próprio, essas sobrecargas desaparecem. O valor é a média de 15 min; transformadores aguentam sobrecargas curtas, e a perda de vida (IEEE C57.91) não foi calculada.
 
 ### Capacidade da rede
 

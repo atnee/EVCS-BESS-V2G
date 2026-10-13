@@ -86,6 +86,8 @@ def redraw(config_dir="configs", results="results"):
         for old in s1_dir.glob("*.png"):  # all-fleet figures are rebuilt below and by the summary
             old.unlink()
         export_sensitivity(s1_dir)
+        from integration.service_transformers import export_transformers
+        export_transformers(root,config_dir)  # after the clean redraw of each fleet folder
         done.append("s1")
 
     # Integration S0-S4

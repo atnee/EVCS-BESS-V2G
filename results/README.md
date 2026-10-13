@@ -23,7 +23,8 @@ results/
 │   │       ├── voltage_*.png          tensão ao longo do dia e por distância
 │   │       ├── impact_*.png           variação de tensão S1 − S0, queda por passo, taps
 │   │       ├── network_*.png          mapas de tensão e carregamento S0 e S1, equipamentos, faixas
-│   │       └── sessions_*.png         chegadas, tempo de recarga, SOC, espera
+│   │       ├── sessions_*.png         chegadas, tempo de recarga, SOC, espera
+│   │       └── transformers_*.png     transformadores de serviço: uso (%) S0 × S1, os mais e os menos carregados
 │   └── integration/           integração S0–S4 com EVCS, BESS e V2G (coordenador)
 │       ├── demand_substation_power_per_scenario.png
 │       ├── S1/ S2/ S3/ S4/    impact_*.png e network_*.png de cada cenário × S0
@@ -40,6 +41,7 @@ Todos os gráficos estão em inglês, um por arquivo. Para refazer só as figura
 | `ieee8500/evcs_screening/` | `python -m integration.evcs_screening` | 1ª vez ~1,5 h; depois segundos |
 | `ieee8500/s1/` | `python -m integration.s1_study` | ~12 min por frota |
 | `ieee8500/integration/` | `python -m integration.coordinator --output results/ieee8500/integration --frozen-taps` | ~15 min |
+| `ieee8500/s1/evs_<n>/transformers_*` | `python -m integration.service_transformers` (também roda ao fim do S1 e no `redraw`) | ~10 s |
 | `ieee8500/resumo/` | `python -m integration.resumo` (também roda sozinho ao fim do S1 e da integração) | segundos |
 | `ieee8500/s0_vs_s1/` | `python -m integration.analysis` (`--evs 5000` para outra frota; também roda ao fim do S1) | ~15 s |
 | `ieee8500/zoneamento/` | `python -m integration.zoning` (critérios em `configs/ieee8500.yaml` → `zoning:`) | ~10 s |

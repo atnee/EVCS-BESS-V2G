@@ -145,3 +145,17 @@ class TestFullCoverage(unittest.TestCase):
         self.assertTrue(ac.served.any())
         self.assertTrue((ac.loc[ac.served,"power_kw"] == p.charging_kw("ac1")).all())
         self.assertLessEqual(power["x"].max(),2*p.charging_kw("ac1")/p.charger_efficiency+1e-9)
+
+
+class TestSessionsByStationType(unittest.TestCase):
+    def test_ac_sessions_split_by_the_site_where_they_charge(self):
+        from integration.s1_study import sessions_by_station_type
+        p = from_config(read_parameters(ROOT/"configs/evcs.yaml"))
+        sites = {"h": "dc", "e3": "ac", "e1": "ac1"}
+        s = pd.DataFrame({"type": ["dc","ac","ac","ac"], "site": ["h","e3","e1","e1"], "served": [True,True,True,False],
+                          "energy_kwh": [30.,10.,8.,6.], "duration_min": [20.,60.,70.,80.], "wait_min": [0.,0.,5.,0.]})
+        t = sessions_by_station_type(s,sites,p.types)
+        one = t[p.types["ac1"].name]
+        self.assertEqual((one["sites"],one["sessions"],one["energy_kwh"],one["unserved_kwh"]),(["e1"],2,14.,6.))
+        self.assertEqual(t[p.types["ac"].name]["sessions"],1)
+        self.assertAlmostEqual(sum(v["energy_kwh"] for v in t.values()),s.energy_kwh.sum())  # nothing lost
