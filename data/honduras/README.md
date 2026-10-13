@@ -4,5 +4,5 @@ Cabeçalhos na linha 1, sem alteração. IDs devem ser texto. Unidades estão no
 `load_profiles`: hora ISO8601 com offset, consumo positivo em kW/kvar. Preencher todas as horas para cada par barra/fase. Não misturar carga estática e curva temporal como demandas adicionais.
 Coordenadas x/y são opcionais: documentar o sistema de referência antes de usar mapas.
 `lines`: impedâncias totais do trecho em ohms, por fase, sem acoplamento (esquema preliminar).
-Transformadores/reguladores/capacitores/chaves/GD são preservados como registros, mas não resolvidos pelo backend sintético. O importador não valida ainda integralmente os parâmetros desses equipamentos.
+Transformadores/reguladores/capacitores/chaves/GD são preservados como registros, mas o importador ainda não os converte para o modelo pandapower. O importador não valida ainda integralmente os parâmetros desses equipamentos.
 Não incluir arquivos reais no repositório. `.gitignore` reduz o risco de inclusão acidental, mas não impede `git add -f` nem remove arquivos já rastreados. Revisar `git diff --cached` antes de cada commit. Resultados reais também são restritos.

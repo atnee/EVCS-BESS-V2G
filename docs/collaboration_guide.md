@@ -26,7 +26,7 @@ Cada YAML possui seu próprio horizonte temporal. BESS usa `standalone_demand_kw
 ### Entrega para integração
 Preserve o contrato `Profile`: potência positiva injeta na rede, negativa consome, em kW/kvar por barra/fase/intervalo. Um pacote contém `profile.csv` e `manifest.json` com versão, horizonte, IDs de ativos/veículos, métricas e hash do perfil. `core.artifacts.read_profile_bundle(path, network)` valida e recupera esse perfil; `integration.coordinator.combine` rejeita horizontes incompatíveis e veículos/ativos duplicados.
 
-O coordenador executa S0–S4 e publica `results/ieee123/modules/<módulo>/<cenário>/`. A soma das três contribuições recompõe exatamente as injeções integradas. Módulos desativados têm perfis zero e `context.active=false`; V2G inclui a frota unidirecional em S1/S2, identificada por `v2g_discharge_enabled=false`.
+O coordenador executa S0–S4 e publica `results/ieee8500/integration/modules/<módulo>/<cenário>/`. A soma das três contribuições recompõe exatamente as injeções integradas. Módulos desativados têm perfis zero e `context.active=false`; V2G inclui a frota unidirecional em S1/S2, identificada por `v2g_discharge_enabled=false`.
 
 O coordenador chama apenas uma função por módulo. Todas retornam `(Profile, tabelas)`, e `Profile.metadata["kpis"]` traz as colunas do `summary.csv` (`capex_usd` é somado entre módulos). Fora dessas assinaturas, cada equipe pode renomear, dividir ou substituir seu código; `test_integration_uses_only_run_integrated` impede novos acoplamentos:
 
@@ -38,11 +38,11 @@ O coordenador chama apenas uma função por módulo. Todas retornam `(Profile, t
 
 Dentro de cada módulo, o algoritmo é escolhido por `strategy:` no YAML, entre as funções registradas em `src/<módulo>/strategies.py`; `tests/test_strategies.py` verifica cada estratégia registrada contra o contrato. Veja [ONBOARDING.md](../ONBOARDING.md).
 
-O EVCS também publica `evcs.planning` (`from_config`, `with_fleet`, `generate_sessions`, `size_sites`, `simulate`, `resample`, `greedy_coverage`), usado pela triagem de locais e pelo estudo S1; ver `src/evcs/README.md`. Alterar essas assinaturas, as chaves de `kpis` é mudança de interface compartilhada e exige revisão dos três.
+O EVCS também publica `evcs.planning` (`from_config`, `with_fleet`, `generate_sessions`, `size_sites`, `simulate`, `resample`, `greedy_coverage`, `thin_candidates`, `optimal_coverage`), usado pela triagem de locais e pelo estudo S1; ver `src/evcs/README.md`. Alterar essas assinaturas, as chaves de `kpis` é mudança de interface compartilhada e exige revisão dos três.
 
 Na execução integrada, infraestrutura EVCS e demanda atendida são entradas do V2G; demanda nominal da rede mais EVCS/frota alimenta o BESS. Portanto, resultados integrados podem mudar quando outro módulo muda. O alvo é independência de implementação, testes e arquivos, preservando coerência elétrica. Os horizontes dos três YAML devem coincidir para integrar; divergências geram erro explícito. O bloco `standalone` do V2G e a curva `standalone_demand_kw` do BESS não são usados pelo coordenador.
 
-Antes de entregar: executar testes do próprio módulo e `python -m pytest tests/test_module_independence.py -q`. A integração final deve passar pela suíte completa e pelo fluxo IEEE123.
+Antes de entregar: executar testes do próprio módulo e `python -m pytest tests/test_module_independence.py -q`. A integração final deve passar pela suíte completa e pelo fluxo no IEEE 8500.
 
 ## Iniciar
 O repositório está em https://github.com/atnee/EVCS-BESS-V2G, com `main` e as três branches. Cada colaborador clona sua própria cópia e trabalha na sua branch; os comandos de instalação estão em [ONBOARDING.md](../ONBOARDING.md).
@@ -69,4 +69,4 @@ Proteger main com Pull Requests, check `tests` aprovado e revisão. Preencher e 
 Ayrton: validar população de veículos independente, demanda horária, filas e critérios de seleção de barras. Evoluir dimensionamento EVCS.
 Kenia: avaliar dimensionamento P/E, objetivos, tarifa, degradação e política de SOC terminal. Substituir heurística por despacho otimizado.
 Cesar: definir disponibilidade, necessidades de viagem, sessões e degradação V2G. Refinar compartilhamento de carregadores preservando IDs únicos.
-Todos: aprovar contrato, licença e hipóteses econômicas; validar o equivalente pandapower do IEEE123 contra resultados publicados; acordar interface XLSX com a concessionária e regras de confidencialidade.
+Todos: aprovar contrato, licença e hipóteses econômicas; validar o equivalente pandapower do IEEE 8500 contra resultados publicados; acordar interface XLSX com a concessionária e regras de confidencialidade.

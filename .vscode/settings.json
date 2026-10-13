@@ -1,0 +1,20 @@
+{
+    // Shared project settings (docs/tutorial_vscode_ia.md). Personal settings go in your user settings.
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": ["tests", "-q"],
+    "python.analysis.extraPaths": ["src"],
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.env.windows": { "PYTHONPATH": "${workspaceFolder}/src" },
+    "terminal.integrated.env.linux": { "PYTHONPATH": "${workspaceFolder}/src" },
+    "terminal.integrated.env.osx": { "PYTHONPATH": "${workspaceFolder}/src" },
+    // Notebooks run from the repository root so configs/ is found.
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    // Generated outputs: keep them out of search and of the AI's file indexing.
+    "search.exclude": { "results/**": true, "**/__pycache__": true, "**/*.egg-info": true },
+    "files.watcherExclude": { "results/**": true },
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    // Copilot reads AGENTS.md (project instructions for every AI assistant).
+    "chat.useAgentsMdFile": true
+}

@@ -16,4 +16,3 @@ data/honduras/templates/*
 data/ieee123/raw/
 results/*
 !results/README.md
-!results/demo_reference/

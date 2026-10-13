@@ -10,39 +10,72 @@ import math
 import numpy as np
 import pandas as pd
 
-FT_TO_M = .3048  # IEEE123 bus coordinates are in feet
+FT_TO_M = .3048  # IEEE 8500 bus coordinates are in feet
 MINUTES = 1440
 
 
 @dataclass(frozen=True)
-class Fleet:
-    evs: int                    # electric cars in the feeder area
+class VehicleClass:
+    """One kind of vehicle in the fleet, e.g. private cars or taxis/ride-hailing."""
+    name: str
+    share: float                # fraction of the fleet's vehicles
     battery_kwh: float          # average usable battery
     battery_std_kwh: float      # spread of battery sizes (0 = all equal)
-    daily_km: float             # km per car per day
+    daily_km: float             # km per vehicle per day
     kwh_per_km: float
-    public_share: float         # fraction of the energy charged at public stations (rest at home)
+    public_share: float         # fraction of the energy charged at public stations (rest at home/depot)
     arrival_soc_mean: float
     arrival_soc_std: float
-    max_ac_kw: float            # on-board charger limit
-    max_dc_kw: float            # car DC acceptance limit
+    services: tuple = ()        # ((service, share of this class's public energy), ...); () = station type shares
+    arrival_shape: tuple = ()   # ((service, 24 hourly weights), ...); default: the station type's shape
 
     def __post_init__(self):
-        if self.evs < 0 or self.battery_kwh <= 0 or self.battery_std_kwh < 0 or self.daily_km < 0 or self.kwh_per_km <= 0:
-            raise ValueError("Invalid fleet")
+        if not self.name or not 0 < self.share <= 1:
+            raise ValueError("Invalid vehicle class name/share")
+        if self.battery_kwh <= 0 or self.battery_std_kwh < 0 or self.daily_km < 0 or self.kwh_per_km <= 0:
+            raise ValueError("Invalid vehicle class")
         if not 0 < self.public_share <= 1 or not 0 < self.arrival_soc_mean < 1 or self.arrival_soc_std < 0:
-            raise ValueError("Invalid fleet shares/SOC")
+            raise ValueError("Invalid vehicle class shares/SOC")
+        if self.services and (abs(sum(s for _,s in self.services)-1) > 1e-9 or any(s < 0 for _,s in self.services)):
+            raise ValueError("Service shares of a vehicle class must be non-negative and add up to 1")
+        for _,shape in self.arrival_shape:
+            shape = np.asarray(shape,float)
+            if shape.shape != (24,) or (shape < 0).any() or shape.sum() == 0:
+                raise ValueError("arrival_shape needs 24 non-negative weights")
+
+
+@dataclass(frozen=True)
+class Fleet:
+    evs: int                    # electric vehicles that charge in the feeder area (all classes)
+    max_ac_kw: float            # on-board charger limit
+    max_dc_kw: float            # vehicle DC acceptance limit
+    classes: tuple              # VehicleClass; vehicle shares add up to 1
+
+    def __post_init__(self):
+        if self.evs < 0 or not self.classes:
+            raise ValueError("Invalid fleet")
+        if abs(sum(c.share for c in self.classes)-1) > 1e-9 or len({c.name for c in self.classes}) != len(self.classes):
+            raise ValueError("Vehicle class shares must add up to 1, with unique names")
         if self.max_ac_kw <= 0 or self.max_dc_kw <= 0:
             raise ValueError("Invalid car charging limits")
 
+    def public_kwh(self, c: VehicleClass):
+        """Daily energy that one class asks from public stations (kWh)."""
+        return self.evs*c.share*c.daily_km*c.kwh_per_km*c.public_share
+
     @property
     def daily_public_kwh(self):
-        return self.evs*self.daily_km*self.kwh_per_km*self.public_share
+        return sum(self.public_kwh(c) for c in self.classes)
+
+    @property
+    def battery_kwh(self):
+        """Vehicle-weighted average battery (kWh)."""
+        return sum(c.share*c.battery_kwh for c in self.classes)
 
 
 @dataclass(frozen=True)
 class StationType:
-    key: str                    # "ac" or "dc"
+    key: str                    # "ac", "dc" or "ac1" (single-phase eletroposto)
     name: str                   # label: eletroposto / hub
     charger_kw: float
     chargers_per_site: int
@@ -52,10 +85,15 @@ class StationType:
     coverage_radius_m: float
     min_spacing_m: float
     arrival_shape: tuple        # 24 hourly weights for arrival times
+    capex_usd: float = 0.       # installed cost of one site (chargers + connection), used by the integration KPIs
+    serves: str = ""            # session type it charges ("ac"/"dc"); default: its own key
+    phases: int = 3             # 3 = three-phase site; 1 = single-phase (connects to one phase of a lateral)
 
     def __post_init__(self):
-        if self.key not in ("ac","dc") or self.charger_kw <= 0 or self.chargers_per_site < 1:
+        if self.key not in ("ac","dc","ac1") or self.charger_kw <= 0 or self.chargers_per_site < 1 or self.capex_usd < 0:
             raise ValueError("Invalid station type")
+        if self.service not in ("ac","dc") or self.phases not in (1,3):
+            raise ValueError("Invalid station service/phases")
         if not 0 <= self.share <= 1 or not 0 < self.target_soc <= 1 or self.max_wait_min < 0:
             raise ValueError("Invalid station share/target/wait")
         shape = np.asarray(self.arrival_shape,float)
@@ -66,6 +104,11 @@ class StationType:
     def site_kw(self):
         return self.charger_kw*self.chargers_per_site
 
+    @property
+    def service(self):
+        """Session type this station charges: its own key unless `serves` says otherwise."""
+        return self.serves or self.key
+
 
 @dataclass(frozen=True)
 class PlanningParameters:
@@ -75,20 +118,47 @@ class PlanningParameters:
     resolution_min: int = 15
     charger_efficiency: float = .95
     sizing_quantile: float = .95                # chargers = this quantile of unconstrained concurrency
+    candidate_spacing_m: float = 0.             # screening candidates at least this far apart (0 = all)
+    ac_siting: str = "greedy"                   # eletropostos: greedy (maximal coverage) or full_coverage (set covering)
+    min_served_share: float = .95               # full_coverage: add AC capacity until this share of sessions is served
 
     def __post_init__(self):
         if abs(sum(t.share for t in self.types.values())-1) > 1e-9:
             raise ValueError("Station type shares must add up to 1")
-        if MINUTES % self.resolution_min or not 0 < self.charger_efficiency <= 1 or not 0 < self.sizing_quantile <= 1:
+        if (MINUTES % self.resolution_min or not 0 < self.charger_efficiency <= 1 or not 0 < self.sizing_quantile <= 1
+                or self.candidate_spacing_m < 0 or self.ac_siting not in ("greedy","full_coverage")
+                or not 0 < self.min_served_share <= 1):
             raise ValueError("Invalid resolution/efficiency/quantile")
 
     def car_limit(self, key):
-        return self.fleet.max_ac_kw if key == "ac" else self.fleet.max_dc_kw
+        service = self.types[key].service if key in self.types else key
+        return self.fleet.max_ac_kw if service == "ac" else self.fleet.max_dc_kw
+
+    def charging_kw(self, key):
+        """Power one charger of this type actually delivers to a car (charger or car limit)."""
+        return min(self.types[key].charger_kw,self.car_limit(key))
+
+
+CLASS_FIELDS = ("battery_kwh","battery_std_kwh","daily_km","kwh_per_km","public_share","arrival_soc_mean","arrival_soc_std")
+
+
+def _fleet(f):
+    """Fleet from evcs.yaml `fleet:` with its vehicle `classes:`."""
+    f = dict(f)
+    if "classes" not in f:
+        raise ValueError("evcs.yaml fleet needs `classes:` (vehicle classes of the mixed fleet)")
+    classes = []
+    for name,c in f.pop("classes").items():
+        c = dict(c)
+        classes.append(VehicleClass(name=name,**{k: c.pop(k) for k in ("share",*CLASS_FIELDS)},
+                                    services=tuple(c.pop("services",{}).items()),
+                                    arrival_shape=tuple((k,tuple(v)) for k,v in c.pop("arrival_shape",{}).items()),**c))
+    return Fleet(classes=tuple(classes),**f)
 
 
 def from_config(config):
     p = dict(config["planning"])
-    fleet = Fleet(**p.pop("fleet"))
+    fleet = _fleet(p.pop("fleet"))
     types = {k: StationType(key=k,**{**v,"arrival_shape": tuple(v["arrival_shape"])})
              for k,v in p.pop("station_types").items()}
     return PlanningParameters(fleet=fleet,types=types,**p)
@@ -100,24 +170,32 @@ def with_fleet(p: PlanningParameters, evs):
 
 
 def generate_sessions(p: PlanningParameters):
-    """Charging requests for one representative day (no charger limits yet)."""
+    """Charging requests for one representative day (no charger limits yet).
+
+    Each vehicle class asks its daily public energy from each service (AC/DC) in its own proportion
+    (default: the station type shares), with its own battery, arrival SOC and, optionally, arrival times."""
     rng = np.random.default_rng(p.seed)
     f, rows = p.fleet, []
-    for key,t in p.types.items():
-        energy_goal, energy = f.daily_public_kwh*t.share, 0.
-        weights = np.asarray(t.arrival_shape,float)/sum(t.arrival_shape)
-        while energy < energy_goal-1e-9:
-            battery = max(10.,rng.normal(f.battery_kwh,f.battery_std_kwh)) if f.battery_std_kwh else f.battery_kwh
-            soc = float(np.clip(rng.normal(f.arrival_soc_mean,f.arrival_soc_std),.05,t.target_soc-.05))
-            need = min(battery*(t.target_soc-soc),energy_goal-energy)  # last session tops up the daily total
-            power = min(t.charger_kw,p.car_limit(key))
-            arrival = int(rng.choice(24,p=weights))*60+int(rng.integers(60))
-            rows.append(dict(type=key,arrival_min=arrival,battery_kwh=battery,soc_arrival=soc,energy_kwh=need,
-                             power_kw=power,grid_kw=power/p.charger_efficiency,
-                             duration_min=max(1,math.ceil(need/power*60))))
-            energy += need
-    sessions = pd.DataFrame(rows,columns=["type","arrival_min","battery_kwh","soc_arrival","energy_kwh","power_kw",
-                                          "grid_kw","duration_min"])
+    for c in f.classes:
+        services = c.services or tuple((k,t.share) for k,t in p.types.items())
+        shapes = dict(c.arrival_shape)
+        for key,share in services:
+            t = p.types[key]
+            energy_goal, energy = f.public_kwh(c)*share, 0.
+            shape = np.asarray(shapes.get(key,t.arrival_shape),float)
+            weights = shape/shape.sum()
+            while energy < energy_goal-1e-9:
+                battery = max(10.,rng.normal(c.battery_kwh,c.battery_std_kwh)) if c.battery_std_kwh else c.battery_kwh
+                soc = float(np.clip(rng.normal(c.arrival_soc_mean,c.arrival_soc_std),.05,t.target_soc-.05))
+                need = min(battery*(t.target_soc-soc),energy_goal-energy)  # last session tops up the daily total
+                power = min(t.charger_kw,p.car_limit(key))
+                arrival = int(rng.choice(24,p=weights))*60+int(rng.integers(60))
+                rows.append(dict(type=key,vehicle_class=c.name,arrival_min=arrival,battery_kwh=battery,soc_arrival=soc,
+                                 energy_kwh=need,power_kw=power,grid_kw=power/p.charger_efficiency,
+                                 duration_min=max(1,math.ceil(need/power*60))))
+                energy += need
+    sessions = pd.DataFrame(rows,columns=["type","vehicle_class","arrival_min","battery_kwh","soc_arrival","energy_kwh",
+                                          "power_kw","grid_kw","duration_min"])
     return sessions.sort_values("arrival_min",kind="stable").reset_index(drop=True)
 
 
@@ -147,36 +225,50 @@ def size_sites(p: PlanningParameters, sessions=None):
 
 
 def simulate(p: PlanningParameters, sites, sessions=None):
-    """Assign sessions to sites of their type and queue them on the chargers.
+    """Assign sessions to the sites that serve their type and queue them on the chargers.
 
-    sites: {bus: type_key}. Returns (sessions with site/start/wait/served, minute grid power per site).
-    Sessions are spread over the sites of their type in turn; the day is periodic (charging past
-    midnight wraps to the early hours)."""
+    sites: {bus: type_key}. A session goes to one of the sites serving its type (e.g. AC sessions to
+    three-phase `ac` and single-phase `ac1` eletropostos) with probability proportional to the site's
+    charging power, and charges at that site's power (charger or car limit, whichever is lower).
+    Returns (sessions with site/start/wait/served, minute grid power per site). The day is periodic
+    (charging past midnight wraps to the early hours)."""
     rng = np.random.default_rng(p.seed+1)
     sessions = (generate_sessions(p) if sessions is None else sessions).copy()
     sessions["site"], sessions["start_min"], sessions["wait_min"], sessions["served"] = None, np.nan, np.nan, False
     power = {bus: np.zeros(MINUTES) for bus in sites}
-    for key,t in p.types.items():
-        buses = [b for b,k in sites.items() if k == key]
-        idx = sessions.index[sessions.type==key]
+    for service in sorted(set(sessions.type)):
+        buses = [b for b,k in sites.items() if p.types[k].service == service]
+        idx = sessions.index[sessions.type==service]
         if not buses:
             continue
-        sessions.loc[idx,"site"] = rng.choice(buses,size=len(idx))
+        weight = np.array([p.charging_kw(sites[b])*p.types[sites[b]].chargers_per_site for b in buses],float)
+        sessions.loc[idx,"site"] = rng.choice(buses,size=len(idx),p=weight/weight.sum())
+        max_wait = p.types[service].max_wait_min  # patience belongs to the session type
         for bus in buses:
-            free = np.zeros(t.chargers_per_site)
-            for i in sessions.index[(sessions.type==key) & (sessions.site==bus)]:
-                row = sessions.loc[i]
-                charger = int(free.argmin())
-                start = max(row.arrival_min,free[charger])
-                if start-row.arrival_min > t.max_wait_min:
-                    continue  # gave up: unserved
-                free[charger] = start+row.duration_min
-                sessions.loc[i,["start_min","wait_min","served"]] = [start,start-row.arrival_min,True]
-                minutes = (np.arange(int(row.duration_min))+int(start)) % MINUTES
-                # Last minute charges only the remaining energy.
-                kw = np.full(len(minutes),row.grid_kw)
-                kw[-1] = row.grid_kw*(row.energy_kwh/row.power_kw*60-(len(minutes)-1))
-                np.add.at(power[bus],minutes,kw)
+            t, key = p.types[sites[bus]], sites[bus]
+            kw_car = p.charging_kw(key)
+            free = np.full(t.chargers_per_site,-float(MINUTES))  # free from the start of the warm-up day
+            rows = sessions.loc[(sessions.type==service) & (sessions.site==bus)]
+            # The day repeats: a warm-up copy of the previous day (-1) occupies the chargers with the
+            # sessions that run past midnight, so the studied day (0) starts with them already charging.
+            for day in (-1,0):
+                for i,row in rows.iterrows():
+                    arrival = row.arrival_min+day*MINUTES
+                    charger = int(free.argmin())
+                    start = max(arrival,free[charger])
+                    if start-arrival > max_wait:
+                        continue  # gave up: unserved
+                    duration = max(1,math.ceil(row.energy_kwh/kw_car*60))
+                    free[charger] = start+duration
+                    if day < 0:
+                        continue
+                    sessions.loc[i,["start_min","wait_min","served","duration_min","power_kw","grid_kw"]] = [
+                        start,start-arrival,True,duration,kw_car,kw_car/p.charger_efficiency]
+                    minutes = (np.arange(duration)+int(start)) % MINUTES
+                    # Last minute charges only the remaining energy.
+                    kw = np.full(len(minutes),kw_car/p.charger_efficiency)
+                    kw[-1] = kw[-1]*(row.energy_kwh/kw_car*60-(len(minutes)-1))
+                    np.add.at(power[bus],minutes,kw)
     return sessions, power
 
 
@@ -189,6 +281,21 @@ def distances_m(xy_a, xy_b):
     """Straight-line distance matrix between two lists of IEEE (x, y) coordinates, in metres."""
     a, b = np.asarray(xy_a,float)*FT_TO_M, np.asarray(xy_b,float)*FT_TO_M
     return np.hypot(a[:,None,0]-b[None,:,0],a[:,None,1]-b[None,:,1])
+
+
+def thin_candidates(candidates, demand, spacing_m):
+    """Keep candidates at least `spacing_m` apart, preferring those with more demand within that
+    distance; spacing 0 keeps all. Limits the hosting sweep on large feeders."""
+    if spacing_m <= 0 or candidates.empty:
+        return candidates.reset_index(drop=True)
+    xy = candidates[["x","y"]]
+    score = (distances_m(xy,demand[["x","y"]]) <= spacing_m).astype(float)@demand.weight.to_numpy(float)
+    spacing = distances_m(xy,xy)
+    kept = []
+    for i in np.argsort(-score,kind="stable"):
+        if all(spacing[i,j] >= spacing_m for j in kept):
+            kept.append(i)
+    return candidates.iloc[sorted(kept)].reset_index(drop=True)
 
 
 def greedy_coverage(candidates, demand, radius_m, spacing_m, stations, station_kw, taken=()):
@@ -214,3 +321,31 @@ def greedy_coverage(candidates, demand, radius_m, spacing_m, stations, station_k
         eligible &= spacing[best] >= spacing_m
     covered = 1-weight[uncovered].sum()/weight.sum() if weight.sum() else 0.
     return chosen,float(covered)
+
+
+def optimal_coverage(candidates, demand, radius_m, cost, capacity_kw, min_capacity_kw=0., time_limit_s=120.):
+    """Minimum-cost set of sites so that every demand point is within `radius_m` of a site and the
+    installed charging capacity reaches `min_capacity_kw` (integer program, scipy/HiGHS).
+
+    candidates: DataFrame with bus, x, y (one row per possible site; a bus may appear once per type).
+    demand: DataFrame with bus, x, y, weight. cost, capacity_kw: one value per candidate.
+    Demand points with no candidate within the radius cannot be covered: they are left out and
+    reported. Returns (chosen candidate positions, share of demand weight covered, uncovered demand rows)."""
+    from scipy.optimize import milp, LinearConstraint, Bounds
+    cost = np.asarray(cost,float); capacity = np.asarray(capacity_kw,float)
+    if len(cost) != len(candidates) or len(capacity) != len(candidates):
+        raise ValueError("cost and capacity_kw need one value per candidate")
+    covers = distances_m(demand[["x","y"]],candidates[["x","y"]]) <= radius_m
+    reachable = covers.any(axis=1)
+    constraints = [LinearConstraint(covers[reachable].astype(float),lb=1,ub=np.inf)]
+    if min_capacity_kw > 0:
+        constraints.append(LinearConstraint(capacity[None,:],lb=min_capacity_kw,ub=np.inf))
+    result = milp(c=cost,constraints=constraints,integrality=np.ones(len(cost)),bounds=Bounds(0,1),
+                  options={"time_limit":time_limit_s})
+    if result.x is None:
+        raise ValueError(f"No feasible siting: {result.message}")
+    chosen = np.flatnonzero(result.x > .5)
+    covered = covers[:,chosen].any(axis=1)
+    weight = demand.weight.to_numpy(float)
+    return chosen, float(weight[covered].sum()/weight.sum()), demand[~reachable]
+

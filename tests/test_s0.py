@@ -6,20 +6,20 @@ from tempfile import TemporaryDirectory
 import networkx as nx
 import numpy as np
 import yaml
-from network.ieee123_loader import create_pandapower_network
+from network.feeder_loader import create_pandapower_network
 from network.topology import feeder_graph, energized, graph_metrics, line_table, linecode_table, electrical_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class TestS0Topology(unittest.TestCase):
-    def test_graph_is_radial_with_two_tie_switches(self):
-        g = feeder_graph()
-        self.assertEqual((g.number_of_nodes(),g.number_of_edges()),(130,131))
+    def test_graph_is_radial_with_five_open_switches(self):
+        g = feeder_graph()  # IEEE 8500
+        self.assertEqual((g.number_of_nodes(),g.number_of_edges()),(2521,2525))
         self.assertTrue(nx.is_tree(energized(g)))
         m = graph_metrics(g)
-        self.assertEqual((m["open_switches"],m["loops_if_open_switches_closed"]),(2,2))
-        self.assertEqual(m["main_path"][0],"150")
+        self.assertEqual((m["open_switches"],m["loops_if_open_switches_closed"]),(5,5))
+        self.assertEqual(m["main_path"][0],g.graph["source"])
 
     def test_line_parameters_match_pandapower_model(self):
         lines = line_table().set_index("line")
@@ -31,11 +31,13 @@ class TestS0Topology(unittest.TestCase):
     def test_inductance_is_reactance_over_omega(self):
         t = linecode_table()
         np.testing.assert_allclose(t.l1_mh_km,t.x1_ohm_km/(2*np.pi*60)*1e3)
-        self.assertEqual(t.lines.sum(),118)
+        self.assertEqual(t.lines.sum(),2483)  # medium-voltage lines of the IEEE 8500
 
     def test_inventory_totals(self):
         totals = electrical_inventory()["totals"]
-        self.assertEqual((totals.load_kw,totals.load_kvar,totals.capacitor_kvar),(3490.,1920.,750.))
+        self.assertAlmostEqual(totals.load_kw,10773.17,places=2)
+        self.assertAlmostEqual(totals.load_kvar,2700.011,places=3)
+        self.assertEqual(totals.capacitor_kvar,3900.)
 
 
 class TestS0Study(unittest.TestCase):
@@ -46,11 +48,11 @@ class TestS0Study(unittest.TestCase):
             for name in ("evcs","bess","v2g"):
                 path = configs/f"{name}.yaml"; data = yaml.safe_load(path.read_text())
                 data["time"]["steps"] = 2; path.write_text(yaml.safe_dump(data))
-            path = configs/"ieee123.yaml"; data = yaml.safe_load(path.read_text())
+            path = configs/"ieee8500.yaml"; data = yaml.safe_load(path.read_text())  # S0 default feeder
             data["load_multipliers"] = [.55,1.]; path.write_text(yaml.safe_dump(data))
             summary = export_s0(Path(tmp)/"s0",configs)
             self.assertTrue(.95 < summary["peak_vmin_pu"] < 1.)
             self.assertGreater(summary["peak_losses_kw"],0)
-            for name in ("topology","voltage_map","voltage_profile","daily","linecodes"):
+            for name in ("network_topology","voltage_map_peak","voltage_profile_peak","voltage_range_day","lines_impedance"):
                 self.assertTrue((Path(tmp)/"s0"/f"{name}.png").stat().st_size > 10_000)
-            self.assertEqual(json.loads((Path(tmp)/"s0"/"summary.json").read_text())["graph"]["buses"],130)
+            self.assertEqual(json.loads((Path(tmp)/"s0"/"summary.json").read_text())["graph"]["buses"],2521)
