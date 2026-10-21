@@ -1,6 +1,45 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
 # Algorithm from src/v2g/strategies.py (STRATEGIES). Use 'template' to start your own.
 strategy: heuristic
+# Vehicles: 'vehicles' = explicit list below (test fixture); 'fleet' = sampled from `fleet:` (src/v2g/fleet.py).
+vehicle_source: vehicles
+# S3 fleet (all values are hypotheses; see docs/S3_V2G_Cesar.md). Battery and trip values copy the
+# `private` class of evcs.yaml planning.fleet so S1 and S3 share one vehicle model. Taxis are left out:
+# between rides they stay connected 1-2 h, almost nothing in the 17-21 h window.
+# 'residential' sessions cross midnight (cyclic day, src/v2g/availability.py). Not usable in the
+# integration yet: 100 vehicles need a host station far above the 8 ports of evcs.yaml `station:` (Ayrton).
+fleet:
+  n_vehicles: 100           # hypothesis: S3 target of 50-100 vehicles
+  seed: 42                  # same seed -> same fleet (reproducible)
+  power_kw: 11.0            # on-board AC charger, same as evcs.yaml fleet.max_ac_kw
+  battery_min_kwh: 10.0     # floor of the sampled battery, same as evcs.planning
+  soc_min: 0.1              # hypothesis, same as the fixture vehicles below
+  soc_max: 0.9
+  eta_charge: 0.95          # hypothesis, same as the fixture vehicles below
+  eta_discharge: 0.95
+  profiles:
+    residential:            # private car without a garage that spends the night at the station
+      share: 0.8            # hypothesis: 70/20 split of the proposal once taxis are removed, rounded
+      battery_kwh: 44.9     # evcs.yaml private class (e.g. BYD Dolphin)
+      battery_std_kwh: 15.0
+      daily_km: 40.0        # evcs.yaml private class: urban use
+      kwh_per_km: 0.18
+      arrival_h: [17, 19]   # hypothesis: back home after work; integer hour drawn uniformly, inclusive
+      departure_h: [6, 8]   # hypothesis: leaves next morning (overnight session)
+      arrival_soc_mean: 0.6 # hypothesis: not the S1 0.30 (that car would have ~2 kWh to give); sweep 0.3-0.7
+      arrival_soc_std: 0.1
+      departure_soc: 0.1    # no target beyond the trip; reserve = trip + soc_min, and departure >= arrival energy
+    commercial:             # afternoon shopping/leisure, leaves after the peak
+      share: 0.2
+      battery_kwh: 44.9
+      battery_std_kwh: 15.0
+      daily_km: 40.0
+      kwh_per_km: 0.18
+      arrival_h: [14, 16]   # hypothesis
+      departure_h: [21, 22] # hypothesis: must recharge before 21-22 h
+      arrival_soc_mean: 0.6 # hypothesis, as residential
+      arrival_soc_std: 0.1
+      departure_soc: 0.1
 vehicles:
 - id: fleet-0
   arrival: 8

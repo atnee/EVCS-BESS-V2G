@@ -10,7 +10,7 @@ tests/test_strategies.py checks every registered strategy automatically.
 """
 import numpy as np
 from core.schemas import make_profile
-from v2g.availability import availability
+from v2g.availability import availability, session_energy
 from v2g.model import schedule
 
 
@@ -44,8 +44,7 @@ def fleet_profile(station, grid, vehicles, power_kw, independent_evcs_kw, indepe
             raise ValueError(f"{v.id}: power above charger/battery rating")
         if (p[i][~allowed] > 1e-9).any():
             raise ValueError(f"{v.id}: discharge outside the allowed V2G window")
-        delta = np.where(p[i] < 0,p[i]*b.eta_charge,p[i]/b.eta_discharge)*grid.dt_h
-        energy[i] = b.soc_initial*b.capacity_kwh-np.concatenate([[0.],np.cumsum(delta)])
+        energy[i] = session_energy(p[i],b,v.arrival,v.departure,grid.dt_h)
         if energy[i].min() < b.soc_min*b.capacity_kwh-1e-7 or energy[i].max() > b.soc_max*b.capacity_kwh+1e-7:
             raise ValueError(f"{v.id}: SOC limits violated")
         if energy[i][v.departure]+1e-7 < max(v.reserve_kwh,b.soc_initial*b.capacity_kwh):

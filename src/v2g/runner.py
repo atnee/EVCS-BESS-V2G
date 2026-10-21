@@ -7,10 +7,16 @@ from core.schemas import TimeGrid, read_parameters
 from core.assets import Battery, Station
 from core.artifacts import export_profile_bundle
 from v2g.model import Vehicle
+from v2g.fleet import generate_fleet
 from v2g.strategies import get_strategy
 
 
 def vehicles_from_config(config):
+    source = config.get("vehicle_source","vehicles")
+    if source == "fleet":
+        return generate_fleet(config["fleet"],TimeGrid(**config["time"]))
+    if source != "vehicles":
+        raise ValueError(f"Unknown vehicle_source {source!r}; use 'vehicles' or 'fleet'")
     return [Vehicle(battery=Battery(**v["battery"]),**{k:value for k,value in v.items() if k!="battery"})
             for v in config["vehicles"]]
 
