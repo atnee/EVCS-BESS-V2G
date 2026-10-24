@@ -2,8 +2,8 @@
 # Algorithm from src/bess/strategies.py (STRATEGIES). Use 'template' to start your own.
 strategy: peak_shave
 battery:
-  capacity_kwh: 3700
-  power_kw: 1450
+  capacity_kwh: 7200
+  power_kw: 2200
   soc_initial: 0.7
   soc_min: 0.1
   soc_max: 0.9
@@ -12,7 +12,7 @@ battery:
   capex: 50000.0
   degradation_per_kwh: 0.03
   currency: USD
-target_kw: 12500.0           # 99 % of the IEEE 8500 nominal peak (~10.8 MW)
+target_kw: 11750.0           # 99 % of the IEEE 8500 nominal peak (~10.8 MW)
 time:
   start: '2026-01-01T00:00:00-06:00'
   steps: 24
