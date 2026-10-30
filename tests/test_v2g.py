@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import numpy as np
+import pandas as pd
 import yaml
 from core.schemas import TimeGrid, make_profile, read_parameters
 from bess.model import Battery
@@ -15,7 +16,7 @@ from v2g.fleet import generate_fleet, profile_counts
 from v2g.runner import vehicles_from_config, discharge_mask, run_integrated
 from v2g.s3_configs import write_configs
 from v2g.strategies import fleet_profile, STRATEGIES, cesar_v1, hourly_to_steps, check_price_policy, window_mask
-from v2g.report import fleet_economics
+from v2g.report import fleet_economics, group_metrics, group_of, line_groups, new_overloads, path_lines, success_criterion
 
 
 def flatten(node, prefix=()):
@@ -403,3 +404,47 @@ class TestS3Configs(unittest.TestCase):
                 b = v.battery
                 self.assertTrue(v.restore_trip)
                 self.assertGreaterEqual(meta["departure_energy_kwh"][v.id]+1e-7,b.soc_initial*b.capacity_kwh+v.mobility_kwh)
+
+
+class TestBusComparison(unittest.TestCase):
+    """Line groups and success criterion of v2g.report --compare on a small synthetic feeder (no network data)."""
+    def setUp(self):
+        import networkx as nx
+        # src -l1- a -l2- b(host A) -l3- c -l4- d(host B); lateral b -l5- e; open switch sw links src and d.
+        self.graph = nx.Graph()
+        for u,v,line in (("src","a","l1"),("a","b","l2"),("b","c","l3"),("c","d","l4"),("b","e","l5")):
+            self.graph.add_edge(u,v,id=line,closed=True)
+        self.graph.add_edge("src","d",id="sw",closed=False)
+        self.groups = line_groups(self.graph,"src","b","d")
+        self.hours = np.arange(4.)
+    def loading(self, rows):
+        return pd.DataFrame(rows,index=["l1","l2","l3","l4","l5"],dtype=float)
+    def test_paths_skip_open_switches(self):
+        self.assertEqual(path_lines(self.graph,"src","d"),["l1","l2","l3","l4"])
+        self.assertEqual(self.groups,{"l1": "trunk_out","l2": "trunk_out","l3": "trunk_south","l4": "trunk_south"})
+        self.assertEqual(group_of(["l5","sw"],self.groups).tolist(),["other","other"])
+        with self.assertRaisesRegex(ValueError,"downstream"): line_groups(self.graph,"src","c","a")
+    def test_group_metrics(self):
+        m = group_metrics(self.loading([[90,101,102,90],[99,99,99,99],[50]*4,[60]*4,[120,120,50,50]]),self.groups,1.)
+        self.assertEqual((m["trunk_out_max_loading_pct"],m["trunk_out_worst_line_hours_over_100"]),(102,2))
+        self.assertEqual((m["trunk_out_lines_over_100"],m["trunk_out_line_hours_over_100"]),(1,2))
+        self.assertEqual((m["trunk_south_lines_over_100"],m["other_line_hours_over_100"]),(0,2))
+    def test_success_criterion(self):
+        s0 = self.loading([[90]*4,[90]*4,[90]*4,[90]*4,[110]*4])   # l5 pre-existing
+        meets = self.loading([[99]*4,[100]*4,[101,99,99,99],[90]*4,[130]*4])
+        fails = self.loading([[99,103,104,99],[90]*4,[90]*4,[90]*4,[130]*4])
+        a = success_criterion(meets,s0,self.groups,("trunk_out",),self.hours).set_index("group")
+        self.assertEqual(a.loc["trunk_out","status"],"meets")
+        self.assertEqual(a.loc["trunk_south","status"],"not reachable from the bus")
+        self.assertFalse(a.loc["trunk_south","meets"])
+        self.assertTrue(a.loc["other","meets"]); self.assertEqual(a.loc["other","preexisting_excluded"],1)
+        b = success_criterion(fails,s0,self.groups,("trunk_out","trunk_south"),self.hours).set_index("group")
+        self.assertEqual(b.loc["trunk_out","status"],"fails")
+        self.assertAlmostEqual(b.loc["trunk_out","max_excess_pct"],4)
+        self.assertEqual((b.loc["trunk_out","worst_line"],b.loc["trunk_out","hours_over_100"]),("l1","1 2"))
+        self.assertEqual(b.loc["trunk_south","status"],"meets")
+    def test_new_overloads_outside_window(self):
+        s1 = self.loading([[90,101,90,90],[90]*4,[90]*4,[90]*4,[90]*4])
+        s3 = self.loading([[101,102,90,90],[90,90,101,90],[90]*4,[90]*4,[90,90,90,105]])
+        new = new_overloads(s1,s3,self.hours,[2,3])  # window = hour 2; l2 at hour 2 is inside it
+        self.assertEqual(list(zip(new.line,new.hour)),[("l1",0.),("l5",3.)])

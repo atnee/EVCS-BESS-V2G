@@ -259,8 +259,10 @@ def tariff_figure(config):
     hours,width = np.arange(24),.4
     ax.bar(hours-width/2,prices["tariff_usd_kwh"],width,color="#2a78d6",label="charging price")
     ax.bar(hours+width/2,prices["v2g_remuneration_usd_kwh"],width,color="#eb6834",label="V2G payment (discharge)")
-    ax.axvspan(window[0]-.5,window[1]-.5,color="#2a78d6",alpha=.08,lw=0,label=f"discharge window {window[0]}-{window[1]} h")
-    ax.axvspan(window[1]-.5,no_charge[1]-.5,color="#b9b8b3",alpha=.2,lw=0,label=f"no charging {no_charge[0]}-{no_charge[1]} h")
+    ax.axvspan(window[0]-.5,window[1]-.5,color="#2a78d6",alpha=.08,lw=0,zorder=0,
+               label=f"discharge window {window[0]}-{window[1]} h")
+    ax.axvspan(window[1]-.5,no_charge[1]-.5,color="#b9b8b3",alpha=.2,lw=0,zorder=0,
+               label=f"no charging {no_charge[0]}-{no_charge[1]} h (discharge window included)")
     ax.set_xticks(hours,[f"{h:02d}:00" for h in hours],rotation=90,fontsize=8)
     ax.set_xlim(-.6,23.6); ax.set_xlabel("hour of day",color=MUTED); ax.set_ylabel("energy price (USD/kWh)",color=MUTED)
     ax.legend(frameon=False,fontsize=9,loc="upper left")
@@ -300,12 +302,215 @@ def report(folder, config_dir="configs"):
     return table,economics,peak_value
 
 
+# Host-station bus comparison (python -m v2g.report --compare A B ...): line groups by feeder path.
+GROUPS = ("trunk_out","trunk_south","other")
+BUS_CASES = ("S0","S1_A","S3_A","S1_B","S3_B")
+BUS_COLORS = {"S0": "#b9b8b3", "S1_A": "#d03b3b", "S3_A": "#2a78d6", "S1_B": "#eb6834", "S3_B": "#1f9e89"}
+BUS_DIFFS = (("S3_A","S1_A"),("S3_B","S1_A"),("S3_B","S3_A"),("S1_B","S1_A"))
+
+
+def check_manifest(folder, config_dir):
+    """Every YAML hashed in <folder>/manifest.json must match the file of config_dir."""
+    used = json.loads((Path(folder)/"manifest.json").read_text())["config_sha256"]
+    for name,digest in used.items():
+        if hashlib.sha256((Path(config_dir)/name).read_bytes()).hexdigest() != digest:
+            raise ValueError(f"{Path(config_dir)/name} is not the {name} of {folder} (manifest.json)")
+
+
+def path_lines(graph, start, end):
+    """Element ids on the path start -> end, using closed elements only (open switches would add false loops)."""
+    import networkx as nx
+    closed = graph.edge_subgraph([(u,v) for u,v,d in graph.edges(data=True) if d.get("closed",True)])
+    nodes = nx.shortest_path(closed,start,end)
+    return [closed.edges[u,v]["id"] for u,v in zip(nodes,nodes[1:])]
+
+
+def line_groups(graph, source, bus_a, bus_b):
+    """{line id: group}: trunk_out = source -> bus_a, trunk_south = bus_a -> bus_b; other lines are absent."""
+    groups = {line: "trunk_out" for line in path_lines(graph,source,bus_a)}
+    for line in path_lines(graph,bus_a,bus_b):
+        if line in groups:
+            raise ValueError(f"{bus_b} is not downstream of {bus_a}: {line} is on both paths")
+        groups[line] = "trunk_south"
+    return groups
+
+
+def group_of(lines, groups):
+    return pd.Series([groups.get(line,"other") for line in lines],index=lines)
+
+
+def group_metrics(loading, groups, dt_h):
+    """Per group: max loading, hours over 100 % of its worst line, lines over 100 % and line-hours over 100 %."""
+    group = group_of(loading.index,groups)
+    out = {}
+    for g in GROUPS:
+        lines = loading[group == g]
+        worst = lines.max(axis=1)
+        over = lines > 100
+        out[f"{g}_max_loading_pct"] = float(worst.max()) if len(lines) else np.nan
+        out[f"{g}_worst_line_hours_over_100"] = float(over.loc[worst.idxmax()].sum()*dt_h) if len(lines) else np.nan
+        out[f"{g}_lines_over_100"] = int(over.any(axis=1).sum())
+        out[f"{g}_line_hours_over_100"] = float(over.values.sum()*dt_h)
+    return out
+
+
+def success_criterion(loading_s3, loading_s0, groups, reachable, hours):
+    """Decision 11: per group, 'meets' if no line that is not already over 100 % in S0 exceeds 100 % in S3.
+    Groups outside `reachable` are reported as not reachable from the host-station bus."""
+    pre = set(loading_s0.index[(loading_s0 > 100).any(axis=1)])
+    group = group_of(loading_s3.index,groups)
+    rows = []
+    for g in GROUPS:
+        lines = loading_s3[(group == g) & ~loading_s3.index.isin(pre)]
+        over = lines > 100
+        steps = np.flatnonzero(over.any(axis=0).values)
+        worst = lines.max(axis=1)
+        meets = not len(steps)
+        rows.append({"group": g, "reachable": g in reachable,
+                     "status": ("meets" if meets else "fails") if g in reachable else "not reachable from the bus",
+                     "meets": meets, "preexisting_excluded": len(pre & set(loading_s3.index[group == g])),
+                     "lines_over_100": int(over.any(axis=1).sum()),
+                     "max_excess_pct": 0. if meets else float(worst.max()-100),
+                     "worst_line": "" if meets else str(worst.idxmax()),
+                     "hours_over_100": " ".join(f"{hours[k]:g}" for k in steps)})
+    return pd.DataFrame(rows)
+
+
+def new_overloads(loading_s1, loading_s3, hours, window):
+    """Line-hours over 100 % in S3 but not in S1 outside the discharge window [start, end)."""
+    lines = loading_s3.index.intersection(loading_s1.index)
+    s1,s3 = loading_s1.loc[lines].values,loading_s3.loc[lines].values
+    outside = (np.asarray(hours) < window[0]) | (np.asarray(hours) >= window[1])
+    new = (s3 > 100) & ~(s1 > 100) & outside
+    return pd.DataFrame([{"line": lines[i], "hour": float(hours[k]), "S1_pct": float(s1[i,k]), "S3_pct": float(s3[i,k])}
+                         for i,k in zip(*np.nonzero(new))],columns=["line","hour","S1_pct","S3_pct"])
+
+
+def bus_comparison_table(flows, slack, groups, delivered):
+    """Rows: indicator and view; columns: BUS_CASES and the BUS_DIFFS differences."""
+    rows = []
+    for view in VIEWS:
+        metrics = {}
+        for case in BUS_CASES:
+            flow = flows[case,"regulated" if case == "S0" else view]
+            _,dt = step_hours(flow)
+            m = case_metrics(flow,slack)
+            metrics[case] = {"substation_peak_kw": m["substation_peak_kw"], "substation_peak_hour": m["substation_peak_hour"],
+                             **group_metrics(line_loading(flow),groups,dt),
+                             "v_min_pu": m["v_min_pu"], "customers_below_095": m["customers_below_095"],
+                             "losses_kwh": m["losses_kwh"]}
+        for key in metrics["S0"]:
+            rows.append({"indicator": key, "view": view, **{case: metrics[case][key] for case in BUS_CASES}})
+    rows.append({"indicator": "v2g_delivered_kwh", "view": "module", **{case: float(delivered[case]) for case in BUS_CASES}})
+    table = pd.DataFrame(rows)
+    for a,b in BUS_DIFFS:
+        table[f"{a} - {b}"] = table[a]-table[b]
+    return table
+
+
+def bus_figures(flows, slack, groups, window):
+    from integration.s0_study import new_axes, _style
+    figures = {}
+    ax = new_axes((10,5.2))
+    _style(ax,"Substation active power: S1 and S3 with the host station at m1125976 (A) or m1069504 (B)")
+    _shade(ax,window)
+    for case in ("S1_A","S3_A","S3_B"):
+        _stairs(ax,flows[case,"regulated"],flows[case,"regulated"]["source"].p_kw,color=BUS_COLORS[case],lw=1.8,label=case)
+    _day_axis(ax,"active power (kW)"); ax.legend(frameon=False,fontsize=9)
+    figures["v2g_bus_substation_power"] = ax.figure
+    labels = {"trunk_out": "outgoing trunk (substation to m1125976)", "trunk_south": "south trunk (m1125976 to m1069504)",
+              "other": "other lines"}
+    for g in GROUPS:
+        ax = new_axes((10,5.2))
+        _style(ax,f"Worst line loading per hour, {labels[g]}")
+        _shade(ax,window)
+        for case in ("S1_A","S3_A","S1_B","S3_B"):
+            for view,style in (("regulated","-"),("frozen_taps","--")):
+                loading = line_loading(flows[case,view])
+                worst = loading[group_of(loading.index,groups) == g].max(axis=0)
+                _stairs(ax,flows[case,view],worst,color=BUS_COLORS[case],lw=1.5,ls=style,label=f"{case}, {VIEWS[view]}")
+        ax.axhline(100,color="#0b0b0b",lw=.8,ls=":")
+        _day_axis(ax,"loading, highest physical phase (%)"); ax.legend(frameon=False,fontsize=7,ncol=2)
+        figures[f"v2g_bus_line_groups_{g}"] = ax.figure
+    ax = new_axes((10,5.2))
+    _style(ax,"Minimum bus voltage per hour: host station at m1125976 (A) or m1069504 (B)")
+    _shade(ax,window)
+    for case in BUS_CASES:
+        for view,style in (("regulated","-"),("frozen_taps","--")):
+            if case == "S0" and view == "frozen_taps":
+                continue
+            v = bus_min_voltage(flows[case,view],slack).groupby("time").min()
+            _stairs(ax,flows[case,view],v,color=BUS_COLORS[case],lw=1.5,ls=style,
+                    label=f"{case}, {VIEWS[view]}" if case != "S0" else "S0")
+    ax.axhline(V_MIN,color="#0b0b0b",lw=.8,ls=":")
+    _day_axis(ax,"minimum voltage (pu)"); ax.legend(frameon=False,fontsize=7,ncol=2)
+    figures["v2g_bus_min_voltage"] = ax.figure
+    return figures
+
+
+def compare_buses(folder_a, folder_b, configs_a, configs_b, output):
+    """S1/S3 of both host-station buses against the same S1 reference (S1_A)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from integration.s0_study import save_figures
+    from network.feeder_loader import read_feeder_data
+    from network.topology import feeder_graph
+    folder_a,folder_b,output = Path(folder_a),Path(folder_b),Path(output)
+    check_manifest(folder_a,configs_a); check_manifest(folder_b,configs_b)
+    bus_a = read_parameters(Path(configs_a)/"evcs.yaml")["station"]["bus"]
+    bus_b = read_parameters(Path(configs_b)/"evcs.yaml")["station"]["bus"]
+    window = read_parameters(Path(configs_a)/"v2g.yaml")["discharge_window_h"]
+    if read_parameters(Path(configs_b)/"v2g.yaml")["discharge_window_h"] != window:
+        raise ValueError("Runs A and B use different discharge windows")
+    data = read_feeder_data()
+    groups = line_groups(feeder_graph(data),data["source_bus"],bus_a,bus_b)
+    slack = str(pd.read_csv(folder_a/"dados"/"S0_injections.csv").bus.unique()[0])
+    sources = {"S0": (folder_a,"S0"), "S1_A": (folder_a,"S1"), "S3_A": (folder_a,"S3"),
+               "S1_B": (folder_b,"S1"), "S3_B": (folder_b,"S3")}
+    flows = {(case,view): load_case(folder,scenario,view) for case,(folder,scenario) in sources.items() for view in VIEWS}
+    delivered = {case: pd.read_csv(folder/"summary.csv").set_index("scenario").v2g_delivered_kwh[scenario]
+                 for case,(folder,scenario) in sources.items()}
+    output.mkdir(parents=True,exist_ok=True)
+    table = bus_comparison_table(flows,slack,groups,delivered)
+    table.to_csv(output/"s3_bus_comparison.csv",index=False)
+    reachable = {"S3_A": ("trunk_out",), "S3_B": ("trunk_out","trunk_south")}
+    success,overloads = [],[]
+    for view in VIEWS:
+        hours,_ = step_hours(flows["S0","regulated"])
+        s0 = line_loading(flows["S0","regulated"])
+        for case,ok in reachable.items():
+            s3 = line_loading(flows[case,view])
+            success.append(success_criterion(s3,s0,groups,ok,hours).assign(case=case,view=view))
+            overloads.append(new_overloads(line_loading(flows["S1"+case[2:],view]),s3,hours,window)
+                             .assign(case=case,reference="S1"+case[2:],view=view))
+    success = pd.concat(success,ignore_index=True)[["case","view","group","reachable","status","meets",
+                                                    "preexisting_excluded","lines_over_100","max_excess_pct",
+                                                    "worst_line","hours_over_100"]]
+    success.to_csv(output/"s3_success.csv",index=False)
+    overloads = pd.concat(overloads,ignore_index=True)[["case","reference","view","line","hour","S1_pct","S3_pct"]]
+    overloads.to_csv(output/"s3_new_overloads_outside_window.csv",index=False)
+    pd.Series(groups,name="group").rename_axis("line").to_csv(output/"s3_line_groups.csv")
+    save_figures(bus_figures(flows,slack,groups,window),output,clean=True)
+    return table,success,overloads
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("folder",help="integration output folder (with dados/ and summary.csv)")
+    parser.add_argument("folder",nargs="?",help="integration output folder (with dados/ and summary.csv)")
     parser.add_argument("--configs",default="configs")
+    parser.add_argument("--compare",nargs=2,metavar=("FOLDER_A","FOLDER_B"),
+                        help="compare two runs that differ only in the host-station bus")
+    parser.add_argument("--configs-a"); parser.add_argument("--configs-b"); parser.add_argument("--output")
     args = parser.parse_args()
-    for table in report(args.folder,args.configs):
+    if args.compare:
+        if not (args.configs_a and args.configs_b and args.output):
+            parser.error("--compare needs --configs-a, --configs-b and --output")
+        tables = compare_buses(*args.compare,args.configs_a,args.configs_b,args.output)
+    elif args.folder:
+        tables = report(args.folder,args.configs)
+    else:
+        parser.error("give a run folder or --compare")
+    for table in tables:
         print(table.to_string(index=False),end="\n\n")
 
 
