@@ -13,6 +13,7 @@ class Vehicle:
     departure: int
     mobility_kwh: float
     departure_soc: float
+    restore_trip: bool = False  # departure_rule arrival_plus_trip: also recharge the next trip
 
     def __post_init__(self):
         finite(self.mobility_kwh, "mobility_kwh")
@@ -26,6 +27,16 @@ class Vehicle:
         # Preserve minimum SOC after the next trip and the departure target.
         return max(self.departure_soc*self.battery.capacity_kwh,
                    self.mobility_kwh+self.battery.soc_min*self.battery.capacity_kwh)
+
+    @property
+    def departure_target_kwh(self) -> float:
+        # 'arrival': leave with the arrival energy. restore_trip: arrival energy plus the trip (cyclic day),
+        # never above soc_max. Never below the reserve in either case.
+        b = self.battery
+        arrival = b.soc_initial*b.capacity_kwh
+        if not self.restore_trip:
+            return max(self.reserve_kwh, arrival)
+        return max(self.reserve_kwh, min(arrival+self.mobility_kwh, b.soc_max*b.capacity_kwh))
 
 
 def schedule(station: Station, grid: TimeGrid, vehicles: list[Vehicle], independent_evcs_kw,
@@ -55,7 +66,7 @@ def schedule(station: Station, grid: TimeGrid, vehicles: list[Vehicle], independ
     for i, v in enumerate(vehicles):
         b = v.battery
         limit = min(station.charger_kw, b.power_kw)
-        target = max(v.reserve_kwh, b.soc_initial*b.capacity_kwh)
+        target = v.departure_target_kwh
         e = b.soc_initial*b.capacity_kwh
         order = session_steps(grid.steps, v.arrival, v.departure)
         for k, t in enumerate(order):

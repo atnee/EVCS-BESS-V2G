@@ -1,4 +1,5 @@
 """Independent V2G execution with explicit station and occupancy fixtures."""
+from dataclasses import replace
 from pathlib import Path
 import argparse
 import numpy as np
@@ -11,14 +12,22 @@ from v2g.fleet import generate_fleet
 from v2g.strategies import get_strategy
 
 
+DEPARTURE_RULES = {"arrival": False, "arrival_plus_trip": True}  # rule -> Vehicle.restore_trip
+
+
 def vehicles_from_config(config):
+    rule = config.get("departure_rule","arrival")
+    if rule not in DEPARTURE_RULES:
+        raise ValueError(f"Unknown departure_rule {rule!r}; use {sorted(DEPARTURE_RULES)}")
     source = config.get("vehicle_source","vehicles")
     if source == "fleet":
-        return generate_fleet(config["fleet"],TimeGrid(**config["time"]))
-    if source != "vehicles":
+        vehicles = generate_fleet(config["fleet"],TimeGrid(**config["time"]))
+    elif source == "vehicles":
+        vehicles = [Vehicle(battery=Battery(**v["battery"]),**{k:value for k,value in v.items() if k!="battery"})
+                    for v in config["vehicles"]]
+    else:
         raise ValueError(f"Unknown vehicle_source {source!r}; use 'vehicles' or 'fleet'")
-    return [Vehicle(battery=Battery(**v["battery"]),**{k:value for k,value in v.items() if k!="battery"})
-            for v in config["vehicles"]]
+    return [replace(v,restore_trip=DEPARTURE_RULES[rule]) for v in vehicles]
 
 
 def discharge_mask(config,grid):
@@ -27,6 +36,11 @@ def discharge_mask(config,grid):
         raise ValueError("Discharge window must lie inside the horizon")
     elapsed = np.arange(grid.steps)*grid.dt_h
     return (elapsed>=start)&(elapsed<end)
+
+
+def strategy_options(config,name):
+    """Optional keyword arguments of a strategy: the YAML block named after it, if any."""
+    return dict(config.get(name) or {})
 
 
 def output_tables(profile):
@@ -42,9 +56,11 @@ def run(config_dir="configs"):
     config = read_parameters(Path(config_dir)/"v2g.yaml")
     grid = TimeGrid(**config["time"])
     fixture = config["standalone"]
-    return get_strategy(config.get("strategy","heuristic"))(
+    name = config.get("strategy","heuristic")
+    return get_strategy(name)(
         Station(**fixture["station"]),grid,vehicles_from_config(config),
-        fixture["independent_evcs_kw"],fixture["independent_ids"],discharge_mask(config,grid),True)
+        fixture["independent_evcs_kw"],fixture["independent_ids"],discharge_mask(config,grid),True,
+        **strategy_options(config,name))
 
 
 def run_integrated(config_dir, grid, evcs_profile, enable_v2g=True):
@@ -52,11 +68,12 @@ def run_integrated(config_dir, grid, evcs_profile, enable_v2g=True):
     config = read_parameters(Path(config_dir)/"v2g.yaml")
     if TimeGrid(**config["time"]) != grid:
         raise ValueError("Integrated EVCS/BESS/V2G time grids must match")
-    profile = get_strategy(config.get("strategy","heuristic"))(
+    name = config.get("strategy","heuristic")
+    profile = get_strategy(name)(
         Station(**evcs_profile.metadata["station"]),grid,vehicles_from_config(config),
         # Only the shared host station's demand: public EVCS stations are separate equipment.
         evcs_profile.metadata.get("station_demand_kw",-evcs_profile.total_injection()),
-        evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g)
+        evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g,**strategy_options(config,name))
     profile.metadata["kpis"] = dict(v2g_delivered_kwh=profile.metadata["v2g_delivered_kwh"])
     return profile,output_tables(profile)
 

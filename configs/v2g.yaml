@@ -3,13 +3,16 @@
 strategy: heuristic
 # Vehicles: 'vehicles' = explicit list below (test fixture); 'fleet' = sampled from `fleet:` (src/v2g/fleet.py).
 vehicle_source: vehicles
+# arrival | arrival_plus_trip; 'arrival' keeps the current rule (max(reserve, arrival energy))
+departure_rule: arrival
 # S3 fleet (all values are hypotheses; see docs/S3_V2G_Cesar.md). Battery and trip values copy the
 # `private` class of evcs.yaml planning.fleet so S1 and S3 share one vehicle model. Taxis are left out:
 # between rides they stay connected 1-2 h, almost nothing in the 17-21 h window.
-# 'residential' sessions cross midnight (cyclic day, src/v2g/availability.py). Not usable in the
-# integration yet: 100 vehicles need a host station far above the 8 ports of evcs.yaml `station:` (Ayrton).
+# 'residential' sessions cross midnight (cyclic day, src/v2g/availability.py). Used only with
+# vehicle_source: fleet. Team agreement for S3: the 150 cars are part of the 3,000 of S1 (evcs.yaml
+# integration.evs = 2,850) on a host station of 154 ports and 1,694 kW; not yet adopted in configs/.
 fleet:
-  n_vehicles: 100           # hypothesis: S3 target of 50-100 vehicles
+  n_vehicles: 150           # team agreement: 150 of the 3,000 S1 vehicles take part in V2G
   seed: 42                  # same seed -> same fleet (reproducible)
   power_kw: 11.0            # on-board AC charger, same as evcs.yaml fleet.max_ac_kw
   battery_min_kwh: 10.0     # floor of the sampled battery, same as evcs.planning
@@ -26,9 +29,10 @@ fleet:
       kwh_per_km: 0.18
       arrival_h: [17, 19]   # hypothesis: back home after work; integer hour drawn uniformly, inclusive
       departure_h: [6, 8]   # hypothesis: leaves next morning (overnight session)
-      arrival_soc_mean: 0.6 # hypothesis: not the S1 0.30 (that car would have ~2 kWh to give); sweep 0.3-0.7
-      arrival_soc_std: 0.1
-      departure_soc: 0.1    # no target beyond the trip; reserve = trip + soc_min, and departure >= arrival energy
+      # hypothesis: arrival SOC uniform per car in [0.1, min(0.9, soc_max - E_trip/B)]; the per-car cap
+      # (computed in src/v2g/fleet.py) keeps arrival + trip <= soc_max*B so the cyclic day closes
+      arrival_soc_range: [0.1, 0.9]
+      departure_soc: 0.1    # no target beyond the trip; reserve = trip + soc_min; departure >= arrival energy (+ trip with departure_rule: arrival_plus_trip)
     commercial:             # afternoon shopping/leisure, leaves after the peak
       share: 0.2
       battery_kwh: 44.9
@@ -36,9 +40,8 @@ fleet:
       daily_km: 40.0
       kwh_per_km: 0.18
       arrival_h: [14, 16]   # hypothesis
-      departure_h: [21, 22] # hypothesis: must recharge before 21-22 h
-      arrival_soc_mean: 0.6 # hypothesis, as residential
-      arrival_soc_std: 0.1
+      departure_h: [23, 24] # hypothesis: leaves after the peak; pre-charges before 17 h, refills from 22 h
+      arrival_soc_range: [0.1, 0.9]  # hypothesis, as residential (same per-car cap)
       departure_soc: 0.1
 vehicles:
 - id: fleet-0
@@ -125,3 +128,14 @@ standalone:
   - 10.0
   independent_ids:
   - independent-demand-group
+# Strategy cesar_v1 (src/v2g/strategies.py): fleet LP, valley recharge, spread peak discharge.
+# Used only with strategy: cesar_v1; the price policy is checked against the discharge window in use.
+cesar_v1:
+  no_charge_window_h: [17, 22]      # decision: no fleet charging at the feeder peak
+  # PLACEHOLDER tariff (hypothesis, no Honduran source yet): 0.10 for 0-6 h, 0.15 for 6-17 h, 0.30 for 17-22 h, 0.15 for 22-24 h
+  tariff_usd_kwh: [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.30, 0.30, 0.30, 0.30, 0.30, 0.15, 0.15]
+  # PLACEHOLDER V2G remuneration (hypothesis): 0.30 for 17-20 h, 0.15 otherwise
+  # (outside the discharge window it has no effect today: discharge is not allowed there)
+  v2g_remuneration_usd_kwh: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.30, 0.30, 0.30, 0.15, 0.15, 0.15, 0.15]
+  degradation_usd_kwh: 0.0          # PLACEHOLDER (hypothesis)
+  tie_break_usd_kw: 1.0e-4          # numerical tie-break only; much smaller than any price difference

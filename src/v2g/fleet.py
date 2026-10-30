@@ -8,7 +8,7 @@ from core.assets import Battery
 from v2g.model import Vehicle
 
 PROFILE_FIELDS = ("share","battery_kwh","battery_std_kwh","daily_km","kwh_per_km",
-                  "arrival_h","departure_h","arrival_soc_mean","arrival_soc_std","departure_soc")
+                  "arrival_h","departure_h","arrival_soc_range","departure_soc")
 
 
 def profile_counts(shares, n):
@@ -30,6 +30,17 @@ def hour_index(window, grid):
     return [int(round(h/grid.dt_h)) for h in range(int(first),int(last)+1)]
 
 
+def arrival_soc(rng, window, capacity_kwh, mobility_kwh, soc_min, soc_max):
+    """Uniform arrival SOC in [lo, min(hi, soc_max - trip/B)], so arrival + trip fits below soc_max."""
+    lo,hi = window
+    if not soc_min <= lo <= hi <= soc_max:
+        raise ValueError(f"arrival_soc_range {window} must satisfy soc_min <= lo <= hi <= soc_max")
+    cap = soc_max-mobility_kwh/capacity_kwh
+    if cap < lo:
+        raise ValueError(f"Battery of {capacity_kwh:.1f} kWh cannot hold arrival SOC {lo} plus the trip")
+    return float(rng.uniform(lo,min(hi,cap)))
+
+
 def generate_fleet(fleet, grid):
     """Sample the vehicles of every profile; same seed -> same fleet."""
     rng = np.random.default_rng(fleet["seed"])
@@ -47,11 +58,11 @@ def generate_fleet(fleet, grid):
         for k in range(count):
             capacity = max(fleet["battery_min_kwh"],rng.normal(p["battery_kwh"],p["battery_std_kwh"])) \
                 if p["battery_std_kwh"] else p["battery_kwh"]
-            soc = float(np.clip(rng.normal(p["arrival_soc_mean"],p["arrival_soc_std"]),fleet["soc_min"],fleet["soc_max"]))
+            mobility = p["daily_km"]*p["kwh_per_km"]
+            soc = arrival_soc(rng,p["arrival_soc_range"],capacity,mobility,fleet["soc_min"],fleet["soc_max"])
             arrival,departure = int(rng.choice(arrivals)),int(rng.choice(departures))
             battery = Battery(capacity_kwh=float(capacity),power_kw=fleet["power_kw"],soc_initial=soc,
                               soc_min=fleet["soc_min"],soc_max=fleet["soc_max"],
                               eta_charge=fleet["eta_charge"],eta_discharge=fleet["eta_discharge"])
-            vehicles.append(Vehicle(f"{name}-{k:03d}",battery,arrival,departure,
-                                    p["daily_km"]*p["kwh_per_km"],p["departure_soc"]))
+            vehicles.append(Vehicle(f"{name}-{k:03d}",battery,arrival,departure,mobility,p["departure_soc"]))
     return vehicles
