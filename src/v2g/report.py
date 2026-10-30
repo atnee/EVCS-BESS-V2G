@@ -1,9 +1,12 @@
-"""S0, S1 and S3 side by side from a saved integration run (no power flow).
+"""S0, S1 and S3 side by side from a saved integration run (no power flow), with the owner economics.
 
 python -m v2g.report results/ieee8500/integration_s3_prelim --configs <config folder of the run>
 --configs must be the folder the run used (checked against manifest.json). Reads <folder>/dados/{S0,S1,S3}_*.csv (S1/S3 also *_frozen_taps_*; S0 is the reference for both views),
 dados/S1_fleet.json, dados/S3_fleet.json and summary.csv. Writes <folder>/v2g/: one plot per figure
-(v2g_*.png) and v2g_s0_s1_s3.csv. Not imported by v2g.runner, so the module stays independent of the network.
+(v2g_*.png), v2g_s0_s1_s3.csv and v2g_economics.csv (S1 billed flat at the tariff_basis base price,
+S3 billed with the cesar_v1 dynamic tariff; owner benefit per day, month and car, adapted from
+Moreira et al., eq. (6)) and v2g_peak_value_indicative.csv (substation peak cut x demand charge;
+indicative, not a charge). Not imported by v2g.runner, so the module stays independent of the network.
 """
 from pathlib import Path
 import argparse
@@ -184,6 +187,86 @@ def fleet_figures(fleets, window, dt_h):
     return figures
 
 
+def fleet_economics(power_kw, dt_h, tariff_steps, remuneration_steps, flat_usd_kwh, days_per_month, n_vehicles):
+    """Energy bill of a vehicles x steps grid-side power matrix (+ = discharge, - = charge).
+
+    Dynamic: charging_cost - v2g_revenue (net_cost). Flat: every charged kWh at flat_usd_kwh (flat_cost).
+    Both nets are also given per month (x days_per_month) and per car and month (/ n_vehicles)."""
+    p = np.asarray(power_kw,float)
+    charged = np.maximum(-p,0.).sum(axis=0)*dt_h
+    discharged = np.maximum(p,0.).sum(axis=0)*dt_h
+    cost = float(np.dot(np.asarray(tariff_steps,float),charged))
+    revenue = float(np.dot(np.asarray(remuneration_steps,float),discharged))
+    flat = float(flat_usd_kwh*charged.sum())
+    return {"charged_kwh": float(charged.sum()), "discharged_kwh": float(discharged.sum()),
+            "charging_cost_usd": cost, "v2g_revenue_usd": revenue, "net_cost_usd": cost-revenue,
+            "flat_cost_usd": flat, "net_cost_month_usd": (cost-revenue)*days_per_month,
+            "flat_cost_month_usd": flat*days_per_month,
+            "net_cost_vehicle_month_usd": (cost-revenue)*days_per_month/n_vehicles,
+            "flat_cost_vehicle_month_usd": flat*days_per_month/n_vehicles}
+
+
+def base_usd_kwh(basis):
+    return basis["base_hnl_kwh"]/basis["fx_hnl_per_usd"]
+
+
+def economics_table(fleets, config, dt_h):
+    """S1 billed flat at the base price, S3 with the cesar_v1 dynamic tariff; owner benefit = S1 - S3."""
+    from core.schemas import TimeGrid
+    from v2g.strategies import hourly_to_steps
+    basis,prices = config["tariff_basis"],config["cesar_v1"]
+    steps = len(fleets["S3"]["vehicle_power_kw"][0])
+    grid = TimeGrid(steps=steps,dt_h=dt_h)
+    tariff = hourly_to_steps(prices["tariff_usd_kwh"],grid,"tariff_usd_kwh")
+    remuneration = hourly_to_steps(prices["v2g_remuneration_usd_kwh"],grid,"v2g_remuneration_usd_kwh")
+    base,days = base_usd_kwh(basis),basis["days_per_month"]
+    n = len(fleets["S3"]["vehicle_power_kw"])
+    s1 = fleet_economics(fleets["S1"]["vehicle_power_kw"],dt_h,tariff,remuneration,base,days,n)
+    s3 = fleet_economics(fleets["S3"]["vehicle_power_kw"],dt_h,tariff,remuneration,base,days,n)
+    saved = fleets["S3"].get("charging_cost_usd"),fleets["S3"].get("v2g_revenue_usd")
+    if None in saved or not np.isclose(s3["net_cost_usd"],saved[0]-saved[1],rtol=1e-9,atol=0):
+        raise ValueError(f"S3 net cost {s3['net_cost_usd']} does not match S3_fleet.json {saved}")
+    common = {"base_usd_kwh": base, "base_hnl_kwh": basis["base_hnl_kwh"], "fx_hnl_per_usd": basis["fx_hnl_per_usd"],
+              "days_per_month": days, "n_vehicles": n}
+    rows = [{"case": "S1", "billing": "flat", "charged_kwh": s1["charged_kwh"], "discharged_kwh": s1["discharged_kwh"],
+             "charging_cost_usd": s1["flat_cost_usd"], "v2g_revenue_usd": 0., "net_cost_usd": s1["flat_cost_usd"]},
+            {"case": "S3", "billing": "dynamic", "charged_kwh": s3["charged_kwh"], "discharged_kwh": s3["discharged_kwh"],
+             "charging_cost_usd": s3["charging_cost_usd"], "v2g_revenue_usd": s3["v2g_revenue_usd"],
+             "net_cost_usd": s3["net_cost_usd"]}]
+    for row in rows:
+        benefit = s1["flat_cost_usd"]-row["net_cost_usd"]
+        row.update(owner_benefit_day_usd=benefit,owner_benefit_month_usd=benefit*days,
+                   owner_benefit_vehicle_month_usd=benefit*days/n,**common)
+    return pd.DataFrame(rows)
+
+
+def peak_value_indicative(table, basis):
+    """Substation peak cut S1 -> S3 valued at the medium-voltage demand charge: indicative, not a charge."""
+    rate = basis["demand_value_hnl_kw_month"]/basis["fx_hnl_per_usd"]
+    peaks = table[table.indicator == "substation_peak_kw"]
+    return pd.DataFrame([{"label": "indicative, not a charge", "view": r.view, "peak_cut_kw": r.S1-r.S3,
+                          "demand_value_usd_kw_month": rate, "value_usd_month": (r.S1-r.S3)*rate}
+                         for r in peaks.itertuples()])
+
+
+def tariff_figure(config):
+    """Charging price and V2G payment per hour of the day (cesar_v1 vectors)."""
+    from integration.s0_study import new_axes, _style, MUTED
+    prices,window = config["cesar_v1"],config["discharge_window_h"]
+    no_charge = prices["no_charge_window_h"]
+    ax = new_axes((11,5.4))
+    _style(ax,"S3 dynamic tariff: price to charge and payment for V2G discharge")
+    hours,width = np.arange(24),.4
+    ax.bar(hours-width/2,prices["tariff_usd_kwh"],width,color="#2a78d6",label="charging price")
+    ax.bar(hours+width/2,prices["v2g_remuneration_usd_kwh"],width,color="#eb6834",label="V2G payment (discharge)")
+    ax.axvspan(window[0]-.5,window[1]-.5,color="#2a78d6",alpha=.08,lw=0,label=f"discharge window {window[0]}-{window[1]} h")
+    ax.axvspan(window[1]-.5,no_charge[1]-.5,color="#b9b8b3",alpha=.2,lw=0,label=f"no charging {no_charge[0]}-{no_charge[1]} h")
+    ax.set_xticks(hours,[f"{h:02d}:00" for h in hours],rotation=90,fontsize=8)
+    ax.set_xlim(-.6,23.6); ax.set_xlabel("hour of day",color=MUTED); ax.set_ylabel("energy price (USD/kWh)",color=MUTED)
+    ax.legend(frameon=False,fontsize=9,loc="upper left")
+    return {"v2g_tariff": ax.figure}
+
+
 def report(folder, config_dir="configs"):
     import matplotlib
     matplotlib.use("Agg")
@@ -193,7 +276,8 @@ def report(folder, config_dir="configs"):
     used = json.loads((folder/"manifest.json").read_text())["config_sha256"].get("v2g.yaml")
     if used != hashlib.sha256(config.read_bytes()).hexdigest():
         raise ValueError(f"{config} is not the v2g.yaml of this run (manifest.json); pass the run's --configs")
-    window = read_parameters(config)["discharge_window_h"]
+    parameters = read_parameters(config)
+    window = parameters["discharge_window_h"]
     # S0 injects nothing but the zero profile at the slack bus, so its only bus is the slack.
     slack = pd.read_csv(folder/"dados"/"S0_injections.csv").bus.unique()
     if len(slack) != 1:
@@ -207,8 +291,13 @@ def report(folder, config_dir="configs"):
     table = comparison_table(flows,slack,summary)
     table.to_csv(out/"v2g_s0_s1_s3.csv",index=False)
     _,dt_h = step_hours(flows["S3","regulated"])
-    save_figures({**network_figures(flows,slack,window),**fleet_figures(fleets,window,dt_h)},out,clean=True)
-    return table
+    economics = economics_table(fleets,parameters,dt_h)
+    economics.to_csv(out/"v2g_economics.csv",index=False)
+    peak_value = peak_value_indicative(table,parameters["tariff_basis"])
+    peak_value.to_csv(out/"v2g_peak_value_indicative.csv",index=False)
+    save_figures({**network_figures(flows,slack,window),**fleet_figures(fleets,window,dt_h),**tariff_figure(parameters)},
+                 out,clean=True)
+    return table,economics,peak_value
 
 
 def main():
@@ -216,7 +305,8 @@ def main():
     parser.add_argument("folder",help="integration output folder (with dados/ and summary.csv)")
     parser.add_argument("--configs",default="configs")
     args = parser.parse_args()
-    print(report(args.folder,args.configs).to_string(index=False))
+    for table in report(args.folder,args.configs):
+        print(table.to_string(index=False),end="\n\n")
 
 
 if __name__ == "__main__":

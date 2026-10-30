@@ -1,14 +1,28 @@
 import copy
+import json
+import shutil
 import unittest
+from dataclasses import asdict
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import numpy as np
-from core.schemas import TimeGrid, read_parameters
+import yaml
+from core.schemas import TimeGrid, make_profile, read_parameters
 from bess.model import Battery
 from evcs.model import Station
 from v2g.model import Vehicle, schedule
 from v2g.fleet import generate_fleet, profile_counts
-from v2g.runner import vehicles_from_config, discharge_mask
-from v2g.strategies import fleet_profile, STRATEGIES, cesar_v1, hourly_to_steps
+from v2g.runner import vehicles_from_config, discharge_mask, run_integrated
+from v2g.s3_configs import write_configs
+from v2g.strategies import fleet_profile, STRATEGIES, cesar_v1, hourly_to_steps, check_price_policy, window_mask
+from v2g.report import fleet_economics
+
+
+def flatten(node, prefix=()):
+    """Nested mapping -> {key path: leaf}; lists are compared whole."""
+    if not isinstance(node,dict):
+        return {prefix: node}
+    return {k: v for key,value in node.items() for k,v in flatten(value,prefix+(key,)).items()}
 from v2g.availability import availability, session_steps
 
 class TestV2G(unittest.TestCase):
@@ -256,7 +270,136 @@ class TestCesarV1(unittest.TestCase):
         np.testing.assert_allclose(p.metadata["vehicle_power_kw"],base.metadata["vehicle_power_kw"])
         self.assertEqual(p.metadata["v2g_delivered_kwh"],0)
     def test_price_policy_is_enforced(self):
-        tariff = list(self.options["tariff_usd_kwh"]); tariff[3] = 0.30  # valley as dear as the peak
+        tariff = list(self.options["tariff_usd_kwh"]); tariff[3] = tariff[17]  # valley as dear as the peak
         with self.assertRaisesRegex(ValueError,"tariff"): self.solve(tariff_usd_kwh=tariff)
-        remuneration = list(self.options["v2g_remuneration_usd_kwh"]); remuneration[21] = 0.40
+        remuneration = list(self.options["v2g_remuneration_usd_kwh"]); remuneration[21] = remuneration[17]  # peak pay outside the window
         with self.assertRaisesRegex(ValueError,"remuneration"): self.solve(v2g_remuneration_usd_kwh=remuneration)
+    def test_s1_has_no_dynamic_billing(self):
+        meta = self.solve(enable_v2g=False).metadata
+        self.assertIsNone(meta["charging_cost_usd"]); self.assertIsNone(meta["v2g_revenue_usd"])
+        self.assertTrue(meta["billing"].startswith("flat"))
+        self.assertEqual(self.profile.metadata["billing"],"dynamic")
+        json.dumps(meta)
+
+
+def block_vector(blocks, base):
+    """24 hour-of-day prices: base x multiplier inside [start, end) blocks, 1x elsewhere."""
+    values = np.full(24,base)
+    for start,end,multiplier in blocks:
+        values[start:end] = base*multiplier
+    return values
+
+
+class TestTariff(unittest.TestCase):
+    """Dynamic tariff of configs/v2g.yaml (cesar_v1 vectors) against tariff_basis."""
+    def setUp(self):
+        self.config = read_parameters(ROOT/"configs/v2g.yaml")
+        self.basis,self.prices = self.config["tariff_basis"],self.config["cesar_v1"]
+        self.base = self.basis["base_hnl_kwh"]/self.basis["fx_hnl_per_usd"]
+    def test_tariff_vectors_match_basis(self):
+        for key,vector in (("charge_multipliers","tariff_usd_kwh"),("discharge_multipliers","v2g_remuneration_usd_kwh")):
+            blocks = self.basis[key]
+            for start,end,_ in blocks:
+                self.assertTrue(float(start).is_integer() and float(end).is_integer() and 0 <= start < end <= 24)
+            spans = sorted((start,end) for start,end,_ in blocks)
+            self.assertTrue(all(a[1] <= b[0] for a,b in zip(spans,spans[1:])),key)
+            np.testing.assert_allclose(self.prices[vector],block_vector(blocks,self.base),rtol=0,atol=5e-5)
+    def test_dynamic_prices_quarter_hour(self):
+        grid = TimeGrid(steps=96,dt_h=.25)
+        charge = hourly_to_steps(self.prices["tariff_usd_kwh"],grid)/self.base
+        discharge = hourly_to_steps(self.prices["v2g_remuneration_usd_kwh"],grid)/self.base
+        for step,multiplier in ((55,1.),(56,2.),(68,10.),(88,1.)):
+            self.assertAlmostEqual(charge[step],multiplier,delta=5e-4)
+        self.assertAlmostEqual(discharge[79],2.5,delta=5e-4); self.assertAlmostEqual(discharge[80],1.,delta=5e-4)
+    def test_price_policy_with_s3_window(self):
+        grid = TimeGrid(**self.config["time"])
+        tariff = hourly_to_steps(self.prices["tariff_usd_kwh"],grid)
+        remuneration = hourly_to_steps(self.prices["v2g_remuneration_usd_kwh"],grid)
+        check_price_policy(tariff,remuneration,window_mask(self.prices["no_charge_window_h"],grid),window_mask(S3_WINDOW,grid))
+        self.assertGreater(remuneration.max()*.95*.95,tariff.min())
+    def test_fleet_economics(self):
+        # Two cars, 4 steps of 0.5 h: car 0 charges 10 kW at step 0 and discharges 4 kW at step 2;
+        # car 1 charges 6 kW at step 1. Charged 5 + 3 = 8 kWh, discharged 2 kWh.
+        power = [[-10,0,4,0],[0,-6,0,0]]
+        e = fleet_economics(power,.5,[1.,2.,3.,4.],[.5,.5,5.,.5],.25,22,2)
+        self.assertAlmostEqual(e["charged_kwh"],8); self.assertAlmostEqual(e["discharged_kwh"],2)
+        self.assertAlmostEqual(e["charging_cost_usd"],5*1.+3*2.)       # 11
+        self.assertAlmostEqual(e["v2g_revenue_usd"],2*5.)              # 10
+        self.assertAlmostEqual(e["net_cost_usd"],1.)
+        self.assertAlmostEqual(e["flat_cost_usd"],8*.25)               # 2
+        self.assertAlmostEqual(e["net_cost_month_usd"],22.); self.assertAlmostEqual(e["flat_cost_vehicle_month_usd"],22.)
+
+
+def minimal_evcs_profile(config, grid):
+    """EVCS Profile carrying only what v2g.runner.run_integrated reads: host station and its own demand."""
+    fixture = config["standalone"]
+    demand = np.asarray(fixture["independent_evcs_kw"],float)
+    station = Station(**fixture["station"])
+    profile = make_profile(grid,"evcs",station.bus,station.phases,-demand,vehicle_ids=fixture["independent_ids"])
+    profile.metadata.update(station=asdict(station),station_demand_kw=demand.tolist())
+    return profile
+
+
+class TestS3Configs(unittest.TestCase):
+    """python -m v2g.s3_configs: reads only configs/ and writes to a temporary folder."""
+    def setUp(self):
+        self.tmp = TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.case = read_parameters(ROOT/"configs/v2g.yaml")["s3_case"]
+    def tearDown(self):
+        self.tmp.cleanup()
+    def flat(self, folder):
+        return {p.name: flatten(read_parameters(p)) for p in sorted(Path(folder).glob("*.yaml"))}
+    def test_s3_configs_apply_overrides(self):
+        write_configs(self.root/"A",ROOT/"configs")
+        official,s3 = self.flat(ROOT/"configs"),self.flat(self.root/"A")
+        self.assertEqual(set(s3),set(official))
+        self.assertTrue((self.root/"A"/"S3_CHANGES.md").is_file())
+        for name in official:
+            expected = dict(official[name])
+            expected.update({tuple(k.split(".")): v for k,v in self.case["overrides"].get(name,{}).items()})
+            self.assertEqual(s3[name],expected,name)
+    def test_s3_configs_variant_b_moves_only_the_bus(self):
+        write_configs(self.root/"A",ROOT/"configs")
+        write_configs(self.root/"B",ROOT/"configs","B")
+        a,b = self.flat(self.root/"A"),self.flat(self.root/"B")
+        diff = {(name,key) for name in a for key in set(a[name])|set(b[name]) if a[name].get(key) != b[name].get(key)}
+        self.assertEqual(diff,{("evcs.yaml",("station","bus")),("v2g.yaml",("standalone","station","bus"))})
+        self.assertEqual(b["v2g.yaml"]["standalone","station","bus"],b["evcs.yaml"]["station","bus"])
+    def test_s3_configs_rejects_unknown_key(self):
+        configs = self.root/"configs"
+        shutil.copytree(ROOT/"configs",configs)
+        config = read_parameters(configs/"v2g.yaml")
+        config["s3_case"]["overrides"]["evcs.yaml"]["station.charger"] = 154  # typo of station.chargers
+        (configs/"v2g.yaml").write_text(yaml.safe_dump(config,sort_keys=False),encoding="utf-8")
+        with self.assertRaisesRegex(ValueError,"station.charger"): write_configs(self.root/"A",configs)
+        with self.assertRaisesRegex(ValueError,"variant"): write_configs(self.root/"C",ROOT/"configs","C")
+    def test_s3_case_does_not_change_official_run(self):
+        configs = self.root/"configs"
+        shutil.copytree(ROOT/"configs",configs)
+        config = read_parameters(configs/"v2g.yaml")
+        del config["s3_case"]
+        (configs/"v2g.yaml").write_text(yaml.safe_dump(config,sort_keys=False),encoding="utf-8")
+        grid = TimeGrid(**config["time"])
+        evcs = minimal_evcs_profile(config,grid)
+        for enable in (True,False):
+            with_case,_ = run_integrated(ROOT/"configs",grid,evcs,enable)
+            without,_ = run_integrated(configs,grid,evcs,enable)
+            self.assertEqual(with_case.metadata["vehicle_power_kw"],without.metadata["vehicle_power_kw"])
+            self.assertTrue(with_case.data.equals(without.data))
+            self.assertEqual(set(with_case.metadata["kpis"]),{"v2g_delivered_kwh"})
+    def test_s3_config_runs_module(self):
+        write_configs(self.root/"A",ROOT/"configs")
+        config = read_parameters(self.root/"A"/"v2g.yaml")
+        grid = TimeGrid(**config["time"])
+        for enable in (True,False):
+            profile,_ = run_integrated(self.root/"A",grid,minimal_evcs_profile(config,grid),enable)
+            meta = profile.metadata
+            self.assertEqual(meta["warnings"],[]); self.assertEqual(meta["capped_target_vehicles"],[])
+            self.assertEqual(set(meta["kpis"]),{"v2g_delivered_kwh"})
+            json.dumps(meta)
+            self.assertEqual(meta["v2g_delivered_kwh"] > 0,enable)
+            for v in vehicles_from_config(config):
+                b = v.battery
+                self.assertTrue(v.restore_trip)
+                self.assertGreaterEqual(meta["departure_energy_kwh"][v.id]+1e-7,b.soc_initial*b.capacity_kwh+v.mobility_kwh)

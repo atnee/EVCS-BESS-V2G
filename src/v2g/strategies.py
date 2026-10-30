@@ -141,10 +141,13 @@ def cesar_v1(station, grid, vehicles, independent_evcs_kw, independent_ids=(), d
         power_kw,participating = fleet_lp(station,grid,vehicles,allowed,no_charge,tariff,remuneration,
                                           degradation_usd_kwh,tie_break_usd_kw)
     result = fleet_profile(station,grid,vehicles,power_kw,independent_evcs_kw,independent_ids,discharge_mask,enable_v2g)
-    result.metadata.update(
-        charging_cost_usd=float(dt*(tariff*np.maximum(-power_kw,0.)).sum()),
-        v2g_revenue_usd=float(dt*(remuneration*np.maximum(power_kw,0.)).sum()),
-        participating_vehicles=participating,capped_target_vehicles=capped,warnings=warnings)
+    if enable_v2g:
+        billing = dict(charging_cost_usd=float(dt*(tariff*np.maximum(-power_kw,0.)).sum()),
+                       v2g_revenue_usd=float(dt*(remuneration*np.maximum(power_kw,0.)).sum()),billing="dynamic")
+    else:
+        # S1 has no price signal: it is billed flat by v2g.report, not with the dynamic tariff.
+        billing = dict(charging_cost_usd=None,v2g_revenue_usd=None,billing="flat (see v2g.report)")
+    result.metadata.update(**billing,participating_vehicles=participating,capped_target_vehicles=capped,warnings=warnings)
     return result
 
 
