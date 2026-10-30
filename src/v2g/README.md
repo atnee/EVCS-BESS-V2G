@@ -2,7 +2,7 @@
 
 Responsável: **Cesar** · branch `feature/v2g-cesar` · configuração `configs/v2g.yaml` · notebook `notebooks/03_v2g_cesar.ipynb`
 
-O **S3** é o S1 com V2G: uma frota de carros conectados à estação anfitriã devolve energia na ponta do alimentador **IEEE 8500** e recarrega fora dela, sem comprometer a próxima viagem de nenhum carro. A **V2G-B** é uma variante **exploratória** do S3, com a mesma frota e a mesma estratégia, mas com a estação anfitriã mais a jusante, na barra `m1069504`.
+O **S3** é o S1 com V2G: uma frota de carros conectados à estação anfitriã devolve energia na ponta do alimentador **IEEE 8500** e recarrega fora dela, sem comprometer a próxima viagem de nenhum carro. A **V2G-B** é uma **variante de comparação aprovada pelo time** (Ayrton e Kenia), com a mesma frota e a mesma estratégia, mas com a estação anfitriã mais a jusante, na barra `m1069504`. A estação oficial do S3 continua em `m1125976`.
 
 > ⚠️ **O S3 ainda não é o caso oficial do repositório.** Em `configs/` continuam valendo `strategy: heuristic`, `vehicle_source: vehicles`, `departure_rule: arrival` e `discharge_window_h: [17, 21]`, e `configs/evcs.yaml` não muda. O S3 roda com uma pasta de configuração **gerada** por `python -m v2g.s3_configs` (seção *Como reproduzir*). Com `configs/`, os resultados S0–S4 dos colegas ficam idênticos aos de `origin/feature/v2g-cesar`.
 
@@ -33,7 +33,7 @@ O **S3** é o S1 com V2G: uma frota de carros conectados à estação anfitriã 
 | 9 | SOC de chegada | uniforme por carro em `[0,1; 0,9 − E_viagem/B]` | hipótese do time (fecha o dia cíclico) |
 | 10 | Bateria e viagem | 44,9 ± 15 kWh, 40 km/dia × 0,18 kWh/km = 7,2 kWh (classe *private* do `evcs.yaml`) | hipótese, igual ao S1 |
 | 11 | Tarifas | seção *Tarifas* | dado (CREE, BCH) + estrutura de Moreira et al. + decisão de Cesar |
-| 12 | V2G-B | mesma configuração do S3 com a estação em `m1069504` | **exploratória**, estação não acordada |
+| 12 | V2G-B | mesma configuração do S3 com a estação em `m1069504` | variante de comparação aprovada pelo time; a estação oficial do S3 continua em `m1125976` |
 | 13 | Critério de sucesso | contra o S1; linhas já acima de 100 % no S0 não contam; linhas fora do caminho elétrico da estação são reportadas como "não alcançáveis" | acordo |
 
 Todos os valores estão em `configs/v2g.yaml` (blocos `fleet:`, `cesar_v1:`, `tariff_basis:` e `s3_case:`), cada um com comentário de origem.
@@ -132,6 +132,6 @@ Números de `results/ieee8500/s3_final_bus_comparison/s3_bus_comparison.csv` e `
 - 39 dos 150 carros não participam (chegam sem energia acima da reserva antes da janela; `participating_vehicles` em `dados/S3_fleet.json`).
 - O transformador da estação não é modelado.
 - Os 2.850 públicos incluem táxis, mas a frota V2G não tem táxis.
-- A V2G-B é exploratória: a estação em `m1069504` não foi acordada.
+- A V2G-B é uma variante de comparação (aprovada pelo time): a estação oficial do S3 continua em `m1125976`.
 - Com reguladores atuando, o S3_A tem mais consumidores abaixo de 0,95 pu que o S1_A (68 contra 50); com taps travados, menos (241 contra 390). Os reguladores escondem parte do efeito.
 - Nenhum limite usado (ANSI C84.1 faixa A, 100 % de carregamento) é a norma de Honduras.

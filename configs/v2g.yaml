@@ -174,7 +174,7 @@ s3_case:
       station.capex: 770000.0                  # hypothesis: 5,000 USD per port
       integration.evs: 2850                    # team agreement: the 150 V2G cars come out of the 3,000
   variants:
-    B:                                         # exploratory only (not an agreed station): host station moved downstream
+    B:                                         # comparison case approved by the team (official S3 station stays at m1125976): host station moved downstream
       v2g.yaml:
         standalone.station.bus: m1069504
       evcs.yaml:
