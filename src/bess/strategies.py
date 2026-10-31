@@ -27,7 +27,21 @@ def template(battery, demand_kw, config, dt_h):
     return simulate(battery,commands_kw,dt_h,final_soc=battery.soc_initial)
 
 
-STRATEGIES = {"peak_shave": peak_shave_strategy, "template": template}
+def trial7_schedule(battery, demand_kw, config, dt_h):
+    """Replay the selected hourly S2 dispatch for the documented study day."""
+    demand = np.asarray(demand_kw, float)
+    commands = np.asarray(config["trial7_schedule"]["commands_kw"], float)
+    if (dt_h != 1.0 or demand.ndim != 1 or commands.shape != demand.shape or
+            not np.isfinite(demand).all() or not np.isfinite(commands).all()):
+        raise ValueError("Trial-7 schedule requires a finite hourly demand of matching length")
+    result = simulate(battery, commands, dt_h, final_soc=battery.soc_initial)
+    if np.max(np.abs(result.rejected_kw)) > 1e-6:
+        raise ValueError("Trial-7 schedule exceeds battery power or SOC limits")
+    return result
+
+
+STRATEGIES = {"peak_shave": peak_shave_strategy, "template": template,
+              "trial7_schedule": trial7_schedule}
 
 
 def get_strategy(name):

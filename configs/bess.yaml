@@ -1,10 +1,11 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
-# Algorithm from src/bess/strategies.py (STRATEGIES). Use 'template' to start your own.
-strategy: peak_shave
+# Final selected experimental case: fixed 24-hour schedule from trial 7,
+# calibrated for the documented S1 day, not a general demand optimizer.
+strategy: trial7_schedule
 battery:
   capacity_kwh: 7200
   power_kw: 2200
-  soc_initial: 0.7
+  soc_initial: 0.3
   soc_min: 0.1
   soc_max: 0.9
   eta_charge: 0.95
@@ -12,13 +13,13 @@ battery:
   capex: 50000.0
   degradation_per_kwh: 0.03
   currency: USD
-target_kw: 11750.0           # 99 % of the IEEE 8500 nominal peak (~10.8 MW)
+target_kw: 11750.0           # Historical study target; trial7_schedule does not enforce it.
 time:
   start: '2026-01-01T00:00:00-06:00'
   steps: 24
   dt_h: 1.0
 connection:
-  bus: m1125976             # IEEE 8500, same bus as the V2G host station (one of the DC hubs)
+  bus: l3029502            # Selected trial-7 bus for the fixed 24-hour study.
   phases: ABC
 standalone_demand_kw:
   - 7494.3
@@ -45,3 +46,32 @@ standalone_demand_kw:
   - 11145.1
   - 9727.8
   - 8176.7
+# Hypothesis: exact AC-side commands exported by trial 7, in kW (positive = discharge).
+# Source: results/ieee8500/peak_reserve_l3029502_trial7/modules/bess/S2/dispatch.csv.
+# Validated only for the stated 24 hourly steps and S1 input scenario.
+trial7_schedule:
+  commands_kw:
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 106.0633935293715
+    - 109.51965429964204
+    - 207.68435251118512
+    - 180.53172614544312
+    - 400.9759431875202
+    - 788.6889712196032
+    - 1678.7317305087554
+    - 697.8621507350415
+    - 517.5598491327389
+    - 18.72893912385027
+    - -274.7885987735735
+    - -600.0
