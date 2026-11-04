@@ -1,6 +1,48 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
 # Algorithm from src/v2g/strategies.py (STRATEGIES). Use 'template' to start your own.
 strategy: heuristic
+# Vehicles: 'vehicles' = explicit list below (test fixture); 'fleet' = sampled from `fleet:` (src/v2g/fleet.py).
+vehicle_source: vehicles
+# arrival | arrival_plus_trip; 'arrival' keeps the current rule (max(reserve, arrival energy))
+departure_rule: arrival
+# S3 fleet (all values are hypotheses; see docs/S3_V2G_Cesar.md). Battery and trip values copy the
+# `private` class of evcs.yaml planning.fleet so S1 and S3 share one vehicle model. Taxis are left out:
+# between rides they stay connected 1-2 h, almost nothing in the 17-21 h window.
+# 'residential' sessions cross midnight (cyclic day, src/v2g/availability.py). Used only with
+# vehicle_source: fleet. Team agreement for S3: the 150 cars are part of the 3,000 of S1 (evcs.yaml
+# integration.evs = 2,850) on a host station of 154 ports and 1,694 kW; not yet adopted in configs/.
+fleet:
+  n_vehicles: 150           # team agreement: 150 of the 3,000 S1 vehicles take part in V2G
+  seed: 42                  # same seed -> same fleet (reproducible)
+  power_kw: 11.0            # on-board AC charger, same as evcs.yaml fleet.max_ac_kw
+  battery_min_kwh: 10.0     # floor of the sampled battery, same as evcs.planning
+  soc_min: 0.1              # hypothesis, same as the fixture vehicles below
+  soc_max: 0.9
+  eta_charge: 0.95          # hypothesis, same as the fixture vehicles below
+  eta_discharge: 0.95
+  profiles:
+    residential:            # private car without a garage that spends the night at the station
+      share: 0.8            # hypothesis: 70/20 split of the proposal once taxis are removed, rounded
+      battery_kwh: 44.9     # evcs.yaml private class (e.g. BYD Dolphin)
+      battery_std_kwh: 15.0
+      daily_km: 40.0        # evcs.yaml private class: urban use
+      kwh_per_km: 0.18
+      arrival_h: [17, 19]   # hypothesis: back home after work; integer hour drawn uniformly, inclusive
+      departure_h: [6, 8]   # hypothesis: leaves next morning (overnight session)
+      # hypothesis: arrival SOC uniform per car in [0.1, min(0.9, soc_max - E_trip/B)]; the per-car cap
+      # (computed in src/v2g/fleet.py) keeps arrival + trip <= soc_max*B so the cyclic day closes
+      arrival_soc_range: [0.1, 0.9]
+      departure_soc: 0.1    # no target beyond the trip; reserve = trip + soc_min; departure >= arrival energy (+ trip with departure_rule: arrival_plus_trip)
+    commercial:             # afternoon shopping/leisure, leaves after the peak
+      share: 0.2
+      battery_kwh: 44.9
+      battery_std_kwh: 15.0
+      daily_km: 40.0
+      kwh_per_km: 0.18
+      arrival_h: [14, 16]   # hypothesis
+      departure_h: [23, 24] # hypothesis: leaves after the peak; pre-charges before 17 h, refills from 22 h
+      arrival_soc_range: [0.1, 0.9]  # hypothesis, as residential (same per-car cap)
+      departure_soc: 0.1
 vehicles:
 - id: fleet-0
   arrival: 8
@@ -86,3 +128,54 @@ standalone:
   - 10.0
   independent_ids:
   - independent-demand-group
+# Strategy cesar_v1 (src/v2g/strategies.py): fleet LP, valley recharge, spread peak discharge.
+# Used only with strategy: cesar_v1; the price policy is checked against the discharge window in use.
+cesar_v1:
+  no_charge_window_h: [17, 22]      # decision: no fleet charging at the feeder peak
+  # Dynamic tariff (built from tariff_basis below; tests check both agree): charge 1x 0-14 h and 22-24 h,
+  # 2x 14-17 h (shoulder, commercial arrivals), 10x 17-22 h (no-charge peak). Base 0.2421 USD/kWh.
+  tariff_usd_kwh: [0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.4841, 0.4841, 0.4841, 2.4207, 2.4207, 2.4207, 2.4207, 2.4207, 0.2421, 0.2421]
+  # V2G remuneration: 2.5x in the 17-20 h discharge window, 1x otherwise
+  # (outside the discharge window it has no effect: discharge is not allowed there)
+  v2g_remuneration_usd_kwh: [0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.2421, 0.6052, 0.6052, 0.6052, 0.2421, 0.2421, 0.2421, 0.2421]
+  degradation_usd_kwh: 0.0          # hypothesis: battery degradation not priced (as in Moreira et al.); stated as a limitation
+  tie_break_usd_kw: 1.0e-4          # numerical tie-break only; much smaller than any price difference
+# Dynamic tariff basis (read by v2g.report and tests only; cesar_v1 reads the vectors above).
+# Structure adapted from Moreira et al., "Vehicle to Grid for Demand Response Optimization: A Case Study", Fig. 5.
+tariff_basis:
+  source: "CREE pliego tarifario IV trimestre 2026, Servicio Residencial, consumo > 50 kWh/mes (siguientes kWh)"
+  base_hnl_kwh: 6.5102
+  fx_source: "BCH tipo de cambio de referencia, 2026-10-20"
+  fx_hnl_per_usd: 26.8936
+  # [start_h, end_h, multiplier] on whole hours; 1x outside the listed blocks
+  charge_multipliers:
+    - [14, 17, 2.0]     # shoulder: commercial cars arrive (paper Fig. 5: 2x block)
+    - [17, 22, 10.0]    # no-charge peak (paper Fig. 5: 10x)
+  discharge_multipliers:
+    - [17, 20, 2.5]     # decision: 2.5x (the paper uses 5x; too high for Honduras)
+  days_per_month: 22    # Moreira et al., eq. (5)-(6)
+  s1_billing: flat      # S1 (uncontrolled charging) billed at the base price all day
+  demand_value_hnl_kw_month: 340.4170  # CREE Servicio en Media Tension, potencia; indicative value of the peak cut only
+# S3 case (team agreement; see src/v2g/README.md). Read only by `python -m v2g.s3_configs`, which writes a complete
+# config folder = copy of configs/ + these overrides, for `integration.coordinator --configs`. configs/ is unchanged.
+s3_case:
+  overrides:                       # file -> dotted key -> value
+    v2g.yaml:
+      strategy: cesar_v1                       # decision (Cesar)
+      vehicle_source: fleet                    # 150-car S3 fleet (team agreement)
+      departure_rule: arrival_plus_trip        # decision (Cesar): leave with arrival energy + trip
+      discharge_window_h: [17, 20]             # Ayrton's indication
+      standalone.station.chargers: 154         # team agreement: 150 cars + 4 ports for the independent demand
+      standalone.station.connection_kw: 1694.0
+      standalone.station.capex: 770000.0       # hypothesis: 5,000 USD per port
+    evcs.yaml:
+      station.chargers: 154                    # team agreement (bus m1125976 unchanged)
+      station.connection_kw: 1694.0
+      station.capex: 770000.0                  # hypothesis: 5,000 USD per port
+      integration.evs: 2850                    # team agreement: the 150 V2G cars come out of the 3,000
+  variants:
+    B:                                         # comparison case approved by the team (official S3 station stays at m1125976): host station moved downstream
+      v2g.yaml:
+        standalone.station.bus: m1069504
+      evcs.yaml:
+        station.bus: m1069504                  # public DC hub at m1125976 (integration.sites) is unchanged
