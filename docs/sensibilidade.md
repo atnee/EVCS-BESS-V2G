@@ -15,7 +15,7 @@ Análise de robustez do resultado do S4 (BESS + V2G), feita em 4–5 nov. 2026. 
 
 1. **Linhas: o resultado é robusto.** BESS + V2G, com os despachos propostos, eliminam as sobrecargas novas em 23 dos 29 casos, inclusive a 15 min, com ±10 % de carga e com BESS de 0,5× a 1,5×. As exceções têm causa identificada (abaixo).
 2. **Tensão: o resultado é frágil.** O 0,951 pu do caso base (semente 42) ficou acima da média. Nas 10 sementes, a tensão mínima do S4 foi de 0,945 a 0,954 pu (média 0,9485, desvio-padrão 0,0028). A 15 min, 0,946 pu. Não se pode afirmar que o S4 garante 0,95 pu.
-3. **A tensão depende dos reguladores, não do tamanho dos recursos.** Só mudanças no controle dos reguladores moveram a tensão de forma consistente; o tamanho da BESS não mudou nada.
+3. **A tensão depende dos reguladores, não do tamanho dos recursos.** Só mudanças no controle dos reguladores moveram a tensão de forma consistente; o tamanho da BESS não mudou nada. Na confirmação com as 10 sementes, a banda de 1 V levou o S4 a 0,95 pu ou mais em 9 de 10, e a BESS de metade do tamanho deu o mesmo resultado da inteira.
 4. **Os despachos propostos importam.** Com regras convencionais, o S4 perde o critério e, com o V2G heurístico, volta a ter sobrecargas.
 
 ## Resultados por grupo (S4)
@@ -87,6 +87,25 @@ O critério do estudo olha só a tensão mínima. O caso de 1,04 pu mostra que, 
 
 As pontas de 15 min não trazem sobrecargas novas no S4. A recalibração a 15 min (margens de 1,95 a 9,41 %, contra 1,94 a 6,21 % na horária) não muda nada: a calibração horária vale para as linhas, e a tensão não depende da BESS.
 
+## Confirmação (5 nov. 2026, 22 casos)
+
+Os dois achados (banda de 1 V e BESS de metade do tamanho) foram testados com as 10 sementes. Os casos foram definidos depois dos grupos acima e antes de rodar (grupo `confirmacao` de `configs/sensitivity.yaml`).
+
+| S4, 10 sementes | Atende | Zero linhas novas | Tensão ≥ 0,95 pu | Tensão mínima (faixa; média) | Tensão máxima |
+|---|---|---|---|---|---|
+| Configuração atual (BESS 2,2 MW / 7,2 MWh, banda 2 V) | 3 | 8 | 3 | 0,945–0,954; 0,9485 pu | 1,047 pu |
+| BESS × 0,5 (1,1 MW / 3,6 MWh) | 4 | 8 | 4 | 0,945–0,954; 0,9489 pu | 1,047 pu |
+| Banda de 1 V nos reguladores | **7** | 8 | **9** | 0,949–0,953; **0,9510 pu** | 1,045 pu |
+
+| Caso | Linhas novas > 100 % | Tensão mínima (reguladores / taps do S0) | CAPEX total (USD) | Critério |
+|---|---|---|---|---|
+| Banda 1 V a 15 min | 0 | 0,949 / 0,933 pu | 6.802.800 | não atende |
+| Banda 1 V + BESS × 0,5 (semente 42) | 0 | 0,954 / 0,939 pu | 5.600.400 | **atende** |
+
+- **A BESS de metade do tamanho está confirmada.** Em 9 das 10 sementes, o S4 fica idêntico ao da BESS inteira. Na semente 5, a tensão mínima melhora (0,9516 contra 0,9484 pu). O maior throughput diário (3,7 MWh, carga + descarga, semente 6) cabe nos 2,9 MWh úteis da metade da bateria (SOC de 0,1 a 0,9).
+- **A banda de 1 V melhora a tensão de forma consistente.** Ela leva o S4 a 0,95 pu ou mais em 9 das 10 sementes (a exceção é a semente 10, com 0,9492 pu) e nunca passa de 1,046 pu. A 15 min, chega a 0,949 pu: melhora, mas não basta.
+- **As linhas não dependem dessas duas medidas.** As sementes 1 e 3 continuam com 4–6 e 1–3 linhas novas, no máximo a 101,3 %. Esse resíduo vem da calibração da BESS feita com a semente 42.
+
 ## O que isso muda no artigo
 
 - **Pode afirmar:**
@@ -94,8 +113,9 @@ As pontas de 15 min não trazem sobrecargas novas no S4. A recalibração a 15 m
   - nem a BESS nem o V2G fazem isso sozinhos, em nenhuma das 10 sementes;
   - as regras convencionais não chegam a esse resultado.
 - **Não pode afirmar:** que o S4 garante tensão ≥ 0,95 pu. Isso vale em 3 de 10 sementes e não vale a 15 min.
-- **Pode propor:** coordenar o controle dos reguladores (banda de 1 V) como parte da solução. É uma mudança de operação, sem investimento, e no caso base dá 0,954 pu sem sobretensão. Não foi testada com as outras sementes nem a 15 min.
-- **Deve rever:** o tamanho da BESS. Os resultados indicam 1,1 MW / 3,6 MWh, desde que confirmado com várias sementes.
+- **Pode propor:** coordenar o controle dos reguladores (banda de 1 V) como parte da solução. É uma mudança de operação, sem investimento, e levou a tensão a 0,95 pu ou mais em 9 de 10 sementes, sem sobretensão. A 15 min ainda fica em 0,949 pu.
+- **Deve rever:** o tamanho da BESS. A metade (1,1 MW / 3,6 MWh) dá o mesmo resultado em todas as sementes e reduz o CAPEX total em 1,2 milhão de USD (de 6,80 para 5,60 milhões).
+- **Uma configuração que vale apresentar:** BESS de 1,1 MW / 3,6 MWh + V2G de 150 carros + banda de 1 V atende ao critério no caso base (0,954 pu), com CAPEX total de 5,6 milhões de USD. Ela não foi rodada com as outras sementes; pelos dois testes separados, o esperado é o mesmo comportamento da banda de 1 V.
 
 ## Execução e limitações
 

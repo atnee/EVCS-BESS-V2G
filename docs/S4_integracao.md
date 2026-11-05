@@ -80,7 +80,7 @@ O S4 atende com **0,951 pu**, apenas 0,001 pu acima do limite: 34 barras ficam a
 
 ## Sensibilidade (5 nov. 2026)
 
-29 casos em [sensibilidade.md](sensibilidade.md): despacho convencional, 10 sementes, reguladores, carga ±10 %, tamanho da BESS e do V2G, e passo de 15 min. **As linhas são robustas:** 23 dos 29 resultados do S4 não têm linha nova acima de 100 %. **A tensão não é:** só 12 chegam a 0,95 pu (3 de 10 sementes; 0,946 pu a 15 min). A banda de 1 V nos reguladores dá 0,954 pu sem sobretensão. A BESS de metade do tamanho dá o mesmo resultado no caso base.
+29 casos em [sensibilidade.md](sensibilidade.md): despacho convencional, 10 sementes, reguladores, carga ±10 %, tamanho da BESS e do V2G, e passo de 15 min. **As linhas são robustas:** 23 dos 29 resultados do S4 não têm linha nova acima de 100 %. **A tensão não é:** só 12 chegam a 0,95 pu (3 de 10 sementes; 0,946 pu a 15 min). A banda de 1 V nos reguladores leva o S4 a 0,95 pu ou mais em 9 de 10 sementes, sem sobretensão (0,949 pu a 15 min). A BESS de metade do tamanho (1,1 MW / 3,6 MWh) dá o mesmo resultado em todas as sementes, com 1,2 milhão de USD a menos.
 
 ## Limitações e cuidados
 

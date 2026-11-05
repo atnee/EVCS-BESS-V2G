@@ -68,3 +68,27 @@ cases:
     description: S0-S4 at 15 min with the BESS recalibrated at 15 min
     resolution_min: 15
     recalibrate_from: resolution_15min
+  # 7. Confirmation (defined 2026-11-05 after groups 1-6, before running): do the two findings hold for other seeds?
+  #    band 1 V on the regulators and the half-size BESS, each with seeds 1-10; band 1 V at 15 min; both together.
+  band1v_seed_01: {group: confirmacao, description: band 1 V + seed 1, regulators: {band_pu: 0.008333}, seed: 1}
+  band1v_seed_02: {group: confirmacao, description: band 1 V + seed 2, regulators: {band_pu: 0.008333}, seed: 2}
+  band1v_seed_03: {group: confirmacao, description: band 1 V + seed 3, regulators: {band_pu: 0.008333}, seed: 3}
+  band1v_seed_04: {group: confirmacao, description: band 1 V + seed 4, regulators: {band_pu: 0.008333}, seed: 4}
+  band1v_seed_05: {group: confirmacao, description: band 1 V + seed 5, regulators: {band_pu: 0.008333}, seed: 5}
+  band1v_seed_06: {group: confirmacao, description: band 1 V + seed 6, regulators: {band_pu: 0.008333}, seed: 6}
+  band1v_seed_07: {group: confirmacao, description: band 1 V + seed 7, regulators: {band_pu: 0.008333}, seed: 7}
+  band1v_seed_08: {group: confirmacao, description: band 1 V + seed 8, regulators: {band_pu: 0.008333}, seed: 8}
+  band1v_seed_09: {group: confirmacao, description: band 1 V + seed 9, regulators: {band_pu: 0.008333}, seed: 9}
+  band1v_seed_10: {group: confirmacao, description: band 1 V + seed 10, regulators: {band_pu: 0.008333}, seed: 10}
+  bess050_seed_01: {group: confirmacao, description: BESS x0.50 + seed 1, bess_scale: 0.50, seed: 1}
+  bess050_seed_02: {group: confirmacao, description: BESS x0.50 + seed 2, bess_scale: 0.50, seed: 2}
+  bess050_seed_03: {group: confirmacao, description: BESS x0.50 + seed 3, bess_scale: 0.50, seed: 3}
+  bess050_seed_04: {group: confirmacao, description: BESS x0.50 + seed 4, bess_scale: 0.50, seed: 4}
+  bess050_seed_05: {group: confirmacao, description: BESS x0.50 + seed 5, bess_scale: 0.50, seed: 5}
+  bess050_seed_06: {group: confirmacao, description: BESS x0.50 + seed 6, bess_scale: 0.50, seed: 6}
+  bess050_seed_07: {group: confirmacao, description: BESS x0.50 + seed 7, bess_scale: 0.50, seed: 7}
+  bess050_seed_08: {group: confirmacao, description: BESS x0.50 + seed 8, bess_scale: 0.50, seed: 8}
+  bess050_seed_09: {group: confirmacao, description: BESS x0.50 + seed 9, bess_scale: 0.50, seed: 9}
+  bess050_seed_10: {group: confirmacao, description: BESS x0.50 + seed 10, bess_scale: 0.50, seed: 10}
+  band1v_15min: {group: confirmacao, description: band 1 V at 15 min (hourly BESS calibration), regulators: {band_pu: 0.008333}, resolution_min: 15}
+  band1v_bess050: {group: confirmacao, description: band 1 V + BESS x0.50 (seed 42), regulators: {band_pu: 0.008333}, bess_scale: 0.50}
