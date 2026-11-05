@@ -1,0 +1,70 @@
+# Sensitivity study of S0-S4 (python -m integration.sensitivity). Defined on 2026-11-05 BEFORE any run; every
+# case is reported, whether it meets the success criterion or not. Each case runs the full integration with a copy
+# of configs/ plus the changes below; configs/ itself is never modified. Base case = official run
+# (results/ieee8500/integration). The BESS line_limit calibration of the base case is kept in every case (it is
+# part of the method under test), except `resolution_15min_recal`, which recalibrates it at 15 min.
+#
+# Case keys:
+#   group, description: for the report
+#   set: {file: {dotted.key: value}}     plain overrides (the key must exist)
+#   seed: n                              evcs.yaml planning.seed and v2g.yaml fleet.seed
+#   load_scale: k                        ieee8500.yaml load_multipliers x k (native load of the feeder)
+#   regulators: {vreg_pu, band_pu}       every regulator bank (network data, not configs/)
+#   bess_scale: k                        BESS power, energy and capex x k (same 3.3 h duration, same USD/kWh)
+#   v2g_fleet: n                         n V2G cars, public fleet 3000 - n, host station n + 4 ports (same kW and USD per port)
+#   resolution_min: m                    whole S0-S4 at m-minute steps (load curve interpolated as in the S1 study)
+#   recalibrate_from: case               BESS line_limit recalibrated on that case's output (runs after it)
+workers: 4                               # 4 parallel runs: RAM (17 GB, ~3 GB free when set) and 6 physical cores
+keep_raw_tables: [resolution_15min, resolution_15min_recal]  # other cases keep only compact tables (disk: 27 GB free)
+cases:
+  # 1. Conventional dispatch (contribution of the method): same assets, textbook rules
+  conv_bess_peak_shave:
+    group: convencional
+    description: BESS peak shaving to the S0 peak (11,750 kW) instead of line_limit
+    set: {bess.yaml: {strategy: peak_shave, target_kw: 11750.0}}
+  conv_v2g_heuristic:
+    group: convencional
+    description: V2G heuristic (discharge whatever is above the trip reserve in the window) instead of cesar_v1
+    set: {v2g.yaml: {strategy: heuristic}}
+  conv_both:
+    group: convencional
+    description: both conventional rules together
+    set: {bess.yaml: {strategy: peak_shave, target_kw: 11750.0}, v2g.yaml: {strategy: heuristic}}
+  # 2. Random seeds of the charging sessions and of the V2G fleet (stations fixed, BESS calibration of seed 42)
+  seed_01: {group: sementes, description: seed 1, seed: 1}
+  seed_02: {group: sementes, description: seed 2, seed: 2}
+  seed_03: {group: sementes, description: seed 3, seed: 3}
+  seed_04: {group: sementes, description: seed 4, seed: 4}
+  seed_05: {group: sementes, description: seed 5, seed: 5}
+  seed_06: {group: sementes, description: seed 6, seed: 6}
+  seed_07: {group: sementes, description: seed 7, seed: 7}
+  seed_08: {group: sementes, description: seed 8, seed: 8}
+  seed_09: {group: sementes, description: seed 9, seed: 9}
+  seed_10: {group: sementes, description: seed 10, seed: 10}
+  # 3. Regulator settings (study adjustment: vreg 1.03 pu, band 2 V of 120 V)
+  reg_vreg_102: {group: reguladores, description: vreg 1.02 pu, regulators: {vreg_pu: 1.02}}
+  reg_vreg_104: {group: reguladores, description: vreg 1.04 pu, regulators: {vreg_pu: 1.04}}
+  reg_band_1v: {group: reguladores, description: band 1 V (0.0083 pu), regulators: {band_pu: 0.008333}}
+  reg_band_3v: {group: reguladores, description: band 3 V (0.025 pu), regulators: {band_pu: 0.025}}
+  # 4. Feeder load (curve of configs/ieee8500.yaml scaled; EV fleet unchanged)
+  load_090: {group: carga, description: native load x 0.90, load_scale: 0.90}
+  load_110: {group: carga, description: native load x 1.10 (growth), load_scale: 1.10}
+  # 5. Sizing, one at a time
+  bess_050: {group: dimensionamento, description: BESS 1.1 MW / 3.6 MWh (x0.50), bess_scale: 0.50}
+  bess_075: {group: dimensionamento, description: BESS 1.65 MW / 5.4 MWh (x0.75), bess_scale: 0.75}
+  bess_125: {group: dimensionamento, description: BESS 2.75 MW / 9.0 MWh (x1.25), bess_scale: 1.25}
+  bess_150: {group: dimensionamento, description: BESS 3.3 MW / 10.8 MWh (x1.50), bess_scale: 1.50}
+  v2g_050: {group: dimensionamento, description: 50 V2G cars (2950 public), v2g_fleet: 50}
+  v2g_100: {group: dimensionamento, description: 100 V2G cars (2900 public), v2g_fleet: 100}
+  v2g_200: {group: dimensionamento, description: 200 V2G cars (2800 public), v2g_fleet: 200}
+  v2g_250: {group: dimensionamento, description: 250 V2G cars (2750 public), v2g_fleet: 250}
+  # 6. Time resolution (sharper charging peaks)
+  resolution_15min:
+    group: resolucao
+    description: S0-S4 at 15 min with the hourly BESS calibration
+    resolution_min: 15
+  resolution_15min_recal:
+    group: resolucao
+    description: S0-S4 at 15 min with the BESS recalibrated at 15 min
+    resolution_min: 15
+    recalibrate_from: resolution_15min
