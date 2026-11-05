@@ -17,6 +17,7 @@ Pesquisa sobre o impacto de estações de recarga de veículos elétricos (EVCS)
 Leia antes de propor qualquer mudança:
 - [docs/metodologia.md](docs/metodologia.md): modelo, formulação, variáveis e unidades, solvers, indicadores e limitações.
 - [docs/S2_BESS_Kenia.md](docs/S2_BESS_Kenia.md) e [docs/S3_V2G_Cesar.md](docs/S3_V2G_Cesar.md): o que o S2 e o S3 devem entregar e os critérios de "pronto".
+- [docs/S4_integracao.md](docs/S4_integracao.md): decisões do S4 (barras, frota V2G, despacho da BESS, critério de sucesso) e resultados S0–S4.
 - [src/evcs/README.md](src/evcs/README.md): exemplo de módulo documentado.
 
 ## Quem é o usuário e o que ele pode alterar
@@ -27,7 +28,8 @@ Descubra o dono pela branch atual (`git branch --show-current`) ou pergunte.
 |---|---|---|---|
 | `feature/bess-kenia` | Kenia | `src/bess/`, `configs/bess.yaml`, `tests/test_bess.py`, `notebooks/02_bess_kenia.ipynb`, `src/bess/README.md` | todo o resto |
 | `feature/v2g-cesar` | Cesar | `src/v2g/`, `configs/v2g.yaml`, `tests/test_v2g.py`, `notebooks/03_v2g_cesar.ipynb`, `src/v2g/README.md` | todo o resto |
-| `feature/evcs-ayrton`, `feature/ieee8500` | Ayrton | `src/evcs/`, `configs/evcs.yaml`, estudos do EVCS em `src/integration/` | `src/core/`, `src/network/`, contratos |
+| `feature/s4` | os três | configs do S4, `src/integration/bess_calibration.py`, estratégia `line_limit` | contratos |
+| `feature/evcs-ayrton` | Ayrton | `src/evcs/`, `configs/evcs.yaml`, estudos do EVCS em `src/integration/` | `src/core/`, `src/network/`, contratos |
 
 **Áreas compartilhadas** exigem acordo dos três:
 - `src/core/`, `src/network/` e `src/integration/` (coordenador e cenários);
@@ -129,16 +131,16 @@ Rode na raiz do repositório. No PowerShell, sem instalar o pacote, defina `$env
 
 ## Git
 
-- Trabalhe só na branch do dono. Nunca faça commit direto em `main` nem em `feature/ieee8500`, nunca use `--force` e nunca reescreva histórico publicado.
+- Trabalhe só na branch do dono. Nunca faça commit direto em `main`, nunca use `--force` e nunca reescreva histórico publicado.
 - Faça commit e push **só quando o usuário pedir**. Mensagem em inglês, dizendo o que mudou e por quê.
-- A versão comum mais recente do projeto está **hoje em `origin/feature/ieee8500`** (a `main` ainda não tem o IEEE 8500). Para atualizar a branch: `git fetch origin` e `git merge origin/feature/ieee8500`. Quando ela entrar na `main`, use `origin/main`.
+- A versão comum mais recente do projeto está na **`main`** (desde 13 out. 2026; a `feature/ieee8500` ficou só como histórico). Para atualizar a branch: `git fetch origin` e `git merge origin/main`.
 - Em conflito numa área compartilhada, não escolha um lado sozinho: mostre o conflito ao usuário.
 - **Fora do Git:**
   - `results/`: saídas geradas, que cada um regenera;
   - dados reais de Honduras;
   - saídas de notebooks (limpe as células antes do commit);
   - `.env` e senhas.
-- PR: da branch do dono para a branch comum, preenchendo `.github/pull_request_template.md`.
+- PR: da branch do dono para a `main`, preenchendo `.github/pull_request_template.md`.
 
 ## Antes de dizer que terminou
 

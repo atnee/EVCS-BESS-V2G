@@ -7,12 +7,12 @@ time:
 # V2G host station: where the V2G fleet (configs/v2g.yaml) connects in S1-S4. Its own demand comes from `strategy:`.
 station:
   id: EVCS-1
-  bus: m1125976             # IEEE 8500: one of the DC hubs chosen by the screening
+  bus: m1069504             # S4 decision (2026-11-04): south trunk, downstream of the 2/0 ACSR overloads (V2G variant B)
   phases: ABC
-  chargers: 8
+  chargers: 154            # S4 decision: 150 V2G cars + 4 ports for the independent demand (44 kW / 11 kW)
   charger_kw: 11.0
-  connection_kw: 88.0
-  capex: 40000.0
+  connection_kw: 1694.0     # 154 x 11 kW: conservative full-port reservation of v2g.strategies.fleet_profile
+  capex: 770000.0           # hypothesis: 5,000 USD per port (40,000 USD / 8 ports of the previous station)
   currency: USD
   bidirectional: true
 independent_demand_kw:
@@ -122,7 +122,7 @@ planning:
 # step. S1 must load the network: mixed fleet of 3000 vehicles, sites from the full-coverage screening
 # (results/ieee8500/evcs_screening, 3000 vehicles). Remove this block to go back to the single host station.
 integration:
-  evs: 3000
+  evs: 2850                 # S4 decision: 150 of the 3000 vehicles are the V2G fleet (configs/v2g.yaml fleet)
   sites:
     m1125976: dc
     n1136365: dc

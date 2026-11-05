@@ -1,5 +1,7 @@
 # BESS — configuración seleccionada de Kenia
 
+> **Actualización S4 (4 nov. 2026):** la estrategia oficial ahora es `line_limit`: tu regla de la línea (pruebas 4–5) escrita como un LP (HiGHS), sin los ajustes manuales de las pruebas 6 y 7, con 54 líneas calibradas (`python -m integration.bess_calibration`). La BESS sigue siendo la tuya: 2.200 kW / 7.200 kWh en `l3029502`, SOC 0,30. El CAPEX pasó a 2.404.800 USD (334 USD/kWh, NREL 2025). `trial7_schedule` queda en `configs/bess.yaml` como referencia. Decisiones y resultados: [docs/S4_integracao.md](../../docs/S4_integracao.md). El texto de abajo describe la prueba 7.
+
 `configs/bess.yaml` selecciona la **prueba 7** para el estudio horario S2.
 Usa una BESS de 7.200 kWh y 2.200 kW en `l3029502`, con SOC inicial y
 final de 0,30, límites de SOC 0,10–0,90 y eficiencias de carga y descarga

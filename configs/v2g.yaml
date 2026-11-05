@@ -1,10 +1,10 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
 # Algorithm from src/v2g/strategies.py (STRATEGIES). Use 'template' to start your own.
-strategy: heuristic
+strategy: cesar_v1            # S4 decision: Cesar's fleet LP (official S3 case)
 # Vehicles: 'vehicles' = explicit list below (test fixture); 'fleet' = sampled from `fleet:` (src/v2g/fleet.py).
-vehicle_source: vehicles
+vehicle_source: fleet         # S4 decision: 150-car fleet sampled from `fleet:`
 # arrival | arrival_plus_trip; 'arrival' keeps the current rule (max(reserve, arrival energy))
-departure_rule: arrival
+departure_rule: arrival_plus_trip   # S4 decision (Cesar): leave with arrival energy + trip
 # S3 fleet (all values are hypotheses; see docs/S3_V2G_Cesar.md). Battery and trip values copy the
 # `private` class of evcs.yaml planning.fleet so S1 and S3 share one vehicle model. Taxis are left out:
 # between rides they stay connected 1-2 h, almost nothing in the 17-21 h window.
@@ -87,18 +87,18 @@ time:
   start: '2026-01-01T00:00:00-06:00'
   steps: 24
   dt_h: 1.0
-discharge_window_h:
+discharge_window_h:            # S4 decision: 17-20 h (Ayrton's indication, Cesar's S3 case)
 - 17
-- 21
+- 20
 standalone:
   station:
     id: EVCS-1
-    bus: m1125976           # IEEE 8500: the V2G host station (one of the DC hubs)
+    bus: m1069504           # S4 decision: same host station as configs/evcs.yaml station.bus
     phases: ABC
-    chargers: 8
+    chargers: 154
     charger_kw: 11.0
-    connection_kw: 88.0
-    capex: 40000.0
+    connection_kw: 1694.0
+    capex: 770000.0           # hypothesis: 5,000 USD per port
     currency: USD
     bidirectional: true
   independent_evcs_kw:
@@ -174,8 +174,8 @@ s3_case:
       station.capex: 770000.0                  # hypothesis: 5,000 USD per port
       integration.evs: 2850                    # team agreement: the 150 V2G cars come out of the 3,000
   variants:
-    B:                                         # comparison case approved by the team (official S3 station stays at m1125976): host station moved downstream
-      v2g.yaml:
-        standalone.station.bus: m1069504
+    A:                                         # S4 decision 2026-11-04: the official station moved to m1069504 (old variant B);
+      v2g.yaml:                                # variant A keeps Cesar's first station, next to the DC hub, for comparison
+        standalone.station.bus: m1125976
       evcs.yaml:
-        station.bus: m1069504                  # public DC hub at m1125976 (integration.sites) is unchanged
+        station.bus: m1125976

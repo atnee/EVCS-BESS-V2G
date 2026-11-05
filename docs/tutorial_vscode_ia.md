@@ -34,7 +34,7 @@ No terminal do VS Code (PowerShell):
 git clone https://github.com/atnee/EVCS-BESS-V2G.git
 cd EVCS-BESS-V2G
 git switch feature/bess-kenia          # Cesar: feature/v2g-cesar
-git merge origin/feature/ieee8500      # traz o IEEE 8500 e tudo o que já foi feito
+git merge origin/main                  # traz tudo o que já foi feito
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
@@ -43,7 +43,7 @@ python -m pytest tests/test_bess.py tests/test_strategies.py tests/test_module_i
 
 Cesar troca `bess` por `v2g` nos comandos.
 
-**Branch de referência.** Hoje a versão comum mais recente é a `feature/ieee8500`, não a `main`. As branches de vocês e a `main` ainda estão 11 commits atrás dela. Quando ela entrar na `main`, avisamos e vocês passam a usar `origin/main` no lugar.
+**Branch de referência.** A versão comum mais recente é a `main` (desde 13 out. 2026). A `feature/ieee8500` ficou só como histórico.
 
 **Ajustes do VS Code.**
 - `Ctrl+Shift+P` → **Python: Select Interpreter** → escolha o `.venv`.
@@ -55,7 +55,7 @@ Cesar troca `bess` por `v2g` nos comandos.
 ```powershell
 git switch feature/bess-kenia
 git fetch origin
-git merge origin/feature/ieee8500      # pega o que os outros entregaram
+git merge origin/main                  # pega o que os outros entregaram
 python -m bess                         # roda o módulo sozinho, em segundos
 python -m pytest tests/test_bess.py tests/test_strategies.py tests/test_module_independence.py -q
 ```
@@ -127,7 +127,7 @@ Para mudar só a aparência de um gráfico, não simule de novo: altere a funç�
 1. `python -m pytest -q`: a suíte completa leva ~12 min (a maior parte é o teste da integração) e precisa passar.
 2. Limpe as saídas do notebook: **Clear All Outputs** e salvar.
 3. Faça o commit só dos seus arquivos e o push da sua branch.
-4. No GitHub, abra o Pull Request da sua branch para a `feature/ieee8500` e preencha o modelo: problema, impacto nos outros módulos, evidências.
+4. No GitHub, abra o Pull Request da sua branch para a `main` e preencha o modelo: problema, impacto nos outros módulos, evidências.
 5. Os critérios de "pronto" estão na seção 6 do seu documento: [S2_BESS_Kenia.md](S2_BESS_Kenia.md) ou [S3_V2G_Cesar.md](S3_V2G_Cesar.md).
 
 ## 7. Problemas comuns

@@ -34,7 +34,7 @@ En la terminal de VS Code (PowerShell):
 git clone https://github.com/atnee/EVCS-BESS-V2G.git
 cd EVCS-BESS-V2G
 git switch feature/bess-kenia          # Cesar: feature/v2g-cesar
-git merge origin/feature/ieee8500      # trae el IEEE 8500 y todo lo que ya se hizo
+git merge origin/main                  # trae todo lo que ya se hizo
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
@@ -43,7 +43,7 @@ python -m pytest tests/test_bess.py tests/test_strategies.py tests/test_module_i
 
 Cesar cambia `bess` por `v2g` en los comandos.
 
-**Branch de referencia.** Hoy la versión común más reciente es `feature/ieee8500`, no `main`. Sus branches y `main` todavía están 11 commits detrás de ella. Cuando entre en `main`, les avisamos y pasan a usar `origin/main` en su lugar.
+**Branch de referencia.** La versión común más reciente es `main` (desde el 13 oct. 2026). `feature/ieee8500` quedó solo como historial.
 
 **Ajustes de VS Code.**
 - `Ctrl+Shift+P` → **Python: Select Interpreter** → elige el `.venv`.
@@ -55,7 +55,7 @@ Cesar cambia `bess` por `v2g` en los comandos.
 ```powershell
 git switch feature/bess-kenia
 git fetch origin
-git merge origin/feature/ieee8500      # trae lo que los demás entregaron
+git merge origin/main                  # trae lo que los demás entregaron
 python -m bess                         # ejecuta el módulo solo, en segundos
 python -m pytest tests/test_bess.py tests/test_strategies.py tests/test_module_independence.py -q
 ```
@@ -127,7 +127,7 @@ Para cambiar solo la apariencia de un gráfico, no vuelvas a simular: modifica l
 1. `python -m pytest -q`: la suite completa tarda ~12 min (la mayor parte es la prueba de integración) y debe pasar.
 2. Limpia las salidas del notebook: **Clear All Outputs** y guardar.
 3. Haz commit solo de tus archivos y push de tu branch.
-4. En GitHub, abre el Pull Request de tu branch hacia `feature/ieee8500` y completa la plantilla: problema, impacto en los otros módulos, evidencias.
+4. En GitHub, abre el Pull Request de tu branch hacia `main` y completa la plantilla: problema, impacto en los otros módulos, evidencias.
 5. Los criterios de "listo" están en la sección 6 de tu documento: [S2_BESS_Kenia.md](S2_BESS_Kenia.md) o [S3_V2G_Cesar.md](S3_V2G_Cesar.md).
 
 ## 7. Problemas comunes

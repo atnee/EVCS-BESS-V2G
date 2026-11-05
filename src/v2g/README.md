@@ -1,5 +1,7 @@
 # Módulo V2G — frota *vehicle-to-grid* (S3)
 
+> **Atualização S4 (4 nov. 2026):** o S3 agora **é o caso oficial**. `configs/` já traz `strategy: cesar_v1`, `vehicle_source: fleet`, `departure_rule: arrival_plus_trip`, janela 17–20 h e a estação anfitriã em `m1069504` (a antiga V2G-B), com 154 portas e 1.694 kW; `configs/evcs.yaml` tem `integration.evs: 2850`. A variante de comparação passou a ser a **A** (`--variant A`), com a estação de volta em `m1125976`. Decisões e resultados S0–S4: [docs/S4_integracao.md](../../docs/S4_integracao.md). O texto abaixo descreve o estado de 30 out. 2026.
+
 Responsável: **Cesar** · branch `feature/v2g-cesar` · configuração `configs/v2g.yaml` · notebook `notebooks/03_v2g_cesar.ipynb`
 
 O **S3** é o S1 com V2G: uma frota de carros conectados à estação anfitriã devolve energia na ponta do alimentador **IEEE 8500** e recarrega fora dela, sem comprometer a próxima viagem de nenhum carro. A **V2G-B** é uma **variante de comparação aprovada pelo time** (Ayrton e Kenia), com a mesma frota e a mesma estratégia, mas com a estação anfitriã mais a jusante, na barra `m1069504`. A estação oficial do S3 continua em `m1125976`.

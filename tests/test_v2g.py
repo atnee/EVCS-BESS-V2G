@@ -158,7 +158,8 @@ class TestFleet(unittest.TestCase):
         self.fleet.update(n_vehicles=20,profiles={"commercial":dict(self.fleet["profiles"]["commercial"],share=1.)})
         vehicles = generate_fleet(self.fleet,self.grid)
         station = Station("s","n","ABC",24,11.,44.+11.*20)
-        config = dict(self.config,vehicle_source="fleet",fleet=self.fleet)
+        # The rule checked here is 'arrival' (the official one is arrival_plus_trip since the S4 decision).
+        config = dict(self.config,vehicle_source="fleet",fleet=self.fleet,departure_rule="arrival")
         self.assertEqual(vehicles_from_config(config),vehicles)
         mask = discharge_mask(self.config,self.grid)
         demand = np.asarray(self.config["standalone"]["independent_evcs_kw"],float)
@@ -178,12 +179,13 @@ class TestFleet(unittest.TestCase):
                 vehicles = vehicles_from_config(dict(self.config,vehicle_source=source,departure_rule=rule))
                 self.assertTrue(all(v.restore_trip is flag for v in vehicles),(source,rule))
     def test_official_heuristic_matrix_is_unchanged(self):
-        # configs/v2g.yaml: 3 cars of 60 kWh connected 8-22 h, reserve 30 kWh, window 17-21 h (steps 17-20).
+        # Fixture of configs/v2g.yaml (the official case until the S4 decision of 2026-11-04):
+        # 3 cars of 60 kWh connected 8-22 h, reserve 30 kWh, window 17-21 h (steps 17-20).
         # fleet-0/1 (48 kWh, target 48): 11 kW out at 17 -> 48-11/.95; then down to the 30 kWh reserve at 18;
         # 0 at 19; at 20 back to 48-10.45 so 21 can close the gap at 11 kW. fleet-2 (18 kWh, target 30)
         # charges 11 kW at 8 and the remaining (30-18-10.45)/.95 at 9.
-        config = self.config
-        self.assertEqual((config["strategy"],config["vehicle_source"],config["departure_rule"]),("heuristic","vehicles","arrival"))
+        config = dict(self.config,strategy="heuristic",vehicle_source="vehicles",departure_rule="arrival",
+                      discharge_window_h=[17,21])
         fixture = config["standalone"]
         p = STRATEGIES[config["strategy"]](Station(**fixture["station"]),self.grid,vehicles_from_config(config),
                                             fixture["independent_evcs_kw"],fixture["independent_ids"],
@@ -360,13 +362,15 @@ class TestS3Configs(unittest.TestCase):
             expected = dict(official[name])
             expected.update({tuple(k.split(".")): v for k,v in self.case["overrides"].get(name,{}).items()})
             self.assertEqual(s3[name],expected,name)
-    def test_s3_configs_variant_b_moves_only_the_bus(self):
-        write_configs(self.root/"A",ROOT/"configs")
-        write_configs(self.root/"B",ROOT/"configs","B")
-        a,b = self.flat(self.root/"A"),self.flat(self.root/"B")
-        diff = {(name,key) for name in a for key in set(a[name])|set(b[name]) if a[name].get(key) != b[name].get(key)}
+    def test_s3_configs_variant_a_moves_only_the_bus(self):
+        # Since the S4 decision (2026-11-04) the official station is at m1069504; variant A moves it back to m1125976.
+        write_configs(self.root/"S3",ROOT/"configs")
+        write_configs(self.root/"A",ROOT/"configs","A")
+        s3,a = self.flat(self.root/"S3"),self.flat(self.root/"A")
+        diff = {(name,key) for name in s3 for key in set(s3[name])|set(a[name]) if s3[name].get(key) != a[name].get(key)}
         self.assertEqual(diff,{("evcs.yaml",("station","bus")),("v2g.yaml",("standalone","station","bus"))})
-        self.assertEqual(b["v2g.yaml"]["standalone","station","bus"],b["evcs.yaml"]["station","bus"])
+        self.assertEqual(a["v2g.yaml"]["standalone","station","bus"],a["evcs.yaml"]["station","bus"])
+        self.assertEqual(a["evcs.yaml"]["station","bus"],"m1125976")
     def test_s3_configs_rejects_unknown_key(self):
         configs = self.root/"configs"
         shutil.copytree(ROOT/"configs",configs)

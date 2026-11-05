@@ -4,7 +4,8 @@ import numpy as np
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from core.artifacts import read_profile_bundle
-from core.schemas import TimeGrid,make_profile
+from core.schemas import TimeGrid,make_profile,read_parameters
+from v2g.runner import vehicles_from_config
 from test_network import small_network
 from integration.coordinator import combine,run_scenarios,export_results
 
@@ -30,11 +31,15 @@ class TestIntegration(unittest.TestCase):
         for name in ("S2","S4"):
             soc=details[name]["modules"]["bess"][0].metadata["soc"]
             self.assertAlmostEqual(soc[0],soc[-1])
+        vehicles={v.id: v for v in vehicles_from_config(read_parameters(root/"configs"/"v2g.yaml"))}
         for name in ("S1","S2","S3","S4"):
             end=details[name]["modules"]["v2g"][0].metadata["departure_energy_kwh"]
-            self.assertEqual(set(end),{"fleet-0","fleet-1","fleet-2"})
+            self.assertEqual(set(end),set(vehicles))
             for key in end:
-                self.assertAlmostEqual(end[key],details["S1"]["modules"]["v2g"][0].metadata["departure_energy_kwh"][key])
+                # Same departure energy in S1-S4 and never below the target; 1e-5 kWh covers the LP margin
+                # (v2g.strategies.LP_MARGIN_KWH) of the cesar_v1 fleet LP.
+                self.assertAlmostEqual(end[key],details["S1"]["modules"]["v2g"][0].metadata["departure_energy_kwh"][key],delta=1e-5)
+                self.assertGreaterEqual(end[key]+1e-7,vehicles[key].departure_target_kwh)
         # Export already-computed flows once; verify module attribution can be
         # recombined exactly without rerunning their implementations.
         with TemporaryDirectory() as tmp, patch("integration.coordinator.run_scenarios",return_value=(summary,details)):
