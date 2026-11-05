@@ -92,3 +92,16 @@ cases:
   bess050_seed_10: {group: confirmacao, description: BESS x0.50 + seed 10, bess_scale: 0.50, seed: 10}
   band1v_15min: {group: confirmacao, description: band 1 V at 15 min (hourly BESS calibration), regulators: {band_pu: 0.008333}, resolution_min: 15}
   band1v_bess050: {group: confirmacao, description: band 1 V + BESS x0.50 (seed 42), regulators: {band_pu: 0.008333}, bess_scale: 0.50}
+  # 8. Combined configuration (defined 2026-11-05, before running): half-size BESS + V2G 150 + 1 V band, seeds 1-10 and 15 min
+  #    (seed 42 at 1 h is band1v_bess050).
+  combo_seed_01: {group: combinada, description: BESS x0.50 + 1 V band + seed 1, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 1}
+  combo_seed_02: {group: combinada, description: BESS x0.50 + 1 V band + seed 2, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 2}
+  combo_seed_03: {group: combinada, description: BESS x0.50 + 1 V band + seed 3, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 3}
+  combo_seed_04: {group: combinada, description: BESS x0.50 + 1 V band + seed 4, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 4}
+  combo_seed_05: {group: combinada, description: BESS x0.50 + 1 V band + seed 5, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 5}
+  combo_seed_06: {group: combinada, description: BESS x0.50 + 1 V band + seed 6, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 6}
+  combo_seed_07: {group: combinada, description: BESS x0.50 + 1 V band + seed 7, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 7}
+  combo_seed_08: {group: combinada, description: BESS x0.50 + 1 V band + seed 8, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 8}
+  combo_seed_09: {group: combinada, description: BESS x0.50 + 1 V band + seed 9, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 9}
+  combo_seed_10: {group: combinada, description: BESS x0.50 + 1 V band + seed 10, regulators: {band_pu: 0.008333}, bess_scale: 0.50, seed: 10}
+  combo_15min: {group: combinada, description: BESS x0.50 + 1 V band at 15 min (hourly BESS calibration), regulators: {band_pu: 0.008333}, bess_scale: 0.50, resolution_min: 15}
