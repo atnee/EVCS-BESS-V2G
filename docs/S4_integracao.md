@@ -78,6 +78,10 @@ O S4 atende com **0,951 pu**, apenas 0,001 pu acima do limite: 34 barras ficam a
 
 **Trabalho futuro:** modelar a compensação de queda na linha (LDC) dos reguladores em `src/network/`. É o que mais se aproxima da operação real e daria margem de tensão de verdade, mas muda todos os cenários, inclusive o S0.
 
+## Sensibilidade (5 nov. 2026)
+
+29 casos em [sensibilidade.md](sensibilidade.md): despacho convencional, 10 sementes, reguladores, carga ±10 %, tamanho da BESS e do V2G, e passo de 15 min. **As linhas são robustas:** 23 dos 29 resultados do S4 não têm linha nova acima de 100 %. **A tensão não é:** só 12 chegam a 0,95 pu (3 de 10 sementes; 0,946 pu a 15 min). A banda de 1 V nos reguladores dá 0,954 pu sem sobretensão. A BESS de metade do tamanho dá o mesmo resultado no caso base.
+
 ## Limitações e cuidados
 
 - **A tensão do S4 depende dos reguladores:** ver a seção anterior; o artigo deve mostrar as duas visões.
