@@ -1,47 +1,145 @@
 # Standalone inputs are fixed fixtures, not live outputs of other teams.
-# Algorithm from src/bess/strategies.py (STRATEGIES). Use 'template' to start your own.
-strategy: peak_shave
+# S4 case (2026-11-04): Kenia's 2.2 MW / 7.2 MWh BESS at l3029502 with the line_limit strategy (her line rule as an LP).
+# trial7_schedule (her fixed trial-7 commands) is kept below for reference.
+strategy: line_limit          # S4 decision 2026-11-04 (was trial7_schedule, kept below for reference)
 battery:
-  capacity_kwh: 120.0
-  power_kw: 40.0
-  soc_initial: 0.7
+  capacity_kwh: 7200
+  power_kw: 2200
+  soc_initial: 0.3
   soc_min: 0.1
   soc_max: 0.9
   eta_charge: 0.95
   eta_discharge: 0.95
-  capex: 50000.0
+  capex: 2404800.0         # data: 334 USD/kWh x 7200 kWh, NREL/TP-6A40-93281 (Cole et al., June 2025), 4-h Li-ion,
+                            # 2024 USD, US costs; this BESS is 3.3 h, so the 4-h value is an approximation
   degradation_per_kwh: 0.03
   currency: USD
-target_kw: 10650.0           # 99 % of the IEEE 8500 nominal peak (~10.8 MW)
+target_kw: 11750.0           # Historical study target; trial7_schedule does not enforce it.
 time:
   start: '2026-01-01T00:00:00-06:00'
   steps: 24
   dt_h: 1.0
 connection:
-  bus: m1125976             # IEEE 8500, same bus as the V2G host station (one of the DC hubs)
+  bus: l3029502            # Selected trial-7 bus for the fixed 24-hour study.
   phases: ABC
-standalone_demand_kw:              # IEEE 8500 nominal 10773 kW x configs/ieee8500.yaml curve
-- 6463.9
-- 6248.4
-- 6033.0
-- 5925.2
-- 6033.0
-- 6463.9
-- 7002.6
-- 7756.7
-- 8403.1
-- 8618.5
-- 8834.0
-- 8941.7
-- 8834.0
-- 8618.5
-- 8834.0
-- 9264.9
-- 9911.3
-- 10557.7
-- 10773.2
-- 10557.7
-- 9911.3
-- 8834.0
-- 7756.7
-- 7002.6
+standalone_demand_kw:
+  - 7494.3
+  - 7150.4
+  - 6992.6
+  - 6762.5
+  - 6822.8
+  - 7170.3
+  - 8156.6
+  - 8952.4
+  - 10384.5
+  - 10483.0
+  - 10812.3
+  - 11015.1
+  - 11584.2
+  - 11327.7
+  - 11527.9
+  - 11564.6
+  - 12357.2
+  - 13398.7
+  - 13885.5
+  - 13505.1
+  - 12754.5
+  - 11145.1
+  - 9727.8
+  - 8176.7
+# Hypothesis: exact AC-side commands exported by trial 7, in kW (positive = discharge).
+# Source: results/ieee8500/peak_reserve_l3029502_trial7/modules/bess/S2/dispatch.csv.
+# Validated only for the stated 24 hourly steps and S1 input scenario.
+trial7_schedule:
+  commands_kw:
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - -620.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+    - 106.0633935293715
+    - 109.51965429964204
+    - 207.68435251118512
+    - 180.53172614544312
+    - 400.9759431875202
+    - 788.6889712196032
+    - 1678.7317305087554
+    - 697.8621507350415
+    - 517.5598491327389
+    - 18.72893912385027
+    - -274.7885987735735
+    - -600.0
+# Strategy line_limit (src/bess/strategies.py), S4 decision 2026-11-04: Kenia's line rule (trials 4-5) as an LP,
+# without manual adjustments. `lines` and `target_pct` come from `python -m integration.bess_calibration`.
+line_limit:
+  target_pct: 100.0          # reference limit (100 % loading); each line is kept at target_pct - its margin
+  overload_weight: 1000.0    # numerical choice: any loading above target costs far more than cycling energy
+  use_weight: 0.001          # numerical choice: small cost per kW cycled; charging cheaper at low demand
+  # data: python -m integration.bess_calibration results/ieee8500/s4_calibration (run 2026-11-04, configs of this
+  # commit with the trial-7 dispatch acting in S2/S4). a + b*demand = loading (%) before the BESS, R2 0.978-0.999;
+  # s = % per kW of BESS injection (taps frozen at S0); margin = largest fit error (%). Recalibrate if S1 changes.
+  lines:
+    ln6321409-1: {a: -3.830988, b: 0.00878993, s: 0.00899042, margin: 2.12}
+    ln5513564-1: {a: -3.83091, b: 0.00878992, s: 0.00899041, margin: 2.12}
+    ln5742828-1: {a: 0.202003, b: 0.00842003, s: 0.00876788, margin: 2.27}
+    ln5815900-1: {a: 0.202078, b: 0.00842003, s: 0.00876788, margin: 2.27}
+    ln5710794-3: {a: 0.202151, b: 0.00842002, s: 0.00876787, margin: 2.27}
+    ln5513564-2: {a: 0.213058, b: 0.0084118, s: 0.00876463, margin: 2.27}
+    ln5775442-1: {a: 0.225516, b: 0.00841084, s: 0.00876185, margin: 2.27}
+    ln5896798-1: {a: 0.225696, b: 0.00841082, s: 0.00876184, margin: 2.27}
+    ln5714974-1: {a: 0.226151, b: 0.00841078, s: 0.00876181, margin: 2.27}
+    ln5473414-1: {a: 0.226563, b: 0.00841075, s: 0.00876179, margin: 2.27}
+    ln5742828-2: {a: 0.226837, b: 0.00841072, s: 0.00876177, margin: 2.27}
+    ln6291242-1: {a: -3.558418, b: 0.00868496, s: 0.00898819, margin: 1.95}
+    ln5654466-1: {a: -3.558209, b: 0.00868494, s: 0.00898818, margin: 1.95}
+    ln5654472-1: {a: -3.549359, b: 0.00861185, s: 0.00897931, margin: 1.94}
+    ln6261021-1: {a: -3.370543, b: 0.00858218, s: 0.00897905, margin: 2.02}
+    ln6351519-1: {a: -3.370232, b: 0.00858215, s: 0.00897903, margin: 2.02}
+    ln5594242-1: {a: -3.369841, b: 0.00858212, s: 0.00897901, margin: 2.02}
+    ln5473440-1: {a: -3.368776, b: 0.00857216, s: 0.00897777, margin: 2.02}
+    ln6504019-5: {a: -3.36547, b: 0.0085554, s: 0.00897562, margin: 2.02}
+    ln6048634-1: {a: -3.365347, b: 0.00855539, s: 0.00897561, margin: 2.02}
+    ln5866268-1: {a: -3.365159, b: 0.00855537, s: 0.00897561, margin: 2.02}
+    ln5957526-1: {a: -3.310506, b: 0.00833638, s: 0.00894643, margin: 2.0}
+    ln6504018-1: {a: -3.307988, b: 0.00833616, s: 0.00894631, margin: 2.0}
+    ln6504020-2: {a: -3.307221, b: 0.0083361, s: 0.00894627, margin: 2.0}
+    ln5866308-1: {a: -3.296111, b: 0.00830213, s: 0.00894142, margin: 2.0}
+    ln5715052-1: {a: -3.295798, b: 0.00830211, s: 0.00894141, margin: 2.0}
+    ln6412355-1: {a: -3.246445, b: 0.00819554, s: 0.00892541, margin: 1.99}
+    ln6412354-1: {a: -3.246413, b: 0.00819554, s: 0.00892541, margin: 1.99}
+    ln5745355-1: {a: -0.945217, b: 0.00780073, s: 0.00891415, margin: 2.4}
+    ln5805761-1: {a: -4.04735, b: 0.00803575, s: 0.00906388, margin: 2.36}
+    ln5896833-1: {a: -4.094756, b: 0.00804308, s: 0.00906661, margin: 2.32}
+    ln5563942-3: {a: -4.094644, b: 0.00804307, s: 0.0090666, margin: 2.32}
+    ln5896834-1: {a: -0.857554, b: 0.0077666, s: 0.00891146, margin: 2.54}
+    ln5805762-1: {a: -0.852464, b: 0.00775626, s: 0.00890986, margin: 2.54}
+    ln5508630-1: {a: -0.852446, b: 0.00775626, s: 0.00890986, margin: 2.54}
+    ln5992960-1: {a: -0.852342, b: 0.00775625, s: 0.00890986, margin: 2.54}
+    ln6326450-1: {a: -0.852309, b: 0.00775625, s: 0.00890985, margin: 2.54}
+    ln6023352-1: {a: -0.852145, b: 0.00775624, s: 0.00890985, margin: 2.54}
+    ln5563942-5: {a: -0.849277, b: 0.00774938, s: 0.0089088, margin: 2.54}
+    ln5563942-4: {a: -0.84918, b: 0.00774937, s: 0.00890879, margin: 2.54}
+    ln6018336-1: {a: -0.848784, b: 0.00774934, s: 0.00890877, margin: 2.54}
+    ln6106511-1: {a: -0.116231, b: 0.00769665, s: 0.03331958, margin: 6.22}
+    ln6351524-1: {a: -0.117488, b: 0.00769673, s: 0.03331986, margin: 6.22}
+    ln6109158-1: {a: -0.118723, b: 0.00769681, s: 0.03332014, margin: 6.22}
+    ln5473449-1: {a: 1.290579, b: 0.00747656, s: 0.03324245, margin: 5.42}
+    ln6079946-1: {a: 1.381724, b: 0.00742549, s: 0.03318299, margin: 5.39}
+    ln6256144-4: {a: 1.379899, b: 0.0074256, s: 0.03318341, margin: 5.39}
+    ln6256144-3: {a: 1.378799, b: 0.00742567, s: 0.03318367, margin: 5.39}
+    ln6256144-1: {a: 1.377482, b: 0.00742576, s: 0.03318398, margin: 5.39}
+    ln5527400-1: {a: 1.474493, b: 0.00737407, s: 0.03312109, margin: 5.36}
+    ln5955063-1: {a: 1.474413, b: 0.00737407, s: 0.03312111, margin: 5.36}
+    ln6440069-1: {a: 1.473176, b: 0.00737415, s: 0.0331214, margin: 5.36}
+    ln5623403-1: {a: 1.472124, b: 0.00737422, s: 0.03312165, margin: 5.36}
+    ln5502533-1: {a: 2.163182, b: 0.00702663, s: 0.03265815, margin: 5.16}
+  calibration:               # read only by python -m integration.bess_calibration
+    candidate_pct: 90.0      # hypothesis: watch lines above 90 % in S1 or S3 (10 % margin before the limit)
+    min_sensitivity_pct_per_kw: 0.001  # numerical: below this the BESS does not reach the line (not on its path)

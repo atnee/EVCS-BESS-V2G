@@ -215,6 +215,50 @@ def integration_table(integration_dir):
     return "\n".join(lines)
 
 
+def line_peaks(branches):
+    """Highest physical-phase loading of each line over the day (%), and line-hours above 100 % per line."""
+    b = branches[branches.physical_phase & (branches.element_type == "line")]
+    worst = b.groupby(["time","line"]).loading_pct.max()
+    return worst.groupby("line").max(), (worst > 100).groupby("line").sum()
+
+
+def success_criterion(s0_peak, peak, hours_over, dt_h, v_min, v_min_frozen):
+    """S4 decision (2026-11-04): success = no line that was at most 100 % in S0 goes above 100 %, and the
+    regulated minimum voltage is at least 0.95 pu. Lines already above 100 % in S0 are reported apart."""
+    new = peak[(s0_peak.reindex(peak.index) <= 100) & (peak > 100)]
+    base = peak[s0_peak.reindex(peak.index) > 100]
+    return dict(new_overloads=len(new),new_max_pct=float(new.max()) if len(new) else float("nan"),
+                new_line_hours=float(hours_over[new.index].sum()*dt_h),base_overloads=int((base > 100).sum()),
+                base_max_pct=float(base.max()) if len(base) else float("nan"),v_min_pu=v_min,v_min_frozen_pu=v_min_frozen,
+                success=bool(len(new) == 0 and v_min >= .95))
+
+
+def criterion_table(integration_dir):
+    """Success criterion per scenario from the saved integration tables; writes criterio.csv."""
+    s = pd.read_csv(integration_dir/"summary.csv").set_index("scenario")
+    impact = integration_dir/"impact.csv"
+    frozen = pd.read_csv(impact).set_index("scenario").get("frozen_taps_v_min_pu") if impact.exists() else None
+    tables = integration_dir/"dados"
+    s0 = pd.read_csv(tables/"S0_branches.csv")
+    s0_peak,_ = line_peaks(s0)
+    dt_h = 24/s0.time.nunique()  # one-day horizon
+    rows = []
+    for name in s.index:
+        peak,hours = line_peaks(pd.read_csv(tables/f"{name}_branches.csv"))
+        f = float(frozen[name]) if frozen is not None and name in frozen.index else float(s.v_min_pu[name])
+        rows.append(dict(scenario=name,**success_criterion(s0_peak,peak,hours,dt_h,float(s.v_min_pu[name]),f)))
+    t = pd.DataFrame(rows).set_index("scenario")
+    t.to_csv(integration_dir/"criterio.csv")
+    lines = ["| Cenário | Linhas novas > 100 % | Maior carga nelas | Linha·h > 100 % | Sobrecargas do S0 (máx.) | "
+             "Tensão mínima | Sem a ação dos reguladores | Critério |","|---|---|---|---|---|---|---|---|"]
+    for name,r in t.iterrows():
+        new_max = "—" if np.isnan(r.new_max_pct) else f"{_num(r.new_max_pct,1)} %"
+        base = "—" if np.isnan(r.base_max_pct) else f"{r.base_overloads} ({_num(r.base_max_pct,1)} %)"
+        lines.append(f"| {name} | {r.new_overloads} | {new_max} | {_num(r.new_line_hours,0)} | {base} | "
+                     f"{_num(r.v_min_pu,3)} pu | {_num(r.v_min_frozen_pu,3)} pu | {'**atende**' if r.success else 'não atende'} |")
+    return "\n".join(lines)
+
+
 def export_resumo(feeder_dir, evs=None):
     """Writes feeder_dir/resumo/ from what exists; missing studies are listed as not run."""
     feeder_dir = Path(feeder_dir)
@@ -258,7 +302,12 @@ def export_resumo(feeder_dir, evs=None):
         doc += ["## S0 × S1","","Estudo S1 ainda não rodado: `python -m integration.s1_study`.",""]
     if (integration_dir/"summary.csv").exists():
         doc += ["## Integração S0–S4 (passo de 1 h)","",integration_table(integration_dir),"",
-                "S2 = S1 + BESS, S3 = S1 com V2G, S4 = tudo junto. O que o S2 e o S3 devem entregar: `docs/S2_BESS_Kenia.md` e `docs/S3_V2G_Cesar.md`.",""]
+                "S2 = S1 + BESS, S3 = S1 com V2G, S4 = tudo junto. O que o S2 e o S3 devem entregar: `docs/S2_BESS_Kenia.md` e `docs/S3_V2G_Cesar.md`.","",
+                "### Critério de sucesso","",
+                "Atende quando nenhuma linha que estava até 100 % no S0 passa de 100 % e a tensão mínima, com os reguladores "
+                "atuando, fica em 0,95 pu ou mais (decisão do S4). As sobrecargas que já existiam no S0 aparecem à parte. "
+                "Referências: ANSI C84.1 faixa A e 100 % de carregamento; nenhuma é a norma de Honduras.","",
+                criterion_table(integration_dir),""]
     else:
         doc += ["## Integração S0–S4 (passo de 1 h)","",
                 "Ainda não rodada: aguarda o S2 (BESS, Kenia) e o S3 (V2G, Cesar); o S4 vem depois dos dois. "
