@@ -1,6 +1,6 @@
 # Módulo V2G — frota *vehicle-to-grid* (S3)
 
-> **Atualização S4 (4 nov. 2026):** o S3 agora **é o caso oficial**. `configs/` já traz `strategy: cesar_v1`, `vehicle_source: fleet`, `departure_rule: arrival_plus_trip`, janela 17–20 h e a estação anfitriã em `m1069504` (a antiga V2G-B), com 154 portas e 1.694 kW; `configs/evcs.yaml` tem `integration.evs: 2850`. A variante de comparação passou a ser a **A** (`--variant A`), com a estação de volta em `m1125976`. Decisões e resultados S0–S4: [docs/S4_integracao.md](../../docs/S4_integracao.md). O texto abaixo descreve o estado de 30 out. 2026.
+> **Atualização S4 (4 nov. 2026):** as configurações do S3 **agora são as oficiais** e entram no S3 e no S4 da integração. `configs/` já traz `strategy: cesar_v1`, `vehicle_source: fleet`, `departure_rule: arrival_plus_trip`, janela 17–20 h e a estação anfitriã em `m1069504` (a antiga V2G-B), com 154 portas e 1.694 kW; `configs/evcs.yaml` tem `integration.evs: 2850`. A variante de comparação passou a ser a **A** (`--variant A`), com a estação de volta em `m1125976`. Decisões e resultados S0–S4: [docs/S4_integracao.md](../../docs/S4_integracao.md). O texto abaixo descreve o estado de 30 out. 2026.
 
 Responsável: **Cesar** · branch `feature/v2g-cesar` · configuração `configs/v2g.yaml` · notebook `notebooks/03_v2g_cesar.ipynb`
 

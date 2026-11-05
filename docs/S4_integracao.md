@@ -1,6 +1,6 @@
 # S4 — EVCS + BESS + V2G no IEEE 8500
 
-S4 = S1 (frota mista e 75 estações públicas) + a BESS da Kenia + o V2G do Cesar, numa só rodada S0–S4 com passo de 1 h. Rodada oficial: `results/ieee8500/integration/` (4 nov. 2026). Resumo: `results/ieee8500/resumo/LEIA-ME.md`.
+S4 = S1 (frota mista e 75 estações públicas) + a BESS da Kenia + o V2G do Cesar, numa só rodada S0–S4 com passo de 1 h. Rodada oficial: `results/ieee8500/integration/` (4 nov. 2026). Resumo: `results/ieee8500/resumo/LEIA-ME.md`. Versão para a Kenia e o Cesar, em espanhol: [S4_equipo_es.md](S4_equipo_es.md).
 
 ## Decisões (4 nov. 2026, os três)
 

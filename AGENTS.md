@@ -17,7 +17,7 @@ Pesquisa sobre o impacto de estações de recarga de veículos elétricos (EVCS)
 Leia antes de propor qualquer mudança:
 - [docs/metodologia.md](docs/metodologia.md): modelo, formulação, variáveis e unidades, solvers, indicadores e limitações.
 - [docs/S2_BESS_Kenia.md](docs/S2_BESS_Kenia.md) e [docs/S3_V2G_Cesar.md](docs/S3_V2G_Cesar.md): o que o S2 e o S3 devem entregar e os critérios de "pronto".
-- [docs/S4_integracao.md](docs/S4_integracao.md): decisões do S4 (barras, frota V2G, despacho da BESS, critério de sucesso) e resultados S0–S4.
+- [docs/S4_integracao.md](docs/S4_integracao.md): decisões do S4 (barras, frota V2G, despacho da BESS, critério de sucesso) e resultados S0–S4; versão para a Kenia e o Cesar, em espanhol: [docs/S4_equipo_es.md](docs/S4_equipo_es.md).
 - [src/evcs/README.md](src/evcs/README.md): exemplo de módulo documentado.
 
 ## Quem é o usuário e o que ele pode alterar

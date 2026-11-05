@@ -80,7 +80,7 @@ Python 3.12 or newer (tested on 3.13.5). Run the commands above from the project
 - **S1:** a mixed fleet of 3,000 EVs (85 % private cars, many without a garage; 15 % taxis/ride-hailing), 27 MWh/day at 75 public stations (4 DC hubs, 9 three-phase and 62 single-phase AC stations, 4.5 MW installed), plus the V2G host station. S1 overloads the feeder; in the 15-min EVCS study, the substation peak rises 19 %, a line reaches 109 % and the minimum voltage drops to 0.933 pu (0.924 pu without the regulators' response).
 - **S2:** S1 + BESS (Kenia), which must reduce the S1 overload.
 - **S3:** S1 with V2G enabled (Cesar).
-- **S4:** S1 + BESS + V2G, built after S2 and S3 are complete.
+- **S4:** S1 + BESS + V2G, all in one official config set (`configs/`). Only S4 meets the success criterion (no new line above 100 %, 0.951 pu); see [docs/S4_integracao.md](docs/S4_integracao.md) (Portuguese) and [docs/S4_equipo_es.md](docs/S4_equipo_es.md) (Spanish).
 
 The fleet has the same starting energy in S1–S4. Each asset is aggregated only once. Independent demand uses chargers at the same station without duplicating fleet vehicles.
 
@@ -139,7 +139,7 @@ Python 3.12 o superior (probado con 3.13.5). Ejecuta los comandos de arriba en l
 - **S1:** flota mixta de 3.000 VE (85 % autos particulares, muchos sin garaje; 15 % taxis/aplicaciones), 27 MWh/día en 75 estaciones públicas (4 hubs DC, 9 electrolineras AC trifásicas y 62 monofásicas, 4,5 MW instalados), más la estación anfitriona del V2G. El S1 sobrecarga el alimentador; en el estudio del EVCS de 15 min, la punta de la subestación sube 19 %, una línea llega a 109 % y la tensión mínima baja a 0,933 pu (0,924 pu sin la acción de los reguladores).
 - **S2:** S1 + BESS (Kenia), que debe reducir la sobrecarga del S1.
 - **S3:** S1 con V2G habilitado (Cesar).
-- **S4:** S1 + BESS + V2G, después de completar S2 y S3.
+- **S4:** S1 + BESS + V2G, todo en una sola configuración oficial (`configs/`). Solo el S4 cumple el criterio de éxito (ninguna línea nueva sobre 100 %, 0,951 pu); ver [docs/S4_equipo_es.md](docs/S4_equipo_es.md) y [docs/S4_integracao.md](docs/S4_integracao.md).
 
 La flota tiene la misma energía inicial en S1–S4. Cada activo se agrega una sola vez. La demanda independiente usa cargadores de la misma estación, sin duplicar los vehículos de la flota.
 
@@ -198,7 +198,7 @@ Python 3.12 ou mais novo (testado no 3.13.5). Execute os comandos acima na raiz 
 - **S1:** frota mista de 3.000 veículos elétricos (85 % carros particulares, muitos sem garagem; 15 % táxis/aplicativo), 27 MWh/dia em 75 estações públicas (4 hubs DC, 9 eletropostos AC trifásicos e 62 monofásicos, 4,5 MW instalados), mais a estação anfitriã do V2G. O S1 sobrecarrega o alimentador; no estudo do EVCS de 15 min, a ponta da subestação sobe 19 %, uma linha chega a 109 % e a tensão mínima cai para 0,933 pu (0,924 pu sem a ação dos reguladores).
 - **S2:** S1 + BESS (Kenia), que deve reduzir a sobrecarga do S1.
 - **S3:** S1 com V2G habilitado (Cesar).
-- **S4:** S1 + BESS + V2G, depois que S2 e S3 estiverem completos.
+- **S4:** S1 + BESS + V2G, tudo numa só configuração oficial (`configs/`). Só o S4 atende ao critério de sucesso (nenhuma linha nova acima de 100 %, 0,951 pu); veja [docs/S4_integracao.md](docs/S4_integracao.md) e [docs/S4_equipo_es.md](docs/S4_equipo_es.md).
 
 A frota tem a mesma energia de partida em S1–S4. Cada ativo é agregado uma única vez. A demanda independente usa carregadores da mesma estação, sem duplicar os veículos da frota.
 
