@@ -1,0 +1,4 @@
+connection,phase_or_branch,p_kw,q_kvar
+wye,A,3590.96,899.979528
+wye,B,3592.08,900.260139
+wye,C,3590.13,899.7713630000001

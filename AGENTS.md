@@ -136,7 +136,7 @@ Rode na raiz do repositório. No PowerShell, sem instalar o pacote, defina `$env
 - A versão comum mais recente do projeto está na **`main`** (desde 13 out. 2026; a `feature/ieee8500` ficou só como histórico). Para atualizar a branch: `git fetch origin` e `git merge origin/main`.
 - Em conflito numa área compartilhada, não escolha um lado sozinho: mostre o conflito ao usuário.
 - **Fora do Git:**
-  - `results/`: saídas geradas, que cada um regenera;
+  - `results/`: saídas geradas, que cada um regenera. **Exceção:** `paper/`, o retrato curado para o artigo, gerado por `python paper/gerar_pasta_paper.py . paper` (não edite à mão);
   - dados reais de Honduras;
   - saídas de notebooks (limpe as células antes do commit);
   - `.env` e senhas.
