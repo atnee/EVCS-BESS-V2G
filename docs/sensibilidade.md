@@ -15,7 +15,7 @@ Análise de robustez do resultado do S4 (BESS + V2G), feita em 4–5 nov. 2026. 
 
 1. **Linhas: o resultado é robusto.** BESS + V2G, com os despachos propostos, eliminam as sobrecargas novas em 23 dos 29 casos, inclusive a 15 min, com ±10 % de carga e com BESS de 0,5× a 1,5×. As exceções têm causa identificada (abaixo).
 2. **Tensão: o resultado é frágil.** O 0,951 pu do caso base (semente 42) ficou acima da média. Nas 10 sementes, a tensão mínima do S4 foi de 0,945 a 0,954 pu (média 0,9485, desvio-padrão 0,0028). A 15 min, 0,946 pu. Não se pode afirmar que o S4 garante 0,95 pu.
-3. **A tensão depende dos reguladores, não do tamanho dos recursos.** Só mudanças no controle dos reguladores moveram a tensão de forma consistente; o tamanho da BESS não mudou nada. Na confirmação com as 10 sementes, a banda de 1 V levou o S4 a 0,95 pu ou mais em 9 de 10, e a BESS de metade do tamanho deu o mesmo resultado da inteira.
+3. **A tensão depende dos reguladores, não do tamanho dos recursos.** Só mudanças no controle dos reguladores moveram a tensão de forma consistente; o tamanho da BESS não mudou nada. Na confirmação com as 10 sementes, a banda de 1 V levou o S4 a 0,95 pu ou mais em 9 de 10, e a BESS de metade do tamanho deu o mesmo resultado da inteira. A combinação das duas atende ao critério em 7 de 10 sementes (contra 3 de 10 hoje), com 1,2 milhão de USD a menos de CAPEX e ~22 % mais operações de tap; a 15 min, ainda fica em 0,949 pu.
 4. **Os despachos propostos importam.** Com regras convencionais, o S4 perde o critério e, com o V2G heurístico, volta a ter sobrecargas.
 
 ## Resultados por grupo (S4)
@@ -106,6 +106,43 @@ Os dois achados (banda de 1 V e BESS de metade do tamanho) foram testados com as
 - **A banda de 1 V melhora a tensão de forma consistente.** Ela leva o S4 a 0,95 pu ou mais em 9 das 10 sementes (a exceção é a semente 10, com 0,9492 pu) e nunca passa de 1,046 pu. A 15 min, chega a 0,949 pu: melhora, mas não basta.
 - **As linhas não dependem dessas duas medidas.** As sementes 1 e 3 continuam com 4–6 e 1–3 linhas novas, no máximo a 101,3 %. Esse resíduo vem da calibração da BESS feita com a semente 42.
 
+## Configuração combinada (5–6 nov. 2026, 11 casos)
+
+BESS de 1,1 MW / 3,6 MWh + V2G de 150 carros + banda de 1 V nos reguladores, com as 10 sementes e a 15 min (grupo `combinada` de `configs/sensitivity.yaml`, definido antes de rodar). A semente 42 a 1 h é o caso `band1v_bess050`, da confirmação.
+
+| S4, 10 sementes, passo de 1 h | Atende | Zero linhas novas | Tensão ≥ 0,95 pu | Tensão mínima (faixa; média) | Tensão máxima | CAPEX total (USD) |
+|---|---|---|---|---|---|---|
+| Configuração atual (BESS 2,2 MW / 7,2 MWh, banda 2 V) | 3 | 8 | 3 | 0,945–0,954; 0,9485 pu | 1,046 pu | 6.802.800 |
+| **Combinada (BESS 1,1 MW / 3,6 MWh, banda 1 V)** | **7** | 8 | **9** | 0,949–0,953; **0,9510 pu** | 1,044 pu | **5.600.400** |
+
+| Caso a 15 min | Linhas novas > 100 % | Tensão mínima (reguladores / taps do S0) | Critério |
+|---|---|---|---|
+| Configuração atual | 0 | 0,946 / 0,934 pu | não atende |
+| Combinada | 0 | 0,949 / 0,933 pu | não atende |
+
+- **A combinação repete a banda de 1 V com a BESS inteira.** A tensão mínima é a mesma nas 10 sementes, com diferença de zero na quarta casa, e também a 15 min. Reduzir a BESS à metade não custa desempenho.
+- **O que ainda não atende:**
+  - na semente 10, a tensão fica em 0,9492 pu;
+  - nas sementes 1 e 3, sobram 4 linhas e 1 linha novas, no máximo a 100,7 %. É o mesmo resíduo da calibração da BESS (semente 42), que nenhuma das duas medidas muda.
+- **A 15 min, a combinação melhora a tensão** (0,946 → 0,949 pu), mas não chega a 0,95.
+- **Execução:** a rodada foi interrompida perto da meia-noite com 5 casos prontos (PC desligado ou sessão encerrada). Os 6 restantes rodaram de novo em 6 nov., do zero.
+
+## Operações de tap
+
+Soma, nos 4 bancos, dos degraus de tap movidos no dia (`integration.impact.tap_operations`), média das 10 sementes mais o caso base (mínimo–máximo). A 15 min há 4 vezes mais passos, então só se compara com o próprio passo. Tabela completa em `results/ieee8500/sensitivity/RELATORIO.md`.
+
+| Configuração | Passo | S0 | S1 | S4 |
+|---|---|---|---|---|
+| Atual (banda 2 V, BESS 2,2 MW) | 1 h | 45 | 57,4 (52–65) | 49,3 (43–57) |
+| Banda 1 V, BESS 2,2 MW | 1 h | 54 | 66,5 (63–70) | 63,0 (59–66) |
+| Combinada (banda 1 V, BESS 1,1 MW) | 1 h | 54 | 66,5 (63–70) | 60,3 (58–64) |
+| Atual | 15 min | 56 | 80 | 76 |
+| Combinada | 15 min | 75 | 108 | 124 |
+
+- **A banda de 1 V tem um custo de operação.** Ela aumenta as operações de tap em ~20 % no próprio S0, sem nenhum veículo (45 → 54), e em ~22 % no S4 a 1 h (49,3 → 60,3). A 15 min, o aumento no S4 é de 63 % (76 → 124).
+- **A 1 h, o S4 opera menos os reguladores que o S1** nas duas bandas (57,4 → 49,3 com 2 V; 66,5 → 60,3 com 1 V): BESS e V2G compensam parte do trabalho extra. A 15 min com a banda de 1 V, não: o S4 opera mais que o S1 (124 contra 108).
+- **Não foi calculado** o efeito na vida útil dos reguladores nem o custo de manutenção. Também não há limite de operações por dia no critério.
+
 ## O que isso muda no artigo
 
 - **Pode afirmar:**
@@ -115,13 +152,14 @@ Os dois achados (banda de 1 V e BESS de metade do tamanho) foram testados com as
 - **Não pode afirmar:** que o S4 garante tensão ≥ 0,95 pu. Isso vale em 3 de 10 sementes e não vale a 15 min.
 - **Pode propor:** coordenar o controle dos reguladores (banda de 1 V) como parte da solução. É uma mudança de operação, sem investimento, e levou a tensão a 0,95 pu ou mais em 9 de 10 sementes, sem sobretensão. A 15 min ainda fica em 0,949 pu.
 - **Deve rever:** o tamanho da BESS. A metade (1,1 MW / 3,6 MWh) dá o mesmo resultado em todas as sementes e reduz o CAPEX total em 1,2 milhão de USD (de 6,80 para 5,60 milhões).
-- **Uma configuração que vale apresentar:** BESS de 1,1 MW / 3,6 MWh + V2G de 150 carros + banda de 1 V atende ao critério no caso base (0,954 pu), com CAPEX total de 5,6 milhões de USD. Ela não foi rodada com as outras sementes; pelos dois testes separados, o esperado é o mesmo comportamento da banda de 1 V.
+- **Uma configuração que vale apresentar:** BESS de 1,1 MW / 3,6 MWh + V2G de 150 carros + banda de 1 V. Ela atende ao critério em 7 de 10 sementes (tensão ≥ 0,95 pu em 9 de 10), com CAPEX total de 5,6 milhões de USD, contra 3 de 10 e 6,8 milhões na configuração atual. O preço é ~22 % mais operações de tap. A 15 min, ainda fica em 0,949 pu.
+- **Deve dizer com clareza o que fica em aberto:** tensão a 15 min; a semente 10; o pequeno resíduo de linhas nas sementes 1 e 3; o desgaste dos reguladores; e a fidelidade do modelo elétrico (sem validação contra o OpenDSS, sem LDC).
 
 ## Execução e limitações
 
 - **Execução:** 4 processos em paralelo, com uma linha de cálculo por processo; cada caso de 1 h levou ~20 min e o de 15 min ~75 min.
 - **Dois casos travados:** `v2g_200` e `v2g_250` ficaram ~5 h sem terminar durante a noite, com só ~1 GB de memória livre. Foram parados e rodados de novo de manhã com as mesmas configurações, e terminaram em 18 min. Cada parte deles (frotas, LPs, fluxo do S1 e do S3) também rodou normalmente sozinha. A causa provável é o ambiente (memória), não o modelo; não foi confirmada.
-- **Um parâmetro por vez:** não foram testadas combinações (por exemplo, banda de 1 V com outras sementes, ou BESS menor a 15 min).
+- **Combinações limitadas:** além das sementes, só foram combinadas a banda de 1 V e a BESS × 0,5 (com as 10 sementes e a 15 min). As demais variações foram feitas um parâmetro por vez.
 - **Poucas repetições:** 10 sementes dão uma primeira ideia da dispersão, mas não um intervalo de confiança.
 - **Tabelas compactas:** nos casos de 1 h, as séries brutas por barra e por linha foram apagadas depois de gerar as tabelas compactas (`dados/line_peaks.csv`, `dados/series.csv`, taps em `dados/S*_source.csv`), por falta de espaço em disco. Os casos de 15 min estão completos.
 - **Mesmas limitações do S4:** um alimentador de referência adaptado (IEEE 8500 reduzido, componentes de sequência, taps comuns por banco, sem LDC), sem validação contra o OpenDSS e sem dados de Honduras além da tarifa.
