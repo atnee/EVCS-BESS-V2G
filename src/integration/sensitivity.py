@@ -22,6 +22,7 @@ import pandas as pd
 import yaml
 from integration.scenarios import study_feeder
 from integration.parallel import SINGLE_THREAD
+from integration.impact import tap_operations
 
 RAW = ("voltages","branches","native_loads","frozen_taps_voltages","frozen_taps_branches")
 
@@ -229,10 +230,26 @@ def collect(root, base_dir, spec):
         crit = pd.read_csv(folder/"criterio.csv").set_index("scenario")
         summ = pd.read_csv(folder/"summary.csv").set_index("scenario")
         for sc in crit.index:
+            taps = tap_operations({"source": pd.read_csv(folder/"dados"/f"{sc}_source.csv")})
             rows.append(dict(case=name,group=case["group"],description=case["description"],scenario=sc,status="ok",
-                             **crit.loc[sc].to_dict(),peak_kw=summ.peak_import_kw[sc],loss_mwh=summ.loss_kwh[sc]/1000,
-                             bess_kwh=summ.bess_throughput_ac_kwh[sc],v2g_kwh=summ.v2g_delivered_kwh[sc],capex_usd=summ.capex_usd[sc]))
+                             **crit.loc[sc].to_dict(),v_max_pu=summ.v_max_pu[sc],peak_kw=summ.peak_import_kw[sc],
+                             loss_mwh=summ.loss_kwh[sc]/1000,bess_kwh=summ.bess_throughput_ac_kwh[sc],v2g_kwh=summ.v2g_delivered_kwh[sc],
+                             capex_usd=summ.capex_usd[sc],tap_operations=sum(taps.values()),**{f"taps_{k}": v for k,v in taps.items()},
+                             **variant(case)))
     return pd.DataFrame(rows)
+
+
+BASE_BAND_PU = 0.016667  # regulator band of the study (2 V on a 120 V base), network data
+VARIANT_KEYS = {"group","description","seed","regulators","bess_scale","resolution_min"}
+
+
+def variant(case):
+    """Band (V), step (min) and BESS scale of a case, and whether it differs from the base only in these and the seed
+    (the sets compared in the tap-operation table)."""
+    regulators = case.get("regulators") or {}
+    return dict(band_v=round(float(regulators.get("band_pu",BASE_BAND_PU))*120,1),step_min=int(case.get("resolution_min",60)),
+                bess_scale=float(case.get("bess_scale",1.)),
+                comparable=set(case) <= VARIANT_KEYS and set(regulators) <= {"band_pu"})
 
 
 def _num(x, d=0):
@@ -269,10 +286,35 @@ def report(config_dir="configs", results="results"):
             doc.append(f"| {sc} | {int(g.success.sum())} de {len(g)} | {int(g.new_overloads.min())}–{int(g.new_overloads.max())} | "
                        f"{_num(g.v_min_pu.min(),3)}–{_num(g.v_min_pu.max(),3)} pu |")
         doc.append("")
+    doc += tap_section(t)
     doc += ["## Figuras","","- `sensitivity_s4_new_overloads.png`: linhas novas acima de 100 % no S4, por caso.",
             "- `sensitivity_s4_min_voltage.png`: tensão mínima do S4 por caso, com os reguladores atuando e com os taps do S0.",""]
     (root/"RELATORIO.md").write_text("\n".join(doc),encoding="utf-8")
     return root/"RELATORIO.md"
+
+
+def tap_table(t):
+    """Tap operations of the day (sum over regulators of |tap step|) per scenario, for each set of comparable cases
+    (same band, step and BESS scale; the seeds are the repetitions). Mean, min and max over the set."""
+    ok = t[(t.status == "ok") & (t.comparable == True)]
+    g = ok.groupby(["band_v","step_min","bess_scale","scenario"]).tap_operations
+    return pd.DataFrame({"cases": g.size(),"mean": g.mean(),"min": g.min(),"max": g.max()}).reset_index()
+
+
+def tap_section(t):
+    tab = tap_table(t)
+    if tab.empty:
+        return []
+    doc = ["## Operações de tap","",
+           "Soma, nos 4 bancos, dos degraus de tap movidos no dia (`integration.impact.tap_operations`). Cada linha junta os casos "
+           "que só diferem do base pela semente: média (mínimo–máximo). O passo de 15 min tem 4 vezes mais passos, então só se "
+           "compara com o próprio passo.","",
+           "| Banda | Passo | BESS | Casos | S0 | S1 | S2 | S3 | S4 |","|---|---|---|---|---|---|---|---|---|"]
+    for (band,step,scale),g in tab.groupby(["band_v","step_min","bess_scale"]):
+        cells = {r.scenario: f"{_num(r['mean'],1)} ({int(r['min'])}–{int(r['max'])})" if r.cases > 1 else f"{int(r['mean'])}"
+                 for _,r in g.iterrows()}
+        doc.append(f"| {_num(band,0)} V | {int(step)} min | × {_num(scale,2)} | {int(g.cases.max())} | "+" | ".join(cells.get(sc,"—") for sc in ("S0","S1","S2","S3","S4"))+" |")
+    return doc+[""]
 
 
 def figures(s4, root):

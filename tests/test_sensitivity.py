@@ -38,3 +38,17 @@ class TestCaseConfigs(unittest.TestCase):
         self.assertEqual(len(c["ieee8500.yaml"]["load_multipliers"]),96)
         hourly = BASE["evcs.yaml"]["independent_demand_kw"]
         self.assertAlmostEqual(sum(c["evcs.yaml"]["independent_demand_kw"])*.25,sum(hourly))  # kWh per day unchanged
+
+
+class TestTapTable(unittest.TestCase):
+    def test_sets_group_seeds_and_skip_other_changes(self):
+        import pandas as pd
+        from integration.sensitivity import variant, tap_table
+        self.assertTrue(variant({"group": "g","description": "d","seed": 3,"regulators": {"band_pu": .008333}})["comparable"])
+        self.assertFalse(variant({"group": "g","description": "d","load_scale": 1.1})["comparable"])
+        self.assertFalse(variant({"group": "g","description": "d","regulators": {"vreg_pu": 1.04}})["comparable"])
+        rows = [dict(status="ok",scenario="S4",tap_operations=n,**variant({"group": "g","description": "d","seed": i}))
+                for i,n in enumerate((40,50,60))]
+        rows.append(dict(status="ok",scenario="S4",tap_operations=99,**variant({"group": "g","description": "d","load_scale": .9})))
+        r = tap_table(pd.DataFrame(rows)).iloc[0]
+        self.assertEqual((r.cases,r["mean"],r["min"],r["max"],r.band_v),(3,50.,40,60,2.))
