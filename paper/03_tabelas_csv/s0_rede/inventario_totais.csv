@@ -1,0 +1,7 @@
+,0
+frequency_hz,60
+source_bus,hvmv_sub_hsb
+nominal_kv,12.47
+load_kw,10773.170000000002
+load_kvar,2700.01103
+capacitor_kvar,3900.0

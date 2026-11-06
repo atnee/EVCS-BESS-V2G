@@ -25,6 +25,7 @@ configs/      parameters (YAML) — one per module · network.yaml (feeder of ev
 src/          code: evcs/ bess/ v2g/ (one per owner) · network/ (feeders, power flow) · integration/ (studies, coordinator) · core/
 data/         feeder source data (ieee8500/ — see its README) · honduras/ templates
 notebooks/    01 EVCS (Ayrton) · 02 BESS (Kenia) · 03 V2G (Cesar) · 04 integration
+paper/        snapshot for the article (methodology, YAML, CSV tables, figures, xlsx) — the one generated folder kept in Git
 results/      generated outputs, not in Git — START at results/ieee8500/resumo/ (8 figures + LEIA-ME.md); S0 × S1 in results/ieee8500/s0_vs_s1/ANALISE.md; map in results/README.md
 docs/         metodologia.md (methodology for the article) · S2_BESS_Kenia.md, S3_V2G_Cesar.md (what S2 and S3 must deliver) · tutorial_vscode_ia.md (VS Code + AI assistant) · team guide · evcs/figures
 AGENTS.md     rules the AI assistants (Claude Code, Copilot, Codex, Cursor) read automatically; CLAUDE.md imports it
