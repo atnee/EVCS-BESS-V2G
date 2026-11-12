@@ -1,0 +1,229 @@
+strategy: cesar_v1
+vehicle_source: fleet
+departure_rule: arrival_plus_trip
+fleet:
+  n_vehicles: 150
+  seed: 42
+  power_kw: 11.0
+  battery_min_kwh: 10.0
+  soc_min: 0.1
+  soc_max: 0.9
+  eta_charge: 0.95
+  eta_discharge: 0.95
+  profiles:
+    residential:
+      share: 0.8
+      battery_kwh: 44.9
+      battery_std_kwh: 15.0
+      daily_km: 40.0
+      kwh_per_km: 0.18
+      arrival_h:
+      - 17
+      - 19
+      departure_h:
+      - 6
+      - 8
+      arrival_soc_range:
+      - 0.1
+      - 0.9
+      departure_soc: 0.1
+    commercial:
+      share: 0.2
+      battery_kwh: 44.9
+      battery_std_kwh: 15.0
+      daily_km: 40.0
+      kwh_per_km: 0.18
+      arrival_h:
+      - 14
+      - 16
+      departure_h:
+      - 23
+      - 24
+      arrival_soc_range:
+      - 0.1
+      - 0.9
+      departure_soc: 0.1
+vehicles:
+- id: fleet-0
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.8
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+- id: fleet-1
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.8
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+- id: fleet-2
+  arrival: 8
+  departure: 22
+  mobility_kwh: 15.0
+  departure_soc: 0.5
+  battery:
+    capacity_kwh: 60.0
+    power_kw: 11.0
+    soc_initial: 0.3
+    soc_min: 0.1
+    soc_max: 0.9
+    eta_charge: 0.95
+    eta_discharge: 0.95
+time:
+  start: '2026-01-01T00:00:00-06:00'
+  steps: 24
+  dt_h: 1.0
+discharge_window_h:
+- 17
+- 20
+standalone:
+  station:
+    id: EVCS-1
+    bus: l2692633
+    phases: ABC
+    chargers: 154
+    charger_kw: 11.0
+    connection_kw: 1694.0
+    capex: 770000.0
+    currency: USD
+    bidirectional: true
+  independent_evcs_kw:
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 4.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 15.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 44.0
+  - 10.0
+  - 10.0
+  - 10.0
+  independent_ids:
+  - independent-demand-group
+cesar_v1:
+  no_charge_window_h:
+  - 17
+  - 22
+  tariff_usd_kwh:
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.4841
+  - 0.4841
+  - 0.4841
+  - 2.4207
+  - 2.4207
+  - 2.4207
+  - 2.4207
+  - 2.4207
+  - 0.2421
+  - 0.2421
+  v2g_remuneration_usd_kwh:
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.6052
+  - 0.6052
+  - 0.6052
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  - 0.2421
+  degradation_usd_kwh: 0.0
+  tie_break_usd_kw: 0.0001
+tariff_basis:
+  source: CREE pliego tarifario IV trimestre 2026, Servicio Residencial, consumo >
+    50 kWh/mes (siguientes kWh)
+  base_hnl_kwh: 6.5102
+  fx_source: BCH tipo de cambio de referencia, 2026-10-20
+  fx_hnl_per_usd: 26.8936
+  charge_multipliers:
+  - - 14
+    - 17
+    - 2.0
+  - - 17
+    - 22
+    - 10.0
+  discharge_multipliers:
+  - - 17
+    - 20
+    - 2.5
+  days_per_month: 22
+  s1_billing: flat
+  demand_value_hnl_kw_month: 340.417
+s3_case:
+  overrides:
+    v2g.yaml:
+      strategy: cesar_v1
+      vehicle_source: fleet
+      departure_rule: arrival_plus_trip
+      discharge_window_h:
+      - 17
+      - 20
+      standalone.station.chargers: 154
+      standalone.station.connection_kw: 1694.0
+      standalone.station.capex: 770000.0
+    evcs.yaml:
+      station.chargers: 154
+      station.connection_kw: 1694.0
+      station.capex: 770000.0
+      integration.evs: 2850
+  variants:
+    A:
+      v2g.yaml:
+        standalone.station.bus: m1125976
+      evcs.yaml:
+        station.bus: m1125976

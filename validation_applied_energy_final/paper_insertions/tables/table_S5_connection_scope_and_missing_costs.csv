@@ -1,0 +1,7 @@
+asset,site,study_site_status,assigned_resources,power_kw,energy_kwh,lower_bound_interface_kva_at_pf1,existing_public_evcs_kw,conservative_coincident_nameplate_kw,reproduced_model_capex_usd,incremental_connection_cost_usd,cost_status
+BESS,l2692633,new_connection_and_site_required,1,703.0166132,1070.117635,703.0166132,0,703.0166132,357419.2902,,"UNKNOWN: transformer, PCS/interface, switchgear, protection, civil work, land and dedicated line need design/quotation"
+BESS,l2711226,new_connection_and_site_required,1,1148.247906,4983.803013,1148.247906,0,1148.247906,1664590.206,,"UNKNOWN: transformer, PCS/interface, switchgear, protection, civil work, land and dedicated line need design/quotation"
+BESS,l3029502,existing_bess_host,1,348.7354808,1146.079352,348.7354808,0,348.7354808,382790.5036,,"UNKNOWN: transformer, PCS/interface, switchgear, protection, civil work, land and dedicated line need design/quotation"
+V2G,l3160107,evcs_upgrade_required,16,176,,176,132,308,80000,,"UNKNOWN: bidirectional-port installation or transfer, existing AC capacity, transformer, protection, metering and civil works require site design"
+V2G,m1069504,existing_v2g_host,67,781,,781,0,781,355000,,"UNKNOWN: bidirectional-port installation or transfer, existing AC capacity, transformer, protection, metering and civil works require site design"
+V2G,m1209790,evcs_upgrade_required,67,737,,737,132,869,335000,,"UNKNOWN: bidirectional-port installation or transfer, existing AC capacity, transformer, protection, metering and civil works require site design"

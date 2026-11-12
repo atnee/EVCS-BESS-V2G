@@ -16,3 +16,6 @@ data/honduras/templates/*
 data/ieee123/raw/
 results/*
 !results/README.md
+
+# OpenDSS rebuild outputs (regenerated locally)
+opendss_rebuild/results/

@@ -1,0 +1,35 @@
+{
+  "name": "complementary_sites",
+  "n_v2g": 150,
+  "n_public": 2850,
+  "bess_bus": "l2711226",
+  "v2g_bus": "l2692633",
+  "bess_power_kw": 2200,
+  "bess_energy_kwh": 7200,
+  "discharge_window": [
+    16,
+    21
+  ],
+  "no_charge_window": [
+    16,
+    22
+  ],
+  "station": {
+    "id": "EVCS-1",
+    "bus": "l2692633",
+    "phases": "ABC",
+    "chargers": 154,
+    "charger_kw": 11.0,
+    "connection_kw": 1694.0,
+    "capex": 770000.0,
+    "currency": "USD",
+    "bidirectional": true
+  },
+  "evcs_kpis": {
+    "evcs_requested_kwh": 27629.0,
+    "evcs_served_kwh": 26952.287932119303,
+    "evcs_unserved_kwh": 676.7120678806968,
+    "capex_usd": 4398000.0
+  },
+  "note": "Same seed, regenerated fleet and public sessions for quantity cases; not a paired nested-vehicle sample. Site relocation includes the independent host demand. Civil/connection costs excluded."
+}

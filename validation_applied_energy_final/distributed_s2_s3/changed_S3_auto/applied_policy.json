@@ -1,0 +1,26 @@
+{
+  "policy": "fase_C_reduzida",
+  "regulators": {
+    "feeder_regc": {
+      "original_v": 126.5,
+      "new_v": 126.0,
+      "delta_v": -0.5
+    },
+    "vreg2_c": {
+      "original_v": 125.0,
+      "new_v": 124.5,
+      "delta_v": -0.5
+    },
+    "vreg3_c": {
+      "original_v": 125.0,
+      "new_v": 124.5,
+      "delta_v": -0.5
+    },
+    "vreg4_c": {
+      "original_v": 125.0,
+      "new_v": 124.5,
+      "delta_v": -0.5
+    }
+  },
+  "capcontrols": {}
+}

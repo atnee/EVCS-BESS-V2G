@@ -1,0 +1,46 @@
+source,path,exists,sha256,normalized_lf_matches
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Buscoords.dss,True,f4b8355531b75b5bf275ee0532a2fcd712092c03a54b05cfad78a5923f9e2aa8,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Buscoords.dss,True,f4b8355531b75b5bf275ee0532a2fcd712092c03a54b05cfad78a5923f9e2aa8,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Buscoords.dss,True,aa3d71873e595578f8c952dffd16b8cf74d5d811da40e16db8a4f0c72abe8c32,False
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Capacitors.dss,True,c5f776934c10a4db2165bfd194df23ffc4f0a4a8fb33c23ac4c377adb418b690,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Capacitors.dss,True,c5f776934c10a4db2165bfd194df23ffc4f0a4a8fb33c23ac4c377adb418b690,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Capacitors.dss,True,cc05836176a6715b121619079eb6cef96e77468a3368c8ed44815f2e9d684dcf,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\CapControls.DSS,True,bcf80c4657bd9e08a399167b95bfb28974cbc03d26e0fed734a5fbbe305d9c8f,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\CapControls.DSS,True,bcf80c4657bd9e08a399167b95bfb28974cbc03d26e0fed734a5fbbe305d9c8f,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\CapControls.DSS,True,562818b4d905f391e88ed58efcd54150d4296d6cfb355f8abac32c969a290348,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\License.txt,True,6d8c69aff6f68b35e959048802bcc793189aafe5ee6f28f30b09ba88ceda37d9,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\License.txt,True,6d8c69aff6f68b35e959048802bcc793189aafe5ee6f28f30b09ba88ceda37d9,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\License.txt,False,,False
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\LineCodes2.DSS,True,06bf30e0a363b2dcf6b62d664fc7353978bd8c935e5d9b95678794613fa592d5,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\LineCodes2.DSS,True,06bf30e0a363b2dcf6b62d664fc7353978bd8c935e5d9b95678794613fa592d5,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\LineCodes2.DSS,True,3fec9199a41696a758eaff7065f86a89477f70898b1bee3295de9c74f154121a,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Lines.dss,True,e75b89b07c504464a0bfd9770c66d59af2c07c80d7ce7f481fad2d39c1d38e1f,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Lines.dss,True,e75b89b07c504464a0bfd9770c66d59af2c07c80d7ce7f481fad2d39c1d38e1f,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Lines.dss,True,460eb5e8179bda1926d0d70cf4fc9d8bdd29ab4dd9a101941730749f8a4a663a,False
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Loads.dss,True,a0f272e48bed15dbf9b2b40abb57825ee65b757b08ab6fe455691bdefc8d7e69,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Loads.dss,True,a0f272e48bed15dbf9b2b40abb57825ee65b757b08ab6fe455691bdefc8d7e69,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Loads.dss,True,4d5b68a8095bbee59a95ba08255f34b74fcf3d89c0e413df2fc669648fb2d18f,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\LoadXfmrCodes.dss,True,213a3c0478b33a4cb95d82d40e076d1c1ec19b22033e4aa03e6dcdd8b92fa8f9,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\LoadXfmrCodes.dss,True,213a3c0478b33a4cb95d82d40e076d1c1ec19b22033e4aa03e6dcdd8b92fa8f9,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\LoadXfmrCodes.dss,True,422122863efd0268cb125694b0830673baa6ce466157ceea223cb64bcbe0a533,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\LoadXfmrs.dss,True,8f9b8745ed8c10af6c708302a357dbbbc36f92c0e203ed1926416d7663d75d1e,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\LoadXfmrs.dss,True,8f9b8745ed8c10af6c708302a357dbbbc36f92c0e203ed1926416d7663d75d1e,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\LoadXfmrs.dss,True,bcb0d10caab6e53d5b5b18b669ebd83f67f79135a478c3079f78a2fdd943122a,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Master.dss,True,40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Master.dss,True,40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Master.dss,True,9bd0e17f33e9ec7e0baa46693abeec069b148cbee8477301d77450f95d601ad8,False
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Regulators.dss,True,d33c4d8ace0659f31969692ce4f62cb093fe74ec0304ed57fc9e09e96f7ac1f4,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Regulators.dss,True,d33c4d8ace0659f31969692ce4f62cb093fe74ec0304ed57fc9e09e96f7ac1f4,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Regulators.dss,True,041f353f55076feaaf751bbb20551226f8727ddfbdfc5101cf1b1f222da38617,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Run_8500Node.dss,True,3893fddf6ec99bbebe73874b0893361f0661482c502d3794108edf8df26bf92a,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Run_8500Node.dss,True,3893fddf6ec99bbebe73874b0893361f0661482c502d3794108edf8df26bf92a,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Run_8500Node.dss,True,6f7049134ab22835173d0b1a5be6f0f8d270be55643c594afcf9e458d6fe1b52,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Transformers.dss,True,45662031edfe78d624bd127407dfff9836bf44c61674bb6850e8c516d587f58d,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Transformers.dss,True,45662031edfe78d624bd127407dfff9836bf44c61674bb6850e8c516d587f58d,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Transformers.dss,True,cab397f65f5de08c4d82cf794c03c432b404cd5db7db37ff827869db8344b708,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Triplex_Linecodes.dss,True,72e4ed6ce8e8aa59e22042f2ae830186375f8e713002915e9eed830e83ae216a,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Triplex_Linecodes.dss,True,72e4ed6ce8e8aa59e22042f2ae830186375f8e713002915e9eed830e83ae216a,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Triplex_Linecodes.dss,True,7dfbfc23e19d8930c9e5ac3302bd9e8e9d52aee9c333e3fc80422f15752a886d,True
+original,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\data\ieee8500\source\Triplex_Lines.DSS,True,070f65ed7c9f93a46a72ba5b921d0fafccca61cf0562851cd7225b3e80d13f81,True
+stochastic,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G-Distributed-Stochastic\data\ieee8500\source\Triplex_Lines.DSS,True,070f65ed7c9f93a46a72ba5b921d0fafccca61cf0562851cd7225b3e80d13f81,True
+installed,C:\Program Files\OpenDSS\IEEETestCases\8500-Node\Triplex_Lines.DSS,True,abf45521bc05a7f9d5c3fa4c94c4f24f7ea9bc984e7086b303ae4a143d77971d,True

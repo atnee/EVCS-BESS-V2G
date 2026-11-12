@@ -1,0 +1,314 @@
+{
+  "check_values": {
+    "rmse_h03": 0.0227,
+    "rmse_h18": 0.07277,
+    "pairs": 3820,
+    "new_s1": 41,
+    "new_s4_single": 23,
+    "new_dist": 0,
+    "vmin_s4_single": 0.92357,
+    "vmin_dist_native": 0.93648,
+    "vmin_dist_policy": 0.93752
+  },
+  "check_tolerance": 5e-06,
+  "dt_h": 1.0,
+  "fig9": [
+    {
+      "hour": 3,
+      "phase": "A",
+      "pairs": 1336,
+      "mae_pu": 0.02786045479764397,
+      "rmse_pu": 0.03133075927491495,
+      "max_abs_error_pu": 0.0421774700974788,
+      "median_abs_pu": 0.03845331586368805,
+      "q1_abs_pu": 0.009881424303391199,
+      "q3_abs_pu": 0.040144710522080074,
+      "beyond_whiskers": 0,
+      "opendss_lower": 1330,
+      "opendss_higher": 6
+    },
+    {
+      "hour": 3,
+      "phase": "B",
+      "pairs": 1269,
+      "mae_pu": 0.0025780139219680493,
+      "rmse_pu": 0.004300565059122431,
+      "max_abs_error_pu": 0.0099927145988225,
+      "median_abs_pu": 0.0005681839590745,
+      "q1_abs_pu": 0.000311311256582,
+      "q3_abs_pu": 0.0036450257165003,
+      "beyond_whiskers": 217,
+      "opendss_lower": 1197,
+      "opendss_higher": 72
+    },
+    {
+      "hour": 3,
+      "phase": "C",
+      "pairs": 1215,
+      "mae_pu": 0.020675000680599662,
+      "rmse_pu": 0.02283528845141513,
+      "max_abs_error_pu": 0.0319576877456033,
+      "median_abs_pu": 0.018378958090861,
+      "q1_abs_pu": 0.012120000589352451,
+      "q3_abs_pu": 0.031073813331910352,
+      "beyond_whiskers": 0,
+      "opendss_lower": 0,
+      "opendss_higher": 1215
+    },
+    {
+      "hour": 3,
+      "phase": "ALL",
+      "pairs": 3820,
+      "mae_pu": 0.017176228561140944,
+      "rmse_pu": 0.022700369167032417,
+      "max_abs_error_pu": 0.0421774700974788,
+      "median_abs_pu": 0.012100204923512901,
+      "q1_abs_pu": 0.0028335764537803,
+      "q3_abs_pu": 0.031168867543122775,
+      "beyond_whiskers": 0,
+      "opendss_lower": 2527,
+      "opendss_higher": 1293
+    },
+    {
+      "hour": 18,
+      "phase": "A",
+      "pairs": 1336,
+      "mae_pu": 0.09553702033152324,
+      "rmse_pu": 0.10377584077197634,
+      "max_abs_error_pu": 0.1375127361691538,
+      "median_abs_pu": 0.1230005609494206,
+      "q1_abs_pu": 0.04639431897151802,
+      "q3_abs_pu": 0.13070165386985316,
+      "beyond_whiskers": 0,
+      "opendss_lower": 1336,
+      "opendss_higher": 0
+    },
+    {
+      "hour": 18,
+      "phase": "B",
+      "pairs": 1269,
+      "mae_pu": 0.009110212711379238,
+      "rmse_pu": 0.013601011215341836,
+      "max_abs_error_pu": 0.0290473902224099,
+      "median_abs_pu": 0.0041176326616942,
+      "q1_abs_pu": 0.001018690919136,
+      "q3_abs_pu": 0.0152082764085512,
+      "beyond_whiskers": 0,
+      "opendss_lower": 1171,
+      "opendss_higher": 98
+    },
+    {
+      "hour": 18,
+      "phase": "C",
+      "pairs": 1215,
+      "mae_pu": 0.06155440325183434,
+      "rmse_pu": 0.0679239085026512,
+      "max_abs_error_pu": 0.0950929169362135,
+      "median_abs_pu": 0.0534355692316019,
+      "q1_abs_pu": 0.036760686209676346,
+      "q3_abs_pu": 0.09212731656717366,
+      "beyond_whiskers": 0,
+      "opendss_lower": 1,
+      "opendss_higher": 1214
+    },
+    {
+      "hour": 18,
+      "phase": "ALL",
+      "pairs": 3820,
+      "mae_pu": 0.056017518074511524,
+      "rmse_pu": 0.0727692595039847,
+      "max_abs_error_pu": 0.1375127361691538,
+      "median_abs_pu": 0.0420168190171421,
+      "q1_abs_pu": 0.01140793364144385,
+      "q3_abs_pu": 0.09308411711585965,
+      "beyond_whiskers": 0,
+      "opendss_lower": 2508,
+      "opendss_higher": 1312
+    }
+  ],
+  "fig9_status": "PASS",
+  "fig10": {
+    "S0": {
+      "peak_kw": 11985.822711215698,
+      "min_voltage_pu": 0.937068759892399,
+      "max_voltage_pu": 1.0610480030097438,
+      "max_loading_pct": 111.02887898681784,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 73.4154369160652,
+      "undervoltage_deficit_puh": 0.5878176367713615,
+      "overvoltage_excess_puh": 2.642571585606497,
+      "loss_kwh": 18162.02329631849
+    },
+    "S1": {
+      "peak_kw": 14463.78348700718,
+      "min_voltage_pu": 0.919151283269346,
+      "max_voltage_pu": 1.0614247660156624,
+      "max_loading_pct": 132.1305031513548,
+      "new_overloaded_lines_vs_s0": 41,
+      "thermal_excess_pph": 2210.726643803993,
+      "undervoltage_deficit_puh": 5.079698039342683,
+      "overvoltage_excess_puh": 2.1217465504808084,
+      "loss_kwh": 21794.46260196861
+    },
+    "S4_single": {
+      "peak_kw": 12909.004118528745,
+      "min_voltage_pu": 0.9235687522888136,
+      "max_voltage_pu": 1.0613931370952274,
+      "max_loading_pct": 120.79796816112606,
+      "new_overloaded_lines_vs_s0": 23,
+      "thermal_excess_pph": 311.80129015214254,
+      "undervoltage_deficit_puh": 4.2163627364833465,
+      "overvoltage_excess_puh": 2.6662452556734233,
+      "loss_kwh": 21566.758120426315
+    },
+    "S4_dist_native": {
+      "peak_kw": 12399.68136487036,
+      "min_voltage_pu": 0.9364811301368888,
+      "max_voltage_pu": 1.058939245321307,
+      "max_loading_pct": 108.50589535491302,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 145.1070667234813,
+      "undervoltage_deficit_puh": 1.2614174485716076,
+      "overvoltage_excess_puh": 2.637125239457538,
+      "loss_kwh": 21628.70324859544
+    },
+    "S4_dist_policy": {
+      "peak_kw": 12404.122401380637,
+      "min_voltage_pu": 0.937516578613642,
+      "max_voltage_pu": 1.0579343071495626,
+      "max_loading_pct": 109.3582003172572,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 148.88248292577163,
+      "undervoltage_deficit_puh": 1.0757154861387228,
+      "overvoltage_excess_puh": 1.0887247200047467,
+      "loss_kwh": 21682.80389861302
+    }
+  },
+  "fig10_s0_overloaded_line_identities": [
+    "ln5623416-1",
+    "ln5653480-1",
+    "ln5835160-1",
+    "ln5860423-1",
+    "ln6290228-2",
+    "ln6290228-5",
+    "ln6290228-6",
+    "ln6290228-7",
+    "ln6290230-1",
+    "ln6350556-2",
+    "ln6350556-3",
+    "ln6351510-1",
+    "ln6380817-1"
+  ],
+  "resources": {
+    "single_power_kw": 2200.0,
+    "single_energy_kwh": 7200.0,
+    "dist_sites": 3,
+    "dist_power_kw": 2200.0,
+    "dist_energy_kwh": 7200.0,
+    "v2g_vehicles": 150,
+    "v2g_sites": 3
+  },
+  "fig10_status": "PASS",
+  "fig11": [
+    {
+      "key": "single",
+      "label": "Historical S4, single BESS",
+      "case_table14": "Historical single BESS",
+      "peak_kw": 12909.004118528745,
+      "min_voltage_pu": 0.9235687522888136,
+      "max_voltage_pu": 1.0613931370952274,
+      "max_loading_pct": 120.79796816112606,
+      "new_overloaded_lines_vs_s0": 23,
+      "thermal_excess_pph": 311.80129015214254,
+      "undervoltage_deficit_puh": 4.2163627364833465,
+      "overvoltage_excess_puh": 2.6662452556734233,
+      "loss_kwh": 21566.758120426315
+    },
+    {
+      "key": "native",
+      "label": "Distributed, native controls",
+      "case_table14": "Distributed, native controls",
+      "peak_kw": 12399.68136487036,
+      "min_voltage_pu": 0.9364811301368888,
+      "max_voltage_pu": 1.058939245321307,
+      "max_loading_pct": 108.50589535491302,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 145.1070667234813,
+      "undervoltage_deficit_puh": 1.2614174485716076,
+      "overvoltage_excess_puh": 2.637125239457538,
+      "loss_kwh": 21628.70324859544
+    },
+    {
+      "key": "policy",
+      "label": "Distributed, saved regulator policy",
+      "case_table14": "Distributed, changed controls",
+      "peak_kw": 12404.122401380637,
+      "min_voltage_pu": 0.937516578613642,
+      "max_voltage_pu": 1.0579343071495626,
+      "max_loading_pct": 109.3582003172572,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 148.88248292577163,
+      "undervoltage_deficit_puh": 1.0757154861387228,
+      "overvoltage_excess_puh": 1.0887247200047467,
+      "loss_kwh": 21682.80389861302
+    },
+    {
+      "key": "native_frozen",
+      "label": "Distributed, taps frozen at native S0",
+      "case_table14": "Distributed, native S0 taps",
+      "peak_kw": 12420.982370665724,
+      "min_voltage_pu": 0.9366889290241716,
+      "max_voltage_pu": 1.057780097603146,
+      "max_loading_pct": 108.20055578561048,
+      "new_overloaded_lines_vs_s0": 2,
+      "thermal_excess_pph": 173.19500219413405,
+      "undervoltage_deficit_puh": 2.4280276286529476,
+      "overvoltage_excess_puh": 1.466903242690736,
+      "loss_kwh": 21884.18010529528
+    },
+    {
+      "key": "policy_frozen",
+      "label": "Distributed, taps frozen at saved-policy S0",
+      "case_table14": "Distributed, changed S0 taps",
+      "peak_kw": 12425.40134869872,
+      "min_voltage_pu": 0.9325890190044386,
+      "max_voltage_pu": 1.0559545357465223,
+      "max_loading_pct": 108.22463511737976,
+      "new_overloaded_lines_vs_s0": 0,
+      "thermal_excess_pph": 174.45859512625222,
+      "undervoltage_deficit_puh": 2.668677791728187,
+      "overvoltage_excess_puh": 0.36307213351574696,
+      "loss_kwh": 21940.96948247793
+    }
+  ],
+  "fig11_provenance": {
+    "policy": {
+      "feeder_regc": {
+        "original_v": 126.5,
+        "new_v": 126.0,
+        "delta_v": -0.5
+      },
+      "vreg2_c": {
+        "original_v": 125.0,
+        "new_v": 124.5,
+        "delta_v": -0.5
+      },
+      "vreg3_c": {
+        "original_v": 125.0,
+        "new_v": 124.5,
+        "delta_v": -0.5
+      },
+      "vreg4_c": {
+        "original_v": 125.0,
+        "new_v": 124.5,
+        "delta_v": -0.5
+      }
+    },
+    "capacitors_switching_in_frozen_views": {
+      "native_frozen": 6,
+      "policy_frozen": 6
+    }
+  },
+  "fig11_status": "PASS",
+  "failures": {}
+}

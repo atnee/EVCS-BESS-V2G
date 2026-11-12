@@ -61,6 +61,7 @@ Os YAML exatos da rodada (`evcs.yaml`, `bess.yaml`, `v2g.yaml`, `ieee8500.yaml`,
 
 | Prefixo | Conteúdo |
 |---|---|
+| `fig1_framework` … `fig8_*`, `figS1_*`, `figS2_*` | **Figuras do artigo**, no padrão de arte-final da Elsevier: desenhadas no tamanho impresso (largura de 190 mm, página dupla, ou 140 mm, 1,5 coluna), Arial de 7 a 8 pt, as mesmas cores de cenário e de recurso em todas. Cada uma em PDF vetorial (fontes embutidas, para a submissão), TIFF de 500 dpi com LZW e PNG para visualizar. Sem simulação: leem `results/` e `configs/`. Título e explicação ficam na legenda do artigo; o arquivo, o tamanho, a fonte dos números de cada figura e as legendas sugeridas estão em `04_figuras/LEGENDAS.md`. As figuras `00_*` a `13_*` abaixo são as versões de trabalho, que estas substituem no artigo |
 | `00_resumo_*` | As 8 figuras do resumo do S1: indicadores por frota, curvas do dia, mapa das estações, tensão e carregamento na ponta |
 | `01`–`02` | Caso base: topologia e perfil de tensão na ponta |
 | `03`–`04` | Capacidade de hospedagem e zoneamento com as estações |

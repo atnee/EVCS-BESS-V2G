@@ -1,0 +1,465 @@
+{
+  "note": "Derived from stored OpenDSS outputs; cases with status reproduced_verified come from a verified re-execution of the archived replays (scripts/reproduce_fig10_hourly.py, no optimisation). No power flow is executed by this script.",
+  "pre_existing_overloaded_lines_native_S0": [
+    "ln5623416-1",
+    "ln5653480-1",
+    "ln5835160-1",
+    "ln5860423-1",
+    "ln6290228-2",
+    "ln6290228-5",
+    "ln6290228-6",
+    "ln6290228-7",
+    "ln6290230-1",
+    "ln6350556-2",
+    "ln6350556-3",
+    "ln6351510-1",
+    "ln6380817-1"
+  ],
+  "cases": [
+    {
+      "case": "S0_native",
+      "label": "S0, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/exact_profile_pilot/S0_auto",
+      "status": "archive_byte_identical",
+      "archive": "EVCS-BESS-V2G/results/replay_s0_s4_opendss.rar",
+      "member": "replay_s0_s4_opendss/S0",
+      "sha256": {
+        "source.csv": "0e76ad762f33c94faa4783abe2ba1329c21bab38d6e4956d5a59030003e9de76",
+        "voltages.csv": "88693527516ccf63423033e2e26ca2d0ea9a3c8b547b0876de61fbcdcf75fbd2",
+        "branches.csv": "5bdf3736103891cdcff94c0e12e6e38c764bf12a93bae804e6fed169e6043a61"
+      },
+      "expected_sha256": {
+        "source.csv": "0e76ad762f33c94faa4783abe2ba1329c21bab38d6e4956d5a59030003e9de76",
+        "voltages.csv": "88693527516ccf63423033e2e26ca2d0ea9a3c8b547b0876de61fbcdcf75fbd2",
+        "branches.csv": "5bdf3736103891cdcff94c0e12e6e38c764bf12a93bae804e6fed169e6043a61"
+      },
+      "recomputed_24h": {
+        "peak_kw": 11985.822711215698,
+        "v_min_pu": 0.937068759892399,
+        "loading_max_pct": 111.02887898681784,
+        "new_lines": 0,
+        "loss_kwh": 18162.02329631849,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 11985.822711215698,
+        "v_min_pu": 0.937068759892399,
+        "loading_max_pct": 111.02887898681784,
+        "new_lines": 0,
+        "loss_kwh": 18162.02329631849
+      },
+      "difference": {
+        "peak_kw": 0.0,
+        "v_min_pu": 0.0,
+        "loading_max_pct": 0.0,
+        "new_lines": 0,
+        "loss_kwh": 0.0
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S1_native",
+      "label": "S1, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/exact_profile_pilot/S1_auto",
+      "status": "archive_byte_identical",
+      "archive": "EVCS-BESS-V2G/results/replay_s0_s4_opendss.rar",
+      "member": "replay_s0_s4_opendss/S1",
+      "sha256": {
+        "source.csv": "d882bb0b7a4b714c446667df08d8e2a1015af4afbe472e4e61592202e314dcd3",
+        "voltages.csv": "dfc3a0a096891f3c6a0f48bb106a62952b13f44269910312d3fd59ed700ce088",
+        "branches.csv": "dc0a2ea3b51ca1fc4bf6507f4265ae5255fb93a52431e958ec6badb282f133e1"
+      },
+      "expected_sha256": {
+        "source.csv": "d882bb0b7a4b714c446667df08d8e2a1015af4afbe472e4e61592202e314dcd3",
+        "voltages.csv": "dfc3a0a096891f3c6a0f48bb106a62952b13f44269910312d3fd59ed700ce088",
+        "branches.csv": "dc0a2ea3b51ca1fc4bf6507f4265ae5255fb93a52431e958ec6badb282f133e1"
+      },
+      "recomputed_24h": {
+        "peak_kw": 14463.78348700718,
+        "v_min_pu": 0.919151283269346,
+        "loading_max_pct": 132.1305031513548,
+        "new_lines": 41,
+        "loss_kwh": 21794.46260196861,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 14463.78348700718,
+        "v_min_pu": 0.919151283269346,
+        "loading_max_pct": 132.1305031513548,
+        "new_lines": 41,
+        "loss_kwh": 21794.46260196861
+      },
+      "difference": {
+        "peak_kw": 0.0,
+        "v_min_pu": 0.0,
+        "loading_max_pct": 0.0,
+        "new_lines": 0,
+        "loss_kwh": 0.0
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S4_hist_native",
+      "label": "Historical S4 replay, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/exact_profile_pilot/S4_auto",
+      "status": "reproduced_verified",
+      "archive": "EVCS-BESS-V2G/results/replay_s0_s4_opendss.rar",
+      "member": "replay_s0_s4_opendss/S4",
+      "sha256": {
+        "source.csv": "90460d8d417a28ab410a3d868bbbd17e17f7da6c9d8ff7a042c74aba0a71917e",
+        "voltages.csv": "5536bbb92db5bc761a83e2787289d7e466bf7b079fb1b708cc38859bb9bd5f96",
+        "branches.csv": "9ec51f90a638e66404168b4afd1373683ab1f661d8127a071295ddf2cf9ede8d"
+      },
+      "expected_sha256": {
+        "source.csv": "d2ae6272b6ab661a0dfce5753255e737c543a16382b10b6a38803acb6246e379",
+        "voltages.csv": "e0d9a038f9e411fc478dc485b8f7856ea94e4926b7149f5dbf986e7c7cb4f3d0",
+        "branches.csv": "7c6eca15b39e1843a2b4bc89ae4dad4c51e41f2645a5ed8c2487f636dee34a0b"
+      },
+      "reproduced_folder": "Rev09_Fig01_Fig10_revision/reproduced_opendss/S4_hist_native",
+      "reproduction_manifest": "Rev09_Fig01_Fig10_revision/reproduced_opendss/manifest.json",
+      "reproduction_environment": {
+        "python": "3.12.14",
+        "platform": "macOS-26.4.1-arm64-arm-64bit",
+        "opendss": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033829; License Status: Open \nDSS-Python version: 0.15.7\nOpenDSSDirect.py version: 0.9.4",
+        "numpy": "2.3.3",
+        "pandas": "2.3.3"
+      },
+      "acceptance": {
+        "first_attempt": "1e-9 absolute on every column: FAILED on control_S0_native (platform rounding ~1e-11 relative)",
+        "column_tolerance_abs": {
+          "v_pu": 1e-09,
+          "loading_pct": 1e-05,
+          "current_a": 1e-05,
+          "p_kw": 0.0001,
+          "q_kvar": 0.0001,
+          "loss_kw": 0.0001,
+          "tap": 0.0
+        },
+        "summary_rel_tolerance": 1e-08,
+        "threshold_margin_factor": 100,
+        "rule": "controls: identical taps and overloaded-line sets, column errors within tolerance; new cases: audited 24-h summary within relative tolerance, identical line counts, threshold margins > factor x tolerance; any failure stops the run"
+      },
+      "control_cases": {
+        "control_S0_native": true,
+        "control_S1_native": true,
+        "control_S4_dist_phaseC": true
+      },
+      "recomputed_24h": {
+        "peak_kw": 12909.004118318386,
+        "v_min_pu": 0.9235687522955908,
+        "loading_max_pct": 120.79796816235071,
+        "new_lines": 23,
+        "loss_kwh": 21566.75811998184,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 12909.004118528745,
+        "v_min_pu": 0.9235687522888136,
+        "loading_max_pct": 120.79796816112606,
+        "new_lines": 23,
+        "loss_kwh": 21566.758120426315
+      },
+      "difference": {
+        "peak_kw": -2.1035884856246412e-07,
+        "v_min_pu": 6.777134409219343e-12,
+        "loading_max_pct": 1.224648826791963e-09,
+        "new_lines": 0,
+        "loss_kwh": -4.444736987352371e-07
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S2_dist_native",
+      "label": "Distributed S2, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/distributed_s2_s3/native_S2_auto",
+      "status": "reproduced_verified",
+      "reproduced_folder": "Rev09_Fig01_Fig10_revision/reproduced_opendss/S2_dist_native",
+      "sha256": {
+        "source.csv": "b5ba8ca3a72c5acec2c057a8919703f04dfde60735f630e0d5695e5c24faf15f",
+        "voltages.csv": "98317392225c425bf3da225cf02d30b3d2daea68928c712b8ae44e18b77a84f2",
+        "branches.csv": "5961ffb758c5587fa9b8c754e82224a2f0e54c9b24d1f8b22cc2f32c0fd1521a"
+      },
+      "reproduction_manifest": "Rev09_Fig01_Fig10_revision/reproduced_opendss/manifest.json",
+      "reproduction_environment": {
+        "python": "3.12.14",
+        "platform": "macOS-26.4.1-arm64-arm-64bit",
+        "opendss": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033829; License Status: Open \nDSS-Python version: 0.15.7\nOpenDSSDirect.py version: 0.9.4",
+        "numpy": "2.3.3",
+        "pandas": "2.3.3"
+      },
+      "acceptance": {
+        "first_attempt": "1e-9 absolute on every column: FAILED on control_S0_native (platform rounding ~1e-11 relative)",
+        "column_tolerance_abs": {
+          "v_pu": 1e-09,
+          "loading_pct": 1e-05,
+          "current_a": 1e-05,
+          "p_kw": 0.0001,
+          "q_kvar": 0.0001,
+          "loss_kw": 0.0001,
+          "tap": 0.0
+        },
+        "summary_rel_tolerance": 1e-08,
+        "threshold_margin_factor": 100,
+        "rule": "controls: identical taps and overloaded-line sets, column errors within tolerance; new cases: audited 24-h summary within relative tolerance, identical line counts, threshold margins > factor x tolerance; any failure stops the run"
+      },
+      "control_cases": {
+        "control_S0_native": true,
+        "control_S1_native": true,
+        "control_S4_dist_phaseC": true
+      },
+      "recomputed_24h": {
+        "peak_kw": 12720.556747374309,
+        "v_min_pu": 0.9243828122568696,
+        "loading_max_pct": 114.57147748796947,
+        "new_lines": 0,
+        "loss_kwh": 21616.661314497684,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 12720.556748175775,
+        "v_min_pu": 0.9243828122509804,
+        "loading_max_pct": 114.571477488427,
+        "new_lines": 0,
+        "loss_kwh": 21616.661314995312
+      },
+      "difference": {
+        "peak_kw": -8.014667400857434e-07,
+        "v_min_pu": 5.889178034124143e-12,
+        "loading_max_pct": -4.575326784106437e-10,
+        "new_lines": 0,
+        "loss_kwh": -4.976282070856541e-07
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S3_dist_native",
+      "label": "Distributed S3, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/distributed_s2_s3/native_S3_auto",
+      "status": "reproduced_verified",
+      "reproduced_folder": "Rev09_Fig01_Fig10_revision/reproduced_opendss/S3_dist_native",
+      "sha256": {
+        "source.csv": "61eebd3b08b412b8639ee05afd5b4994684248c9ccacc54e7f1ada5aa53774b8",
+        "voltages.csv": "9bba1d5bf040cdcf340800bd7ebe30b27e52af78619167ed0d8a554741eec2c0",
+        "branches.csv": "60f5f077a4143efc4f93b37fed7d8765c384fa18c7a32c9ed53c6981cedc3a8b"
+      },
+      "reproduction_manifest": "Rev09_Fig01_Fig10_revision/reproduced_opendss/manifest.json",
+      "reproduction_environment": {
+        "python": "3.12.14",
+        "platform": "macOS-26.4.1-arm64-arm-64bit",
+        "opendss": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033829; License Status: Open \nDSS-Python version: 0.15.7\nOpenDSSDirect.py version: 0.9.4",
+        "numpy": "2.3.3",
+        "pandas": "2.3.3"
+      },
+      "acceptance": {
+        "first_attempt": "1e-9 absolute on every column: FAILED on control_S0_native (platform rounding ~1e-11 relative)",
+        "column_tolerance_abs": {
+          "v_pu": 1e-09,
+          "loading_pct": 1e-05,
+          "current_a": 1e-05,
+          "p_kw": 0.0001,
+          "q_kvar": 0.0001,
+          "loss_kw": 0.0001,
+          "tap": 0.0
+        },
+        "summary_rel_tolerance": 1e-08,
+        "threshold_margin_factor": 100,
+        "rule": "controls: identical taps and overloaded-line sets, column errors within tolerance; new cases: audited 24-h summary within relative tolerance, identical line counts, threshold margins > factor x tolerance; any failure stops the run"
+      },
+      "control_cases": {
+        "control_S0_native": true,
+        "control_S1_native": true,
+        "control_S4_dist_phaseC": true
+      },
+      "recomputed_24h": {
+        "peak_kw": 13549.8915303712,
+        "v_min_pu": 0.925579660870676,
+        "loading_max_pct": 129.69659128009857,
+        "new_lines": 32,
+        "loss_kwh": 21730.54898177563,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 13549.891530804553,
+        "v_min_pu": 0.9255796608513968,
+        "loading_max_pct": 129.69659128001834,
+        "new_lines": 32,
+        "loss_kwh": 21730.54898244542
+      },
+      "difference": {
+        "peak_kw": -4.3335239752195776e-07,
+        "v_min_pu": 1.9279244867220768e-11,
+        "loading_max_pct": 8.023448572203051e-11,
+        "new_lines": 0,
+        "loss_kwh": -6.697882781736553e-07
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S4_dist_native",
+      "label": "Distributed S4, native controls",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/alternative_controls/distributed_native",
+      "status": "reproduced_verified",
+      "reproduced_folder": "Rev09_Fig01_Fig10_revision/reproduced_opendss/S4_dist_native",
+      "sha256": {
+        "source.csv": "5bd96e8ef7e05c032a1cf5295d875b05c6751055f3e46b1a62183f4e3df03e7a",
+        "voltages.csv": "d70806f858d6f699747febef09263be608eec4ac1bdf2c37028653d452604e9d",
+        "branches.csv": "8e0b93881f174ebca7a982fa5a8de6c3a68a77469d35c7ed8b4ad74beb646371"
+      },
+      "reproduction_manifest": "Rev09_Fig01_Fig10_revision/reproduced_opendss/manifest.json",
+      "reproduction_environment": {
+        "python": "3.12.14",
+        "platform": "macOS-26.4.1-arm64-arm-64bit",
+        "opendss": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033829; License Status: Open \nDSS-Python version: 0.15.7\nOpenDSSDirect.py version: 0.9.4",
+        "numpy": "2.3.3",
+        "pandas": "2.3.3"
+      },
+      "acceptance": {
+        "first_attempt": "1e-9 absolute on every column: FAILED on control_S0_native (platform rounding ~1e-11 relative)",
+        "column_tolerance_abs": {
+          "v_pu": 1e-09,
+          "loading_pct": 1e-05,
+          "current_a": 1e-05,
+          "p_kw": 0.0001,
+          "q_kvar": 0.0001,
+          "loss_kw": 0.0001,
+          "tap": 0.0
+        },
+        "summary_rel_tolerance": 1e-08,
+        "threshold_margin_factor": 100,
+        "rule": "controls: identical taps and overloaded-line sets, column errors within tolerance; new cases: audited 24-h summary within relative tolerance, identical line counts, threshold margins > factor x tolerance; any failure stops the run"
+      },
+      "control_cases": {
+        "control_S0_native": true,
+        "control_S1_native": true,
+        "control_S4_dist_phaseC": true
+      },
+      "recomputed_24h": {
+        "peak_kw": 12399.68136484241,
+        "v_min_pu": 0.9364811301464582,
+        "loading_max_pct": 108.50589535483024,
+        "new_lines": 0,
+        "loss_kwh": 21628.703248594487,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 12399.68136487036,
+        "v_min_pu": 0.9364811301368888,
+        "loading_max_pct": 108.50589535491302,
+        "new_lines": 0,
+        "loss_kwh": 21628.70324859544
+      },
+      "difference": {
+        "peak_kw": -2.7948772185482085e-08,
+        "v_min_pu": 9.569345316151612e-12,
+        "loading_max_pct": -8.277822871605167e-11,
+        "new_lines": 0,
+        "loss_kwh": -9.531504474580288e-10
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    },
+    {
+      "case": "S4_dist_phaseC",
+      "label": "Distributed S4, saved phase-C policy",
+      "audit_folder": "EVCS-BESS-V2G-Distributed-Stochastic/validation_applied_energy_final/alternative_controls/distributed_saved_policy",
+      "status": "archive_byte_identical",
+      "archive": "EVCS-BESS-V2G-Distributed-Stochastic/results/v301_continuacao_ac_segura.rar",
+      "member": "v301_continuacao_ac_segura/best/AC",
+      "sha256": {
+        "source.csv": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb",
+        "voltages.csv": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7",
+        "branches.csv": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58"
+      },
+      "expected_sha256": {
+        "source.csv": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb",
+        "voltages.csv": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7",
+        "branches.csv": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58"
+      },
+      "recomputed_24h": {
+        "peak_kw": 12404.122401380637,
+        "v_min_pu": 0.937516578613642,
+        "loading_max_pct": 109.3582003172572,
+        "new_lines": 0,
+        "loss_kwh": 21682.80389861302,
+        "bus_phases_per_hour": 3820,
+        "lines": 2483
+      },
+      "audited_24h": {
+        "peak_kw": 12404.122401380637,
+        "v_min_pu": 0.937516578613642,
+        "loading_max_pct": 109.3582003172572,
+        "new_lines": 0,
+        "loss_kwh": 21682.80389861302
+      },
+      "difference": {
+        "peak_kw": 0.0,
+        "v_min_pu": 0.0,
+        "loading_max_pct": 0.0,
+        "new_lines": 0,
+        "loss_kwh": 0.0
+      },
+      "matches_audited_summary": true,
+      "plotted": true
+    }
+  ],
+  "rev09_table_checks": [
+    {
+      "table": "13",
+      "row": "S0",
+      "ok": true
+    },
+    {
+      "table": "13",
+      "row": "S1",
+      "ok": true
+    },
+    {
+      "table": "13",
+      "row": "S2",
+      "ok": true
+    },
+    {
+      "table": "13",
+      "row": "S3",
+      "ok": true
+    },
+    {
+      "table": "13",
+      "row": "S4",
+      "ok": true
+    },
+    {
+      "table": "14",
+      "row": "S4_hist_native",
+      "ok": true
+    },
+    {
+      "table": "14",
+      "row": "S4_dist_native",
+      "ok": true
+    },
+    {
+      "table": "14",
+      "row": "S4_dist_phaseC",
+      "ok": true
+    }
+  ],
+  "s2_vs_s4": {
+    "loading_reduction_pp_unrounded": 6.065582133513985,
+    "voltage_gain_pu_unrounded": 0.012098317885908427,
+    "loading_reduction_pp_tabulated": 6.06,
+    "voltage_gain_pu_tabulated": 0.0121
+  },
+  "allow_predecessor": false
+}

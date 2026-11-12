@@ -1,0 +1,12 @@
+# O código lê os YAMLs oficiais em ../configs, sem alterar decisões da equipe.
+simulation:
+  source_mode: original           # original: conserva pu=1.05, trafo delta-wye, controles e capacitores
+  source_pu: 1.00                # usado apenas se source_mode=study_source
+  controls: auto                # auto: reguladores/capacitores do circuito; fixed: experimento sem controles
+  ampacity: study               # study: ampacidades do JSON do artigo; original: NormAmps do OpenDSS
+limits:
+  v_min_pu: 0.95
+  v_max_pu: 1.05
+  line_limit_pct: 100.0
+paper:
+  tariff_usd_kwh: 0.15          # hipótese original da avaliação, não tarifa de Honduras verificada

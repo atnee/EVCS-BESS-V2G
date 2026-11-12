@@ -1,0 +1,40 @@
+{
+  "status": "COMPLETE_VERIFIED_AFTER_BOOKKEEPING_CORRECTION",
+  "model": "original full OpenDSS with study ampacities",
+  "baseline": "Same native-policy S0/S1 and changed-policy S0/S1 as the S4 comparator",
+  "profiles": "S2 = saved S1 + 3 BESS; S3 = saved S1 with only 150 V2G cars relocated and rescheduled",
+  "s4_reconstruction_max_kw_kvar_error": 2.842170943040401e-14,
+  "resource_validator": "PASS",
+  "source_sha256": {
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\replay_s0_s4_opendss\\S1\\injections_replayed.csv": "67a73f70723cf0b81e942e8497c2ff22cb4d5e4972a1c548a70296af596c83ad",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\bess_siting_sizing.csv": "3f17ff9dfae3c181f0aa43a00f8eccf7b1fcfafa93f3512279faff48dc501137",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\bess_dispatch.csv": "05aadb694504d04151b5ad41cd099ad4e17dd3a07b6010c9cded3d6915813104",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\vehicle_dispatch.csv": "15d6cfc16cde94e03f7b57ab97a9f039711a9ee68e540190f8333b188e73a8df",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\injections_reoptimized.csv": "61cf9d7d71a34c58244a7bee6a018e416b09307c192384fe011211e1a2dc5dd9",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\control_policy_v25.json": "b5c96620f0e0cf8dc0227d0cdfc1c0a1abd700171a36368800f4b371d877b6fb"
+  },
+  "completed": [
+    "native_S2_auto",
+    "native_S2_frozen",
+    "native_S3_auto",
+    "native_S3_frozen",
+    "changed_S1_auto",
+    "changed_S1_frozen",
+    "changed_S2_auto",
+    "changed_S2_frozen",
+    "changed_S3_auto",
+    "changed_S3_frozen"
+  ],
+  "errors": [],
+  "inputs_unchanged": true,
+  "completion_verification": {
+    "status": "PASS",
+    "new_replays": 10,
+    "cases_in_comparison": 18,
+    "S4_component_additivity_max_kw_kvar": 8.526512829121202e-14,
+    "S4_saved_reconstruction_max_kw_kvar_error": 2.842170943040401e-14,
+    "frozen_taps_verified": true,
+    "source_hashes_preserved": true,
+    "correction": "The first runner exit code was 1 because its final bookkeeping check expected 8 instead of the 10 completed new replays. No physical run failed. The corrected runner uses 10; this independent checker verified every completed file and changes only the manifest status."
+  }
+}

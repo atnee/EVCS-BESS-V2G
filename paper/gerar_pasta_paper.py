@@ -137,6 +137,22 @@ for d, s in figs.items():
         copy(s, f"04_figuras/{d}")
     else:
         print("missing figure", s)
+# Fig. 1: schematic of the pipeline, drawn from configs/ (no simulation)
+from integration.framework_figure import framework_facts, framework_figures, save_paper_figure
+save_paper_figure(framework_figures(framework_facts(REPO/"configs")), OUT/"04_figuras")
+# Figs. 2-5: station siting, EV penetration, service transformers, substation demand (saved results)
+from integration.paper_s1_figures import build as s1_figures
+save_paper_figure(s1_figures(REPO/"configs", REPO/"results"), OUT/"04_figuras")
+# Fig. 6: daily maximum line loading of S1-S4 on one colour scale, from the saved integration tables
+from integration.loading_maps import build as loading_maps
+save_paper_figure(loading_maps(REPO/"configs", REPO/"results"), OUT/"04_figuras")
+# Fig. 7: regulators acting x taps frozen at S0 (S1, S4 voltage maps), minimum voltage and tap trajectories
+from integration.regulator_figure import build as regulator_figure
+save_paper_figure(regulator_figure(REPO/"configs", REPO/"results"), OUT/"04_figuras")
+# Fig. 8: joint S4 thermal and voltage sensitivity over every case (checked against sensitivity.csv)
+if (SENS/"sensitivity.csv").exists():
+    from integration.sensitivity_figure import build as sensitivity_figure
+    save_paper_figure(sensitivity_figure(REPO/"results"), OUT/"04_figuras")
 
 # xlsx with one sheet per table and an index of sources
 sheets = [

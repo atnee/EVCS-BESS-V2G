@@ -1,0 +1,22 @@
+{
+  "status": "COMPUTED_NOT_EXTERNALLY_VALIDATED",
+  "inputs": {
+    "S0": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\ieee8500\\integration\\dados\\S0_injections.csv",
+      "sha256": "a181196bab24915e27e0d9f5e2a9d329be85c47a15635d213482f8d9f5ab0489"
+    },
+    "S1": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\ieee8500\\integration\\dados\\S1_injections.csv",
+      "sha256": "dd862d1f579f4b793df83239a74b3a362cac820d629ad36e3f896e6db0a0cfb8"
+    },
+    "S4": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\ieee8500\\integration\\dados\\S4_injections.csv",
+      "sha256": "07fea273907a26775c255e6383b584921dcf38f27ce00d4de9431a57c0724312"
+    }
+  },
+  "conditions": "Native full IEEE network, original source and capacitor controls, study ampacities; identical historical injections; frozen means hourly S0 RegControl tap numbers, capacitor controls remain active",
+  "dt_h": 1,
+  "errors": [],
+  "completed_cases": 5,
+  "inputs_unchanged": true
+}

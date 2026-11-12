@@ -1,0 +1,12 @@
+{
+  "status": "S1_REPLAY_MATCHED",
+  "delta_kw": 200.0,
+  "baseline_error": {
+    "voltages": 1.562976187807763e-06,
+    "branches": 0.00025553447147785846,
+    "source": 0.0007389830188913038
+  },
+  "controls": "automatic S1, frozen during each sensitivity measurement",
+  "n_hours": 24,
+  "created_utc": "2026-11-09T22:08:29.880232+00:00"
+}

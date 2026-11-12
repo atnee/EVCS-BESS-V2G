@@ -1,0 +1,22 @@
+{
+  "reference_bess_capex_usd": 2404800.0,
+  "reference_v2g_host_capex_usd": 770000.0,
+  "reference_public_ac_site_capex_usd_each": 60000.0,
+  "existing_two_public_ac_sites_model_capex_usd": 120000.0,
+  "distributed_bess_linear_reference_usd": 2404800.0,
+  "distributed_ports_linear_reference_usd": 770000.0,
+  "additional_bess_sites_without_physical_connection_model": 2,
+  "v2g_existing_public_ac_sites_requiring_bidirectional_upgrade": 2,
+  "incremental_connection_cost_usd": null,
+  "known_incremental_total_usd": null,
+  "reason": "Equal modeled energy- and port-based totals are bookkeeping identities. Site-specific interconnection, converter/transformer, protection, metering, land, works and utility costs were not parameterized or quoted.",
+  "warning": "Apparent power at PF=1 is a theoretical lower bound, not an engineered transformer rating. Simultaneous port + public AC nameplate is a conservative active-power envelope, not a verified peak or AC load flow.",
+  "data_source_sha256": {
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\configs\\bess.yaml": "3ba89e073e45f12563b7e2db078130771baa2364b04965b9a2ac6ab0b1819f09",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\configs\\evcs.yaml": "ae51f246d81e4c0f87359214f32a6385ab50ca36136d532086a18213b9f3dff7",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\configs\\v2g.yaml": "2d27971bbd081f3a5f35df112e1dd3ac8aba8dd656791819f93fe7fcea61926b",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\bess_siting_sizing.csv": "3f17ff9dfae3c181f0aa43a00f8eccf7b1fcfafa93f3512279faff48dc501137",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\vehicle_dispatch.csv": "15d6cfc16cde94e03f7b57ab97a9f039711a9ee68e540190f8333b188e73a8df",
+    "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\src\\network\\data\\ieee8500.json": "6b35cf7c6c4c631ae4f70d288a1cdfd2abd3c982fe0ab885a26fcaf6db64a93e"
+  }
+}

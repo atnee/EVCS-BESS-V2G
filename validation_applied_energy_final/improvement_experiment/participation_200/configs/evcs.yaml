@@ -1,0 +1,381 @@
+strategy: fixed
+time:
+  start: '2026-01-01T00:00:00-06:00'
+  steps: 24
+  dt_h: 1.0
+station:
+  id: EVCS-1
+  bus: m1069504
+  phases: ABC
+  chargers: 204
+  charger_kw: 11.0
+  connection_kw: 2244.0
+  capex: 1020000
+  currency: USD
+  bidirectional: true
+independent_demand_kw:
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 4.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 15.0
+- 44.0
+- 44.0
+- 44.0
+- 44.0
+- 44.0
+- 10.0
+- 10.0
+- 10.0
+planning:
+  candidate_spacing_m: 250
+  ac_siting: full_coverage
+  min_served_share: 0.95
+  seed: 42
+  resolution_min: 15
+  charger_efficiency: 0.95
+  sizing_quantile: 0.95
+  fleet:
+    evs: 3000
+    max_ac_kw: 11.0
+    max_dc_kw: 100.0
+    classes:
+      private:
+        share: 0.85
+        battery_kwh: 44.9
+        battery_std_kwh: 15.0
+        daily_km: 40.0
+        kwh_per_km: 0.18
+        public_share: 0.6
+        arrival_soc_mean: 0.3
+        arrival_soc_std: 0.1
+        services:
+          ac: 0.6
+          dc: 0.4
+      taxi:
+        share: 0.15
+        battery_kwh: 60.0
+        battery_std_kwh: 10.0
+        daily_km: 200.0
+        kwh_per_km: 0.18
+        public_share: 1.0
+        arrival_soc_mean: 0.25
+        arrival_soc_std: 0.08
+        services:
+          dc: 0.8
+          ac: 0.2
+        arrival_shape:
+          dc:
+          - 2
+          - 1
+          - 1
+          - 1
+          - 1
+          - 1
+          - 2
+          - 3
+          - 3
+          - 3
+          - 4
+          - 5
+          - 6
+          - 6
+          - 5
+          - 4
+          - 4
+          - 5
+          - 6
+          - 6
+          - 5
+          - 4
+          - 3
+          - 2
+          ac:
+          - 4
+          - 4
+          - 3
+          - 2
+          - 1
+          - 1
+          - 1
+          - 1
+          - 1
+          - 1
+          - 1
+          - 2
+          - 3
+          - 3
+          - 2
+          - 1
+          - 1
+          - 1
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 5
+  station_types:
+    ac:
+      name: eletroposto
+      charger_kw: 22.0
+      chargers_per_site: 6
+      share: 0.6
+      target_soc: 0.9
+      max_wait_min: 30
+      coverage_radius_m: 500.0
+      min_spacing_m: 400.0
+      arrival_shape:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      - 3
+      - 5
+      - 5
+      - 4
+      - 4
+      - 4
+      - 4
+      - 4
+      - 4
+      - 5
+      - 6
+      - 6
+      - 5
+      - 3
+      - 2
+      - 1
+      - 0
+      capex_usd: 60000.0
+    ac1:
+      name: "eletroposto monof\xE1sico"
+      charger_kw: 7.4
+      chargers_per_site: 2
+      share: 0.0
+      serves: ac
+      phases: 1
+      target_soc: 0.9
+      max_wait_min: 30
+      coverage_radius_m: 500.0
+      min_spacing_m: 0.0
+      arrival_shape:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      - 3
+      - 5
+      - 5
+      - 4
+      - 4
+      - 4
+      - 4
+      - 4
+      - 4
+      - 5
+      - 6
+      - 6
+      - 5
+      - 3
+      - 2
+      - 1
+      - 0
+      capex_usd: 24000.0
+    dc:
+      name: hub
+      charger_kw: 150.0
+      chargers_per_site: 4
+      share: 0.4
+      target_soc: 0.8
+      max_wait_min: 15
+      coverage_radius_m: 1500.0
+      min_spacing_m: 800.0
+      arrival_shape:
+      - 1
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      - 2
+      - 4
+      - 5
+      - 4
+      - 3
+      - 3
+      - 4
+      - 3
+      - 3
+      - 4
+      - 5
+      - 6
+      - 6
+      - 5
+      - 4
+      - 3
+      - 2
+      - 1
+      capex_usd: 400000.0
+integration:
+  evs: 2800
+  sites:
+    m1125976: dc
+    n1136365: dc
+    m1089141: dc
+    l2786266: dc
+    l2673309: ac1
+    l3120376: ac1
+    m1026667: ac1
+    m1069560: ac1
+    n1139541: ac
+    m1026646: ac1
+    l2936279: ac
+    m1069412: ac1
+    l3142078: ac1
+    m1069629: ac1
+    m1209790: ac
+    l2841619: ac1
+    l2710504: ac1
+    l3157167: ac1
+    l3231269: ac1
+    l2897779: ac1
+    m1026496: ac1
+    l2991943: ac1
+    l2952013: ac1
+    l3233353: ac1
+    l3178977: ac1
+    l2692600: ac1
+    m1126005: ac1
+    l2897807: ac1
+    l3104117: ac1
+    m1027001: ac1
+    m1089165: ac1
+    l2820583: ac1
+    m1047580: ac
+    l2860491: ac
+    l2767343: ac1
+    l3727710: ac1
+    n1139552: ac
+    m1047773: ac1
+    m1108378: ac
+    l3010563: ac1
+    l3178973: ac1
+    l2785516: ac1
+    l2748152: ac1
+    l3104113: ac1
+    l2804245: ac1
+    l3253570: ac1
+    l2935556: ac1
+    l3448661: ac1
+    l2730108: ac1
+    l2711225: ac1
+    l3160107: ac
+    l2691942: ac1
+    l2935568: ac1
+    l2860488: ac1
+    m1069499: ac
+    e182744: ac1
+    m1209751: ac1
+    l3160896: ac1
+    l3010564: ac1
+    l2989565: ac1
+    l3645811: ac1
+    l3200222: ac1
+    l2917333: ac1
+    l2785547: ac1
+    m1069348: ac1
+    l2991917: ac1
+    m1166407: ac1
+    l2842379: ac1
+    l3122818: ac1
+    l2973157: ac1
+    l3235245: ac1
+    l2822860: ac1
+    l2764403: ac1
+    m1027110: ac1
+    l2801949: ac1
+  phases:
+    l2673309: C
+    l3120376: A
+    m1026667: A
+    m1069560: B
+    m1026646: A
+    m1069412: B
+    l3142078: B
+    m1069629: B
+    l2841619: C
+    l2710504: B
+    l3157167: A
+    l3231269: B
+    l2897779: C
+    m1026496: B
+    l2991943: C
+    l2952013: A
+    l3233353: A
+    l3178977: C
+    l2692600: C
+    m1126005: A
+    l2897807: B
+    l3104117: C
+    m1027001: B
+    m1089165: C
+    l2820583: C
+    l2767343: C
+    l3727710: A
+    m1047773: B
+    l3010563: A
+    l3178973: A
+    l2785516: B
+    l2748152: B
+    l3104113: A
+    l2804245: B
+    l3253570: C
+    l2935556: B
+    l3448661: B
+    l2730108: C
+    l2711225: C
+    l2691942: B
+    l2935568: B
+    l2860488: B
+    e182744: B
+    m1209751: B
+    l3160896: C
+    l3010564: C
+    l2989565: A
+    l3645811: C
+    l3200222: B
+    l2917333: A
+    l2785547: B
+    m1069348: C
+    l2991917: B
+    m1166407: C
+    l2842379: A
+    l3122818: C
+    l2973157: A
+    l3235245: C
+    l2822860: B
+    l2764403: A
+    m1027110: A
+    l2801949: B
+service_transformers:
+  share_single_phase_eletropostos: true
+  most_loaded: 5
+  least_loaded: 3

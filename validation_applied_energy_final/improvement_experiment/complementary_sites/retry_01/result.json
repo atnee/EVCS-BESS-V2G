@@ -1,0 +1,19 @@
+{
+  "case": "complementary_sites",
+  "peak_kw": 12808.943176913228,
+  "vmin": 0.9225614530559979,
+  "vmax": 1.059318419041,
+  "max_loading_pct": 111.69753577451534,
+  "new_lines": 14,
+  "thermal_pph": 270.5435521935957,
+  "under_puh": 4.858575588947678,
+  "over_puh": 2.5967705640663565,
+  "loss_kwh": 21667.19294565712,
+  "no_aggravation_s0": false,
+  "accepted_without_voltage_tradeoff": false,
+  "absolute_feasible": false,
+  "vehicles": 150,
+  "bess_bus": "l2711226",
+  "v2g_bus": "l2692633",
+  "v2g_delivered_kwh": 352.9297596977628
+}

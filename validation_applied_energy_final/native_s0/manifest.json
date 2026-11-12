@@ -1,0 +1,175 @@
+{
+  "engine": "DSS C-API Library version 0.14.5 revision 87d85c2622c8281b92255335bc7c09b11191b21d based on OpenDSS SVN 3723 [FPC 3.2.2] (64-bit build) MVMULT INCREMENTAL_Y CONTEXT_API PM 20240329033747; License Status: Open \nDSS-Python version: 0.15.7\nOpenDSSDirect.py version: 0.9.4",
+  "conditions": "Independent snapshots; native source, full secondary network, automatic native controls; study ampacities for MT reporting",
+  "errors": [],
+  "runs": [
+    {
+      "case": "project_h03",
+      "hour": 3,
+      "master": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\data\\ieee8500\\source\\Master.dss",
+      "master_sha256": "40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c",
+      "loadmult": 0.55,
+      "converged": true,
+      "topology": {
+        "status": "PASS",
+        "lines_checked": 2483,
+        "errors": 0,
+        "examples": [],
+        "meaning": "Checagem de conectividade fisica das fases das linhas MT; nao compara fidelidade do fluxo eletrico."
+      },
+      "physical_nodes": 3820,
+      "missing_nodes": [
+        [
+          "193-48013",
+          "C"
+        ],
+        [
+          "193-51796",
+          "B"
+        ],
+        [
+          "e182745",
+          "C"
+        ]
+      ],
+      "vmin_pu": 1.005662253413076,
+      "vmax_pu": 1.0519358974145563,
+      "source_kw": 6771.703284055814,
+      "source_kvar": 277.06210264757846,
+      "loss_kw": 434.3200026041375,
+      "loss_kvar": 927.741028682605,
+      "load_kw": 6337.367353281042,
+      "load_kvar": 1588.2969105280654,
+      "cap_kvar": -2238.9764446328263,
+      "balance_residual_kw": 0.015927834989554412,
+      "balance_residual_kvar": 0.0006080697344259534,
+      "balance_pass": true
+    },
+    {
+      "case": "project_h18",
+      "hour": 18,
+      "master": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\data\\ieee8500\\source\\Master.dss",
+      "master_sha256": "40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c",
+      "loadmult": 1.0,
+      "converged": true,
+      "topology": {
+        "status": "PASS",
+        "lines_checked": 2483,
+        "errors": 0,
+        "examples": [],
+        "meaning": "Checagem de conectividade fisica das fases das linhas MT; nao compara fidelidade do fluxo eletrico."
+      },
+      "physical_nodes": 3820,
+      "missing_nodes": [
+        [
+          "193-48013",
+          "C"
+        ],
+        [
+          "193-51796",
+          "B"
+        ],
+        [
+          "e182745",
+          "C"
+        ]
+      ],
+      "vmin_pu": 0.9382977769144806,
+      "vmax_pu": 1.0503485565508976,
+      "source_kw": 11983.670169813011,
+      "source_kvar": 1385.2003305102057,
+      "loss_kw": 1210.3367707752266,
+      "loss_kvar": 2768.347427878056,
+      "load_kw": 10773.234052586742,
+      "load_kvar": 2700.111546879722,
+      "cap_kvar": -4083.2046899305096,
+      "balance_residual_kw": 0.09934645104226547,
+      "balance_residual_kvar": -0.05395431706256204,
+      "balance_pass": true
+    },
+    {
+      "case": "installed_h03",
+      "hour": 3,
+      "master": "C:\\Program Files\\OpenDSS\\IEEETestCases\\8500-Node\\Master.dss",
+      "master_sha256": "9bd0e17f33e9ec7e0baa46693abeec069b148cbee8477301d77450f95d601ad8",
+      "loadmult": 0.55,
+      "converged": true,
+      "topology": {
+        "status": "PASS",
+        "lines_checked": 2483,
+        "errors": 0,
+        "examples": [],
+        "meaning": "Checagem de conectividade fisica das fases das linhas MT; nao compara fidelidade do fluxo eletrico."
+      },
+      "physical_nodes": 3820,
+      "missing_nodes": [
+        [
+          "193-48013",
+          "C"
+        ],
+        [
+          "193-51796",
+          "B"
+        ],
+        [
+          "e182745",
+          "C"
+        ]
+      ],
+      "vmin_pu": 1.0056622553049055,
+      "vmax_pu": 1.0519358957769542,
+      "source_kw": 6771.703292564036,
+      "source_kvar": 277.0622221891698,
+      "loss_kw": 434.32001142551536,
+      "loss_kvar": 927.741138638488,
+      "load_kw": 6337.367353283611,
+      "load_kvar": 1588.2969105310567,
+      "cap_kvar": -2238.9764345637086,
+      "balance_residual_kw": 0.01592751926443725,
+      "balance_residual_kvar": 0.0006075833338172743,
+      "balance_pass": true
+    },
+    {
+      "case": "installed_h18",
+      "hour": 18,
+      "master": "C:\\Program Files\\OpenDSS\\IEEETestCases\\8500-Node\\Master.dss",
+      "master_sha256": "9bd0e17f33e9ec7e0baa46693abeec069b148cbee8477301d77450f95d601ad8",
+      "loadmult": 1.0,
+      "converged": true,
+      "topology": {
+        "status": "PASS",
+        "lines_checked": 2483,
+        "errors": 0,
+        "examples": [],
+        "meaning": "Checagem de conectividade fisica das fases das linhas MT; nao compara fidelidade do fluxo eletrico."
+      },
+      "physical_nodes": 3820,
+      "missing_nodes": [
+        [
+          "193-48013",
+          "C"
+        ],
+        [
+          "193-51796",
+          "B"
+        ],
+        [
+          "e182745",
+          "C"
+        ]
+      ],
+      "vmin_pu": 0.9382977816016975,
+      "vmax_pu": 1.0503485547736788,
+      "source_kw": 11983.670215322352,
+      "source_kvar": 1385.200498826995,
+      "loss_kw": 1210.3368152945382,
+      "loss_kvar": 2768.3475755385193,
+      "load_kw": 10773.234052582497,
+      "load_kvar": 2700.1115468753756,
+      "cap_kvar": -4083.2046686747035,
+      "balance_residual_kw": 0.09934744531756223,
+      "balance_residual_kvar": -0.05395491219633186,
+      "balance_pass": true
+    }
+  ]
+}
