@@ -1,0 +1,5 @@
+{
+  "file": "snapshot_fontes.zip",
+  "sha256": "fbac2745cb5250cb28a20237b982dad84cf598026b8744135bb688241f39dfa6",
+  "note": "Verifiable snapshot; hash detects modification, not filesystem write protection"
+}

@@ -1,0 +1,8 @@
+group,scenario,policy,view,new_overloaded_lines,max_branch_loading_pct,min_voltage_pu,source
+distributed_native,S0,native,auto,0,111.028879,0.9370687599,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+distributed_native,S1,native,auto,41,132.1305032,0.9191512833,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+distributed_native,S2,native,auto,0,114.5714775,0.9243828123,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+distributed_native,S3,native,auto,32,129.6965913,0.9255796609,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+distributed_native,S4,native,auto,0,108.5058954,0.9364811301,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+distributed_phaseC,S4,saved phase-C,auto,0,109.3582003,0.9375165786,validation_applied_energy_final/distributed_s2_s3/comparison.csv
+historical_replay,S4,native,auto,23,120.7979682,0.9235687523,validation_applied_energy_final/exact_profile_pilot/summary.csv

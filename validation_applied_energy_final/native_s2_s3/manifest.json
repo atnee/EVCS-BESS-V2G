@@ -1,0 +1,31 @@
+{
+  "status": "COMPLETE",
+  "model": "full original OpenDSS, original source, native automatic controls",
+  "dt_h": 1.0,
+  "inputs": {
+    "S2": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\ieee8500\\integration\\dados\\S2_injections.csv",
+      "sha256": "7a4581c15cdf28db866fbf7f69b8cdad75b83702d3a59d8d7a6738c9881ed030"
+    },
+    "S3": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\ieee8500\\integration\\dados\\S3_injections.csv",
+      "sha256": "8b141f572453e481c0d77d9c3cc8ec3a9bf602657c9ef2f4d8bdaa9a82e55943"
+    }
+  },
+  "completed": [
+    "S2_auto",
+    "S2_frozen",
+    "S3_auto",
+    "S3_frozen"
+  ],
+  "errors": [],
+  "resources": {
+    "S3": {
+      "vehicles": 150,
+      "delivered_kwh": 1360.7208539578132,
+      "reserve_departure_ports_and_soc": "PASS",
+      "saved_states_match": true
+    }
+  },
+  "inputs_unchanged": true
+}

@@ -1,0 +1,19 @@
+{
+  "case": "participation_200",
+  "peak_kw": 13211.33770363397,
+  "vmin": 0.930160487216094,
+  "vmax": 1.0594452499171971,
+  "max_loading_pct": 127.54076641753265,
+  "new_lines": 21,
+  "thermal_pph": 372.7527863247083,
+  "under_puh": 2.0847391980252556,
+  "over_puh": 2.7573147912003932,
+  "loss_kwh": 21643.839170751176,
+  "no_aggravation_s0": false,
+  "accepted_without_voltage_tradeoff": false,
+  "absolute_feasible": false,
+  "vehicles": 200,
+  "bess_bus": "l3029502",
+  "v2g_bus": "m1069504",
+  "v2g_delivered_kwh": 1314.4898003543292
+}

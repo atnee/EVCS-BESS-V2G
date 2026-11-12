@@ -1,0 +1,22 @@
+{
+  "S2_bess": {
+    "initial_soc": 0.3,
+    "final_soc": 0.29999999999999993,
+    "boundary_states": 25,
+    "steps": 24,
+    "matches_saved": true
+  },
+  "S4_bess": {
+    "initial_soc": 0.3,
+    "final_soc": 0.3,
+    "boundary_states": 25,
+    "steps": 24,
+    "matches_saved": true
+  },
+  "S4_v2g": {
+    "vehicles": 150,
+    "delivered_kwh": 1360.7208539578132,
+    "departure_mobility_soc_power_ports_validated": true,
+    "matches_saved_states": true
+  }
+}

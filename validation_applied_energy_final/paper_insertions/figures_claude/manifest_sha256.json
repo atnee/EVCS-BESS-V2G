@@ -1,0 +1,296 @@
+{
+  "status": "DERIVED_FROM_SAVED_RESULTS_NO_SIMULATION",
+  "inputs": {
+    "paper_style": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\src\\integration\\paper_style.py",
+      "sha256": "51506097e5eba3bca3c2a34a0c5ae4bc4eff59cec8ad46f494f4d29a2514b527",
+      "bytes": 1911
+    },
+    "fig9_voltage_pairs": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\figure_data\\fig9_voltage_pairs.csv",
+      "sha256": "9ce6cce422f69b1cbf691994c2a85504fd35275ad165cbc67353cc2664d040b7",
+      "bytes": 520522
+    },
+    "table_S1_paired_voltage_error": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\tables\\table_S1_paired_voltage_error.csv",
+      "sha256": "3dff314501957e0d26d10fe195095da2243426f71d206aaf3cf61df9ecc66b6c",
+      "bytes": 470
+    },
+    "paired_h03": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\validacao_fases_s0_ae\\s0_h03_mt_equivalente_comparacao_tensoes.csv",
+      "sha256": "52451affb2fc0eacd9468dbe1f921258159511fa89123ed21cffd072a6395498",
+      "bytes": 352466
+    },
+    "paired_h18": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\validacao_fases_s0_ae\\s0_h18_mt_equivalente_comparacao_tensoes.csv",
+      "sha256": "08e95bcdaa275f50cb67381568b262f9f9afe0f56b21915feee1a50011e35e29",
+      "bytes": 348830
+    },
+    "S0:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\branches.csv",
+      "sha256": "5bdf3736103891cdcff94c0e12e6e38c764bf12a93bae804e6fed169e6043a61",
+      "bytes": 5435321
+    },
+    "table_13": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\tables\\table_13_opendss_operational_comparison.csv",
+      "sha256": "9c8baaedc46a04bc41a1bec0f56ae545b9143af04ef34d99b4c3edcc35534737",
+      "bytes": 756
+    },
+    "fig10_hourly_profiles": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\figure_data\\fig10_hourly_profiles.csv",
+      "sha256": "6a8cdb5961eda85df6bdcd323a43387bcb7f4ca2cbc1c614db8cfe44e248baad",
+      "bytes": 13581
+    },
+    "S0:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\source.csv",
+      "sha256": "0e76ad762f33c94faa4783abe2ba1329c21bab38d6e4956d5a59030003e9de76",
+      "bytes": 1543
+    },
+    "S0:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\voltages.csv",
+      "sha256": "88693527516ccf63423033e2e26ca2d0ea9a3c8b547b0876de61fbcdcf75fbd2",
+      "bytes": 3068946
+    },
+    "S1:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\source.csv",
+      "sha256": "d882bb0b7a4b714c446667df08d8e2a1015af4afbe472e4e61592202e314dcd3",
+      "bytes": 1556
+    },
+    "S1:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\voltages.csv",
+      "sha256": "dfc3a0a096891f3c6a0f48bb106a62952b13f44269910312d3fd59ed700ce088",
+      "bytes": 3069681
+    },
+    "S1:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\branches.csv",
+      "sha256": "dc0a2ea3b51ca1fc4bf6507f4265ae5255fb93a52431e958ec6badb282f133e1",
+      "bytes": 5434836
+    },
+    "S4_single:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\source.csv",
+      "sha256": "d2ae6272b6ab661a0dfce5753255e737c543a16382b10b6a38803acb6246e379",
+      "bytes": 1558
+    },
+    "S4_single:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\voltages.csv",
+      "sha256": "e0d9a038f9e411fc478dc485b8f7856ea94e4926b7149f5dbf986e7c7cb4f3d0",
+      "bytes": 3069444
+    },
+    "S4_single:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\branches.csv",
+      "sha256": "7c6eca15b39e1843a2b4bc89ae4dad4c51e41f2645a5ed8c2487f636dee34a0b",
+      "bytes": 5434122
+    },
+    "S4_dist_native:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\source.csv",
+      "sha256": "3e15fbace737da26fe2cba24fb16745112fc20fba92708759a7beafc1e0913ed",
+      "bytes": 1557
+    },
+    "S4_dist_native:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\voltages.csv",
+      "sha256": "92d67d4831d44f2a501abbb3af309343591ea74ff8e134616be53e64aa2afcf3",
+      "bytes": 3069288
+    },
+    "S4_dist_native:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\branches.csv",
+      "sha256": "6a6e087ca5b773e9c879dbe4c3c813a625a92752a617990ef19f142668fb45aa",
+      "bytes": 5434427
+    },
+    "S4_dist_policy:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\source.csv",
+      "sha256": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb",
+      "bytes": 1554
+    },
+    "S4_dist_policy:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\voltages.csv",
+      "sha256": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7",
+      "bytes": 3069441
+    },
+    "S4_dist_policy:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\branches.csv",
+      "sha256": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58",
+      "bytes": 5434374
+    },
+    "historical_bess_config": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\configs\\bess.yaml",
+      "sha256": "3ba89e073e45f12563b7e2db078130771baa2364b04965b9a2ac6ab0b1819f09",
+      "bytes": 7324
+    },
+    "distributed_bess_sizing": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\bess_siting_sizing.csv",
+      "sha256": "3f17ff9dfae3c181f0aa43a00f8eccf7b1fcfafa93f3512279faff48dc501137",
+      "bytes": 166
+    },
+    "distributed_vehicle_dispatch": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\vehicle_dispatch.csv",
+      "sha256": "15d6cfc16cde94e03f7b57ab97a9f039711a9ee68e540190f8333b188e73a8df",
+      "bytes": 125956
+    },
+    "table_14": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\tables\\table_14_controls_and_frozen_taps.csv",
+      "sha256": "f1c2a0abb87cf5e4d55c41ef7f353936a47f166f5663893e16e6684a54d1fa12",
+      "bytes": 843
+    },
+    "alternative_controls_comparison": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\comparison.csv",
+      "sha256": "73a832b6244d11948e597fdbed2feac7dadcd1b88bbf470034e1c9563adfa6e0",
+      "bytes": 837
+    },
+    "policy:applied_policy": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\applied_policy.json",
+      "sha256": "4022f5a13355c92a884a8aacbefc1bb4fe2b28ea3a219e714f256cdb50965aeb",
+      "bytes": 485
+    },
+    "policy_frozen:applied_policy": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\applied_policy.json",
+      "sha256": "4022f5a13355c92a884a8aacbefc1bb4fe2b28ea3a219e714f256cdb50965aeb",
+      "bytes": 485
+    },
+    "S0_policy:applied_policy": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\S0_saved_policy\\applied_policy.json",
+      "sha256": "4022f5a13355c92a884a8aacbefc1bb4fe2b28ea3a219e714f256cdb50965aeb",
+      "bytes": 485
+    },
+    "native_frozen:regulators": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\regulators.csv",
+      "sha256": "35c1b293d41e970533a1d872d1c4261ec681c39146d927198c33d3b9995875f8",
+      "bytes": 4244
+    },
+    "S0:regulators": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\regulators.csv",
+      "sha256": "35c1b293d41e970533a1d872d1c4261ec681c39146d927198c33d3b9995875f8",
+      "bytes": 4244
+    },
+    "policy_frozen:regulators": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\regulators.csv",
+      "sha256": "e9a20c6594db00975631179667ef755cffe33344fe2e598a65ca7989966852fa",
+      "bytes": 4245
+    },
+    "S0_policy:regulators": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\S0_saved_policy\\regulators.csv",
+      "sha256": "e9a20c6594db00975631179667ef755cffe33344fe2e598a65ca7989966852fa",
+      "bytes": 4245
+    },
+    "native_frozen:capacitors": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\capacitors.csv",
+      "sha256": "49cb008262fc1e1d09cd3ce2a529ef685b07259f66324961f05e0d920ea7b2ad",
+      "bytes": 4219
+    },
+    "policy_frozen:capacitors": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\capacitors.csv",
+      "sha256": "49cb008262fc1e1d09cd3ce2a529ef685b07259f66324961f05e0d920ea7b2ad",
+      "bytes": 4219
+    },
+    "single:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\source.csv",
+      "sha256": "d2ae6272b6ab661a0dfce5753255e737c543a16382b10b6a38803acb6246e379",
+      "bytes": 1558
+    },
+    "single:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\voltages.csv",
+      "sha256": "e0d9a038f9e411fc478dc485b8f7856ea94e4926b7149f5dbf986e7c7cb4f3d0",
+      "bytes": 3069444
+    },
+    "single:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\branches.csv",
+      "sha256": "7c6eca15b39e1843a2b4bc89ae4dad4c51e41f2645a5ed8c2487f636dee34a0b",
+      "bytes": 5434122
+    },
+    "native:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\source.csv",
+      "sha256": "3e15fbace737da26fe2cba24fb16745112fc20fba92708759a7beafc1e0913ed",
+      "bytes": 1557
+    },
+    "native:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\voltages.csv",
+      "sha256": "92d67d4831d44f2a501abbb3af309343591ea74ff8e134616be53e64aa2afcf3",
+      "bytes": 3069288
+    },
+    "native:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\branches.csv",
+      "sha256": "6a6e087ca5b773e9c879dbe4c3c813a625a92752a617990ef19f142668fb45aa",
+      "bytes": 5434427
+    },
+    "policy:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\source.csv",
+      "sha256": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb",
+      "bytes": 1554
+    },
+    "policy:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\voltages.csv",
+      "sha256": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7",
+      "bytes": 3069441
+    },
+    "policy:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\branches.csv",
+      "sha256": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58",
+      "bytes": 5434374
+    },
+    "native_frozen:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\source.csv",
+      "sha256": "6255f5958dfc5469775c07144fa4ff7df3dc0ec07d8a7b10cc33fd4c96f30d03",
+      "bytes": 1562
+    },
+    "native_frozen:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\voltages.csv",
+      "sha256": "cfb476c1cb506e1e74c1154963bc218c39f63738103e82342e710284c73c471d",
+      "bytes": 3071600
+    },
+    "native_frozen:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\branches.csv",
+      "sha256": "dffbfb29766b2ec16d5bf071a66e89d88ac4ce1f921c592364a7f0777171a6c2",
+      "bytes": 5434038
+    },
+    "policy_frozen:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\source.csv",
+      "sha256": "a844bb63167a81a1b619c7a20c97792270b7fe915291e4341a182311e5777368",
+      "bytes": 1555
+    },
+    "policy_frozen:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\voltages.csv",
+      "sha256": "e82e1499672f3f9e53702760666e86801e1e4f8dc3b711c903cbd411cdd4af61",
+      "bytes": 3072058
+    },
+    "policy_frozen:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\branches.csv",
+      "sha256": "4667d8ae85d146eff51a09d14f79cc7bf704b3c4ed463d5da24347c8ec82dd5e",
+      "bytes": 5433589
+    }
+  },
+  "script": {
+    "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\paper_insertions\\figures_claude\\build_figures_claude.py",
+    "sha256": "0459b73bb630ebabaab886e8d8834ce819eb01e11a928a2d60a905c968a6470c"
+  },
+  "outputs": {
+    "fig9_model_voltage_discrepancy_claude.pdf": "b2e2faad48d6ffdfa0e84961c10858ad064ac261ddf4f7eaa5d06b8574e20398",
+    "fig9_model_voltage_discrepancy_claude.png": "61836982b0542a7094f23e0431ddf15558b39362f7ac8ddcae8d53b4ffb86b92",
+    "fig9_model_voltage_discrepancy_claude.tif": "082f841bdc9d527599843dbd9625a4d9daf3b5ea8a4a8b3314a2500d6b35bd0f",
+    "fig10_native_operational_replay_claude.pdf": "8066c8005ad3171935027f8617e7713e41ea657107158ea70d3823a64a335f14",
+    "fig10_native_operational_replay_claude.png": "c2180815623677c4ec8e82b633dc788b5b2924fc203272c9fd41d1e215e6edc5",
+    "fig10_native_operational_replay_claude.tif": "5b63975649e1413f1171fb2f9d97c54e55c081881219e14dbc9215a29dbe6166",
+    "fig11_thermal_voltage_control_tradeoff_claude.pdf": "da1a32cea40ebbd851c9ecd9821f1758d7d8a077cb414dbd14165b971cc2c473",
+    "fig11_thermal_voltage_control_tradeoff_claude.png": "8d209ce2a2294d6703f31ee36135f4cdf2185aadc21d05ec8b5fc93998635cab",
+    "fig11_thermal_voltage_control_tradeoff_claude.tif": "abb88b377054f878027500b3f10944effa9fa3b9bc6e919d03cc7dd2f309e421",
+    "verification.json": "668d05e55119eb633aada657d97e38c3b8caaa704ce024769a30c62b3ce3edb0",
+    "CAPTIONS_en.md": "8157ae82847b3ddac2f96c332c8ffd092c3c17f2993dbeb28dfc722dd3601d2b",
+    "data/fig10_plotted_series.csv": "f0420d0dfbcecf2ad18025d95c0c392a6529e26a8d02137e765dfd6c37f970b7",
+    "data/fig11_plotted_severity.csv": "c9df3d731dc6b1ce5d4562e9721ca55d93ec4585a4555ca8595f9e33baf7bd31",
+    "data/fig9_summary_by_phase.csv": "9d05b42490ff8474e6e959841ef535c186e699317464c9e570cf0600bb2eb36f"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "matplotlib": "3.10.7",
+    "pandas": "2.3.3",
+    "numpy": "2.3.3",
+    "pillow": "11.3.0",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "rendering": {
+    "png_dpi": 600,
+    "tiff_dpi": 1000,
+    "tiff_compression": "LZW",
+    "colour": "RGB",
+    "pdf_fonttype": 42,
+    "fig9_whiskers": "minimum-maximum"
+  }
+}

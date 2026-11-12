@@ -1,0 +1,21 @@
+{
+  "source": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best",
+  "injection_sha256": "61cf9d7d71a34c58244a7bee6a018e416b09307c192384fe011211e1a2dc5dd9",
+  "comparison": [
+    {
+      "table": "branches",
+      "pairs": 89136,
+      "max_error": 1.4210854715202004e-14
+    },
+    {
+      "table": "voltages",
+      "pairs": 91680,
+      "max_error": 2.220446049250313e-16
+    },
+    {
+      "table": "source",
+      "pairs": 24,
+      "max_error": 1.8189894035458565e-12
+    }
+  ]
+}

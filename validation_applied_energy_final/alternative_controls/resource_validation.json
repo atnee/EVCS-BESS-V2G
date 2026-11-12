@@ -1,0 +1,28 @@
+{
+  "resource_validators_passed": true,
+  "vehicle_count": 150,
+  "allocation": {
+    "m1209790": 67,
+    "m1069504": 67,
+    "l3160107": 16
+  },
+  "bess": [
+    {
+      "site": "l2692633",
+      "power_kw": 703.0166132159566,
+      "energy_kwh": 1070.117635204186
+    },
+    {
+      "site": "l2711226",
+      "power_kw": 1148.2479060141677,
+      "energy_kwh": 4983.803012706247
+    },
+    {
+      "site": "l3029502",
+      "power_kw": 348.7354807698757,
+      "energy_kwh": 1146.0793520895677
+    }
+  ],
+  "max_injection_error_kw": 2.842170943040401e-14,
+  "warning": "Aggregate fleet/SOC/availability constraints verified; civil works, distributed charger infrastructure and connection ratings still require design approval."
+}

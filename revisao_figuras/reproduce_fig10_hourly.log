@@ -1,0 +1,21 @@
+START control_S0_native
+control_S0_native ACCEPTED
+DONE control_S0_native 2.1 s
+START control_S1_native
+control_S1_native ACCEPTED
+DONE control_S1_native 2.3 s
+START control_S4_dist_phaseC
+control_S4_dist_phaseC ACCEPTED
+DONE control_S4_dist_phaseC 2.1 s
+START S4_hist_native
+S4_hist_native ACCEPTED
+DONE S4_hist_native 2.4 s
+START S4_dist_native
+S4_dist_native ACCEPTED
+DONE S4_dist_native 2.2 s
+START S2_dist_native
+S2_dist_native ACCEPTED
+DONE S2_dist_native 2.2 s
+START S3_dist_native
+S3_dist_native ACCEPTED
+DONE S3_dist_native 2.2 s

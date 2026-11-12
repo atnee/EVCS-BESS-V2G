@@ -1,0 +1,13 @@
+OpenDSS BESS–V2G V1.1 — pacote incremental à V1.0
+
+ARQUIVOS:
+opendss_rebuild/reotimizar_guardas_v11.py
+opendss_rebuild/rebuild/joint_optimization.py  (VERSÃO COMPATÍVEL V1.0 + cortes V1.1)
+opendss_rebuild/tests/test_guardas_v11.py
+opendss_rebuild/REOTIMIZACAO_V11.md
+opendss_rebuild/RESUMO_PATCH_V11.txt
+
+Instale o ZIP na raiz do seu projeto, com Expand-Archive -Force.
+Leia REOTIMIZACAO_V11.md para comandos.
+Não executar a partir de uma pasta de saída não vazia.
+Não sobrescrever os resultados V1.0.

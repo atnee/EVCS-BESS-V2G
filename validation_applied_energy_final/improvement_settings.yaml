@@ -1,0 +1,21 @@
+# Hypotheses for a bounded experiment; no official configuration is changed.
+total_vehicles: 3000
+delta_kw: 200.0 # Numerical finite-difference step, inherited from existing calibration.
+solver_time_limit_s: 60.0 # Numerical budget per candidate; a feasible incumbent is not an optimum certificate.
+mip_rel_gap: 0.02
+thermal_screen_pct: 80.0 # Screening only; every physical line is checked in the AC replay.
+voltage_screen_margin_pu: 0.005
+thermal_weight: 40.0 # Hypothesis: existing surrogate objective weights, held fixed across cases.
+voltage_weight: 5000.0
+peak_weight: 0.5
+no_charge_window: [16, 22] # Hypothesis: avoid charging at 16 h and support the 20 h interval.
+extended_discharge_window: [16, 21]
+line_guard_tolerance_pp: 0.05 # Numerical comparison tolerance, not a relaxation of the 100% limit.
+voltage_guard_tolerance_pu: 0.0005 # Reporting guard; absolute violation counts retain 0.95/1.05.
+quantity_cases: [200, 250] # Hypotheses, not recommended deployment quantities.
+ports_reserve: 4 # Same independent-demand reservation as the original host station.
+port_cost_usd: 5000 # Original station CAPEX hypothesis; excludes site works.
+sites:
+  - {name: voltage_site, bess_bus: l3029502, v2g_bus: l2692633}
+  - {name: complementary_sites, bess_bus: l2711226, v2g_bus: l2692633}
+# Sites already shortlisted in results/v21_shortlist; technical/site feasibility remains unproven.

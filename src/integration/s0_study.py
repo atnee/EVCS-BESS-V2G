@@ -26,7 +26,12 @@ V_LIMITS = (.95, 1.05)  # ANSI C84.1 range A
 
 def load_curve(config_dir, steps, feeder):
     """<feeder>.yaml hourly multipliers at `steps` per day: linear between hour centres, periodic."""
-    hourly = np.asarray(read_parameters(Path(config_dir)/f"{feeder}.yaml").get("load_multipliers",[1.]*24),float)
+    return load_curve_from(read_parameters(Path(config_dir)/f"{feeder}.yaml").get("load_multipliers",[1.]*24),steps)
+
+
+def load_curve_from(hourly, steps):
+    """24 hourly multipliers at `steps` per day: linear between hour centres, periodic."""
+    hourly = np.asarray(hourly,float)
     if steps == len(hourly):
         return hourly
     if len(hourly) != 24:

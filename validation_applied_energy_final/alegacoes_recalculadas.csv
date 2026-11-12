@@ -1,0 +1,6 @@
+scenario,peak_kw,dt_h,steps,unique_overloaded_lines,new_lines_vs_S0,max_loading_pct,source_file
+S0,11782.932139921311,1.0,24,1,0,108.72743061709112,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\results\ieee8500\integration\dados\S0_source.csv
+S1,14252.199290747303,1.0,24,50,49,129.7453261484414,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\results\ieee8500\integration\dados\S1_source.csv
+S2,12766.037654908703,1.0,24,9,8,113.20352302792956,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\results\ieee8500\integration\dados\S2_source.csv
+S3,13345.3422315618,1.0,24,22,21,129.67349238153344,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\results\ieee8500\integration\dados\S3_source.csv
+S4,12700.115263575932,1.0,24,1,0,117.74613969928618,<root>\EVCS-BESS-V2G_v0.1\EVCS-BESS-V2G\results\ieee8500\integration\dados\S4_source.csv

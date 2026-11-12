@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "new_replays": 10,
+  "cases_in_comparison": 18,
+  "S4_component_additivity_max_kw_kvar": 8.526512829121202e-14,
+  "S4_saved_reconstruction_max_kw_kvar_error": 2.842170943040401e-14,
+  "frozen_taps_verified": true,
+  "source_hashes_preserved": true,
+  "correction": "The first runner exit code was 1 because its final bookkeeping check expected 8 instead of the 10 completed new replays. No physical run failed. The corrected runner uses 10; this independent checker verified every completed file and changes only the manifest status."
+}

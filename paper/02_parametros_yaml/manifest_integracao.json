@@ -1,0 +1,447 @@
+{
+  "python": "3.13.5",
+  "seed": 0,
+  "stochastic": false,
+  "network": "IEEE8500 (pandapower approximation)",
+  "solver": "pandapower.runpp_3ph",
+  "backend_version": "3.4.0",
+  "fidelity": "IEEE8500 medium-voltage reduction; pandapower sequence approximation; regulator taps controlled per step (ganged)",
+  "limitations": [
+    "Three-phase line matrices replaced by averaged self/mutual sequence parameters.",
+    "One/two-phase lines represented by uncoupled three-phase lines; unused phases excluded from reporting.",
+    "Regulator banks share one tap (mean of the phases), without independent phase controls.",
+    "Service transformers, triplex secondaries and 120/240 V loads lumped as PQ loads on the primary bus.",
+    "Regulator taps follow an emulated RegControl (vreg, band; ganged banks, no time delays).",
+    "Capacitor banks always in service (CapControls not modelled).",
+    "Delta-wye substation transformer represented by a grounded YNyn equivalent.",
+    "STUDY ADJUSTMENT: line ampacity = typical rating of the phase conductor (not IEEE data).",
+    "STUDY ADJUSTMENT: source 1.0 pu and regulator vreg 1.03 pu (reference 1.05 / 1.054 / 1.042 pu).",
+    "No comparison with published IEEE phase voltages has established numerical equivalence."
+  ],
+  "injections_scope": "additional DER only; original realized loads in dados/*_native_loads.csv",
+  "module_outputs": "modules/{evcs,bess,v2g}/{S0,S1,S2,S3,S4}/profile.csv",
+  "dataset_provenance": {
+    "url": "https://github.com/tshort/OpenDSS/tree/5005c668a72d20775f4c2d060feebb2866ba1d38/Distrib/IEEETestCases/8500-Node",
+    "commit": "5005c668a72d20775f4c2d060feebb2866ba1d38",
+    "retrieved": "2026-10-09",
+    "case": "balanced load (Master.dss)",
+    "length_unit": "km",
+    "coordinate_unit": "ft",
+    "reduction": "MV only: service transformers, triplex lines and 120/240 V loads lumped as PQ loads on the primary bus/phase",
+    "adjustments": [
+      {
+        "item": "line ampacity",
+        "reference": "OpenDSS default 400 A (linecodes define none)",
+        "adopted": "typical rating of the phase conductor: 397: 587 A, 4/0: 357 A, 2/0: 276 A, 1/0: 242 A, 2: 184 A, 4: 140 A, 6: 105 A; inline connectors: substation rated current",
+        "reason": "400 A under-rates the 397 ACSR trunk (base case overloaded) and over-rates #4/#2 laterals",
+        "linecodes": {
+          "1ph-x4_acsrx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_acsr4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x2_acsrx2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-x4_acsrx4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_acsr4_acsr4_acsr4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-2/0_acsr2/0_acsr2/0_acsr2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "1ph-4_wpalxx2_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_acsr2_acsr2_acsr4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-4_acsrxx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_acsr4_acsr4_acsr4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-2_acsrxx2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-4_wpalxx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-397_acsr397_acsr397_acsr2/0_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 587.0
+          },
+          "1ph-2_acsrxx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-xx2_acsr2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-xx4_wpal4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_wpalx4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_wpal4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x2_acsrx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-4_acsrxx4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_acsr1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_wpal4_wpal4_wpal4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_wpalx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-4_wpalxx4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_wpal4_wpal4_wpal4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-2_acsr2_acsr2_acsr2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-4_acsrxx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_acsr2_acsr2_acsr4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_acsr4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-4_acsrxx2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_wpalx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_acsr1/0_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-2_acsrxx4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-xx2/0_acsr1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "2ph_h-2_acsrx2_acsr2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-2_wpalxx2_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-2_acsrxx4/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "3ph_h-397_acsr397_acsr397_acsr4_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 587.0
+          },
+          "3ph_h-397_acsr397_acsr397_acsr397_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 587.0
+          },
+          "1ph-xx2_acsr1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-x4_acsrx2_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_acsrx4_dpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-2_acsr2_acsr4_acsr4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-4_wpalxx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_acsrx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-4_acsrxx1/0_3w_cs": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x2_acsrx4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "1ph-x2_acsrx1/0_3w_cs": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "3ph_h-2/0_acsr2/0_acsr2/0_acsr2/0_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "1ph-2_acsrxx1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "3ph_h-4_wpal4_wpal4_wpal1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_wpalx2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-2/0_acsr2/0_acsr2/0_acsr2_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "1ph-xx4_acsr2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_acsrx4_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-4_acsr4_acsr4_acsr4_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-4_acsrxx6_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx4_acsr4_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "3ph_h-397_acsr397_acsr397_acsr2/0_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 587.0
+          },
+          "1ph-2/0_acsrxx2_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "3ph_h-2/0_acsr2/0_acsr2/0_acsr4_acsr": {
+            "reference_a": 400.0,
+            "adopted_a": 276.0
+          },
+          "1ph-xx4_wpal1/0_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx6_wpal6_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 105.0
+          },
+          "1ph-x2_acsrx4_tpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "3ph_h-4_acsr4_acsr4_acsr2_wpal": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-x4_acsrx1/0_3w_cs": {
+            "reference_a": 400.0,
+            "adopted_a": 140.0
+          },
+          "1ph-xx2_acsr4_dpx": {
+            "reference_a": 400.0,
+            "adopted_a": 184.0
+          },
+          "inline_hvmv_sub_connector": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_1a": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_1b": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_1c": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_3a": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_3b": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_3c": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_2a": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_2b": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          },
+          "inline_cap_2c": {
+            "reference_a": 400.0,
+            "adopted_a": 1273.2
+          }
+        }
+      },
+      {
+        "item": "voltage level",
+        "reference": "source 1.05 pu; regulators vreg 1.054 (feeder) / 1.042 pu (VREG2-4)",
+        "adopted": "source 1.0 pu; all regulators vreg 1.03 pu",
+        "reason": "reference case starts above 1.05 pu near the substation; base case S0 must respect ANSI range A"
+      }
+    ],
+    "regulator_taps": "nominal-load taps of the emulated RegControl (no published reference); the solver moves them per snapshot",
+    "coordinates_copied_from_nearest_bus": [
+      "228-1048090-1_int",
+      "228-1353934-4_int",
+      "228-961799-3_int",
+      "228-979371-2_int",
+      "293471",
+      "d5472341-1_int",
+      "d5502543-2_int",
+      "d5513564-1_int",
+      "d5534969-2_int",
+      "d5534970-1_int",
+      "d5535139-1_int",
+      "d5563942-4_int",
+      "d5565090-1_int",
+      "d5587291-3_int",
+      "d5655682-1_int",
+      "d5682346-3_int",
+      "d5686080-1_int",
+      "d5710794-3_int",
+      "d5712486-1_int",
+      "d5746546-1_int",
+      "d5799561-2_int",
+      "d5806920-1_int",
+      "d5835167-6_int",
+      "d5837361-8_int",
+      "d5860423-3_int",
+      "d5861005-2_int",
+      "d5865224-1_int",
+      "d5867591-1_int",
+      "d5926308-3_int",
+      "d5956499-2_int",
+      "d5958866-1_int",
+      "d6019477-1_int",
+      "d6023352-1_int",
+      "d6047588-1_int",
+      "d6049822-1_int",
+      "d6049825-1_int",
+      "d6108141-1_int",
+      "d6138608-3_int",
+      "d6140776-1_int",
+      "d6140778-1_int",
+      "d6198039-1_int",
+      "d6231996-1_int",
+      "d6290228-6_int",
+      "d6413567-3_int",
+      "l0247160",
+      "l0247162",
+      "l0247171",
+      "l2823592_cap",
+      "q1301",
+      "q14404",
+      "q14411",
+      "q14412",
+      "q14413",
+      "q14414",
+      "q14733",
+      "q14734",
+      "q16483",
+      "q16483_cap",
+      "q16642",
+      "q16642_cap",
+      "regxfmr_190-7361",
+      "regxfmr_190-8581",
+      "regxfmr_190-8593"
+    ],
+    "sha256": {
+      "Buscoords.dss": "f4b8355531b75b5bf275ee0532a2fcd712092c03a54b05cfad78a5923f9e2aa8",
+      "Capacitors.dss": "c5f776934c10a4db2165bfd194df23ffc4f0a4a8fb33c23ac4c377adb418b690",
+      "CapControls.DSS": "bcf80c4657bd9e08a399167b95bfb28974cbc03d26e0fed734a5fbbe305d9c8f",
+      "License.txt": "6d8c69aff6f68b35e959048802bcc793189aafe5ee6f28f30b09ba88ceda37d9",
+      "LineCodes2.DSS": "06bf30e0a363b2dcf6b62d664fc7353978bd8c935e5d9b95678794613fa592d5",
+      "Lines.dss": "e75b89b07c504464a0bfd9770c66d59af2c07c80d7ce7f481fad2d39c1d38e1f",
+      "Loads.dss": "a0f272e48bed15dbf9b2b40abb57825ee65b757b08ab6fe455691bdefc8d7e69",
+      "LoadXfmrCodes.dss": "213a3c0478b33a4cb95d82d40e076d1c1ec19b22033e4aa03e6dcdd8b92fa8f9",
+      "LoadXfmrs.dss": "8f9b8745ed8c10af6c708302a357dbbbc36f92c0e203ed1926416d7663d75d1e",
+      "Master.dss": "40d55e14eaa6d5024b6bdf816b36604ae3a3130acbbf8d492d9f2a682c14850c",
+      "Regulators.dss": "d33c4d8ace0659f31969692ce4f62cb093fe74ec0304ed57fc9e09e96f7ac1f4",
+      "Run_8500Node.dss": "3893fddf6ec99bbebe73874b0893361f0661482c502d3794108edf8df26bf92a",
+      "Transformers.dss": "45662031edfe78d624bd127407dfff9836bf44c61674bb6850e8c516d587f58d",
+      "Triplex_Linecodes.dss": "72e4ed6ce8e8aa59e22042f2ae830186375f8e713002915e9eed830e83ae216a",
+      "Triplex_Lines.DSS": "070f65ed7c9f93a46a72ba5b921d0fafccca61cf0562851cd7225b3e80d13f81"
+    }
+  },
+  "dataset_sha256": "eb746b3971f5358bc8b3369c933b63c7c22cf61bfadd00cff69624564f2290fb",
+  "config_sha256": {
+    "bess.yaml": "2c55fc8919230a074c848530ab23ff57d7977a02dcc1f474ea28098d3ce1ef89",
+    "evcs.yaml": "728b1d6286d0088f4a82236729bb3c078007786f3f8e18936a0e8ee1c057f333",
+    "ieee8500.yaml": "6c61c21aeea97b5bf54fd8911c67c8ab12595efaa9f1decdaf67380fb0be2a03",
+    "network.yaml": "c8073f9bbbdf9c2db440858528b767d3d6a24b84e4eddc83bb4d944a877ac803",
+    "v2g.yaml": "e06e5c7822323b3b03f9338d6682e63d3f219290c8cf9acda8f267c9fd366197"
+  }
+}

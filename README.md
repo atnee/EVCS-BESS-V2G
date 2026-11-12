@@ -4,6 +4,8 @@
 
 **New to the team? / ¿Nuevo en el equipo? / Novo na equipe? → [ONBOARDING.md](ONBOARDING.md)**
 
+**Reviewing the Applied Energy manuscript? → [REVIEW_GUIDE.md](REVIEW_GUIDE.md)** (figure/table → code → data map, both electrical models, how to reproduce)
+
 | Owner / Responsable / Responsável | Run / Ejecutar / Executar | Config | Output / Salida / Saída |
 |---|---|---|---|
 | Ayrton (EVCS) | `python -m evcs` | `configs/evcs.yaml` | `results/modules/evcs/` |
@@ -25,9 +27,14 @@ configs/      parameters (YAML) — one per module · network.yaml (feeder of ev
 src/          code: evcs/ bess/ v2g/ (one per owner) · network/ (feeders, power flow) · integration/ (studies, coordinator) · core/
 data/         feeder source data (ieee8500/ — see its README) · honduras/ templates
 notebooks/    01 EVCS (Ayrton) · 02 BESS (Kenia) · 03 V2G (Cesar) · 04 integration
+paper/        snapshot for the article (methodology, YAML, CSV tables, figures, xlsx) — the one generated folder kept in Git
 results/      generated outputs, not in Git — START at results/ieee8500/resumo/ (8 figures + LEIA-ME.md); S0 × S1 in results/ieee8500/s0_vs_s1/ANALISE.md; map in results/README.md
 docs/         metodologia.md (methodology for the article) · S2_BESS_Kenia.md, S3_V2G_Cesar.md (what S2 and S3 must deliver) · tutorial_vscode_ia.md (VS Code + AI assistant) · team guide · evcs/figures
 AGENTS.md     rules the AI assistants (Claude Code, Copilot, Codex, Cursor) read automatically; CLAUDE.md imports it
+opendss_rebuild/                  full-feeder OpenDSS power flow (replay of saved S0–S4 injections)
+distributed_stochastic/           distributed BESS–V2G siting and dispatch (OpenDSS, paper part (d))
+validation_applied_energy_final/  OpenDSS audit for the paper: scripts, reports 01–11, Figs. 9–11, Tables 13–16
+revisao_figuras/                  revised Figs. 1, 5 and 10 of the manuscript, with scripts and plotted data
 scripts/      rebuild the feeder JSON from data/<feeder>/source
 tests/        pytest
 ```

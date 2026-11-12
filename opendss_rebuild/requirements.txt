@@ -1,0 +1,5 @@
+opendssdirect.py>=0.9,<1
+pandas>=2.0
+numpy>=1.25
+PyYAML>=6
+scipy>=1.11

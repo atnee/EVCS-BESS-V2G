@@ -1,0 +1,125 @@
+{
+  "status": "COMPLETE",
+  "completed": 6,
+  "errors": [],
+  "settings": {
+    "total_vehicles": 3000,
+    "delta_kw": 200.0,
+    "solver_time_limit_s": 60.0,
+    "mip_rel_gap": 0.02,
+    "thermal_screen_pct": 80.0,
+    "voltage_screen_margin_pu": 0.005,
+    "thermal_weight": 40.0,
+    "voltage_weight": 5000.0,
+    "peak_weight": 0.5,
+    "no_charge_window": [
+      16,
+      22
+    ],
+    "extended_discharge_window": [
+      16,
+      21
+    ],
+    "line_guard_tolerance_pp": 0.05,
+    "voltage_guard_tolerance_pu": 0.0005,
+    "quantity_cases": [
+      200,
+      250
+    ],
+    "ports_reserve": 4,
+    "port_cost_usd": 5000,
+    "sites": [
+      {
+        "name": "voltage_site",
+        "bess_bus": "l3029502",
+        "v2g_bus": "l2692633"
+      },
+      {
+        "name": "complementary_sites",
+        "bess_bus": "l2711226",
+        "v2g_bus": "l2692633"
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "dispatch_original_window",
+      "n": 150,
+      "b": "l3029502",
+      "v": "m1069504",
+      "window": [
+        17,
+        20
+      ]
+    },
+    {
+      "name": "dispatch_extended_window",
+      "n": 150,
+      "b": "l3029502",
+      "v": "m1069504",
+      "window": [
+        16,
+        21
+      ]
+    },
+    {
+      "name": "voltage_site",
+      "n": 150,
+      "b": "l3029502",
+      "v": "l2692633",
+      "window": [
+        16,
+        21
+      ]
+    },
+    {
+      "name": "complementary_sites",
+      "n": 150,
+      "b": "l2711226",
+      "v": "l2692633",
+      "window": [
+        16,
+        21
+      ]
+    },
+    {
+      "name": "participation_200",
+      "n": 200,
+      "b": "l3029502",
+      "v": "m1069504",
+      "window": [
+        16,
+        21
+      ]
+    },
+    {
+      "name": "participation_250",
+      "n": 250,
+      "b": "l3029502",
+      "v": "m1069504",
+      "window": [
+        16,
+        21
+      ]
+    }
+  ],
+  "reference": {
+    "case": "historical",
+    "peak_kw": 12909.004118528745,
+    "vmin": 0.9235687522888136,
+    "vmax": 1.0613931370952274,
+    "max_loading_pct": 120.79796816112606,
+    "new_lines": 23,
+    "thermal_pph": 311.80129015214254,
+    "under_puh": 4.216362736483346,
+    "over_puh": 2.6662452556734233,
+    "loss_kwh": 21566.758120426315,
+    "no_aggravation_s0": false
+  },
+  "limitations": [
+    "Local surrogate; AC verification is authoritative",
+    "No global optimum certificate",
+    "No additional hardware engineering or independent solver validation",
+    "Regenerated fleet samples and public sessions in quantity experiments"
+  ]
+}

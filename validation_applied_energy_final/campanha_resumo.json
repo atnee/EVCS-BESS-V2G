@@ -1,0 +1,15 @@
+{
+  "rows": 315,
+  "cases": 63,
+  "scenario_counts": {
+    "S0": 63,
+    "S1": 63,
+    "S2": 63,
+    "S3": 63,
+    "S4": 63
+  },
+  "status": {
+    "ok": 315
+  },
+  "peak_reduction_pct": 10.890136992253558
+}

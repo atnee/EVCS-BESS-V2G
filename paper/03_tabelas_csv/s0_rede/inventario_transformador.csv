@@ -1,0 +1,2 @@
+id,from_bus,to_bus,kv,sn_kva,connection,r_percent,x_percent,model_in_pandapower
+hvmv_sub,hvmv_sub_hsb,regxfmr_hvmv_sub_lsb,115.0/12.47,27500.0,Dyn,1.34404,15.51,YNyn equivalent

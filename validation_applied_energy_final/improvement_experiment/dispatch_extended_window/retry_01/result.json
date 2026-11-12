@@ -1,0 +1,19 @@
+{
+  "case": "dispatch_extended_window",
+  "peak_kw": 13115.963468975378,
+  "vmin": 0.928800341274069,
+  "vmax": 1.0594828812031354,
+  "max_loading_pct": 122.40520888931829,
+  "new_lines": 21,
+  "thermal_pph": 303.7639808211392,
+  "under_puh": 2.063514783851439,
+  "over_puh": 2.755738551716691,
+  "loss_kwh": 21686.95894341639,
+  "no_aggravation_s0": false,
+  "accepted_without_voltage_tradeoff": false,
+  "absolute_feasible": false,
+  "vehicles": 150,
+  "bess_bus": "l3029502",
+  "v2g_bus": "m1069504",
+  "v2g_delivered_kwh": 1020.1207786347695
+}

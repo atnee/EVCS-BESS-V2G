@@ -1,0 +1,13 @@
+hour,regulator,tap
+3,feeder_rega,0
+3,feeder_regb,1
+3,feeder_regc,0
+3,vreg2_a,4
+3,vreg2_b,2
+3,vreg2_c,2
+3,vreg3_a,5
+3,vreg3_b,4
+3,vreg3_c,0
+3,vreg4_a,4
+3,vreg4_b,5
+3,vreg4_c,2

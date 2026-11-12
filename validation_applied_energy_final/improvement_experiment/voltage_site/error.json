@@ -1,0 +1,13 @@
+{
+  "case": {
+    "name": "voltage_site",
+    "n": 150,
+    "b": "l3029502",
+    "v": "l2692633",
+    "window": [
+      16,
+      21
+    ]
+  },
+  "traceback": "Traceback (most recent call last):\n  File \"<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\improve.py\", line 102, in main\n    team,profile=prepare_case(case['name'],case['n'],case['b'],case['v'],case['window'],team0,folder,cfg,ctx)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\improve.py\", line 61, in prepare_case\n    vp,vtables=v2g_run(conf,team['grid'],ev,False)\n               ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\src\\v2g\\runner.py\", line 72, in run_integrated\n    profile = get_strategy(name)(\n        Station(**evcs_profile.metadata[\"station\"]),grid,vehicles_from_config(config),\n        # Only the shared host station's demand: public EVCS stations are separate equipment.\n        evcs_profile.metadata.get(\"station_demand_kw\",-evcs_profile.total_injection()),\n        evcs_profile.vehicle_ids,discharge_mask(config,grid),enable_v2g,**strategy_options(config,name))\n  File \"<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\src\\v2g\\strategies.py\", line 124, in cesar_v1\n    check_price_policy(tariff,remuneration,no_charge,mask)\n    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\src\\v2g\\strategies.py\", line 102, in check_price_policy\n    raise ValueError(\"Price policy: the V2G remuneration inside the discharge window must exceed every value outside it\")\nValueError: Price policy: the V2G remuneration inside the discharge window must exceed every value outside it\n"
+}

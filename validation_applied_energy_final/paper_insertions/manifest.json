@@ -1,0 +1,212 @@
+{
+  "status": "SOURCE_CHECKED_NOT_EXTERNAL_VALIDATION",
+  "source_files": {
+    "manuscript_v6": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS_BESS_V2G_Applied_Energy_Elsevier_Template_v6.docx",
+      "sha256": "6817630ceba23574f1f926c38f78ccf9f322ab2ad8039a9368021df8e9ec037b"
+    },
+    "paired_h03": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\validacao_fases_s0_ae\\s0_h03_mt_equivalente_comparacao_tensoes.csv",
+      "sha256": "52451affb2fc0eacd9468dbe1f921258159511fa89123ed21cffd072a6395498"
+    },
+    "paired_h18": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G\\results\\validacao_fases_s0_ae\\s0_h18_mt_equivalente_comparacao_tensoes.csv",
+      "sha256": "08e95bcdaa275f50cb67381568b262f9f9afe0f56b21915feee1a50011e35e29"
+    },
+    "historical_pair_metrics": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\metricas_pareadas_complementares.csv",
+      "sha256": "5c31861dc83c94f816b747b6d2bfd2b164eb6e729ef5b5600f32df64b7813541"
+    },
+    "original_audit_voltage_stats": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\04_validacao_s0.csv",
+      "sha256": "9f7b78a228cd647046cfacc6ccce34ff28684bc84d0e87e5d732c50da9ebd46c"
+    },
+    "S0:base_branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\branches.csv",
+      "sha256": "5bdf3736103891cdcff94c0e12e6e38c764bf12a93bae804e6fed169e6043a61"
+    },
+    "S0:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\source.csv",
+      "sha256": "0e76ad762f33c94faa4783abe2ba1329c21bab38d6e4956d5a59030003e9de76"
+    },
+    "S0:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\voltages.csv",
+      "sha256": "88693527516ccf63423033e2e26ca2d0ea9a3c8b547b0876de61fbcdcf75fbd2"
+    },
+    "S0:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S0_auto\\branches.csv",
+      "sha256": "5bdf3736103891cdcff94c0e12e6e38c764bf12a93bae804e6fed169e6043a61"
+    },
+    "S1:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\source.csv",
+      "sha256": "d882bb0b7a4b714c446667df08d8e2a1015af4afbe472e4e61592202e314dcd3"
+    },
+    "S1:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\voltages.csv",
+      "sha256": "dfc3a0a096891f3c6a0f48bb106a62952b13f44269910312d3fd59ed700ce088"
+    },
+    "S1:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S1_auto\\branches.csv",
+      "sha256": "dc0a2ea3b51ca1fc4bf6507f4265ae5255fb93a52431e958ec6badb282f133e1"
+    },
+    "S4 single BESS:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\source.csv",
+      "sha256": "d2ae6272b6ab661a0dfce5753255e737c543a16382b10b6a38803acb6246e379"
+    },
+    "S4 single BESS:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\voltages.csv",
+      "sha256": "e0d9a038f9e411fc478dc485b8f7856ea94e4926b7149f5dbf986e7c7cb4f3d0"
+    },
+    "S4 single BESS:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\branches.csv",
+      "sha256": "7c6eca15b39e1843a2b4bc89ae4dad4c51e41f2645a5ed8c2487f636dee34a0b"
+    },
+    "S4 distributed:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\source.csv",
+      "sha256": "3e15fbace737da26fe2cba24fb16745112fc20fba92708759a7beafc1e0913ed"
+    },
+    "S4 distributed:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\voltages.csv",
+      "sha256": "92d67d4831d44f2a501abbb3af309343591ea74ff8e134616be53e64aa2afcf3"
+    },
+    "S4 distributed:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\branches.csv",
+      "sha256": "6a6e087ca5b773e9c879dbe4c3c813a625a92752a617990ef19f142668fb45aa"
+    },
+    "S4 distributed + control:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\source.csv",
+      "sha256": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb"
+    },
+    "S4 distributed + control:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\voltages.csv",
+      "sha256": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7"
+    },
+    "S4 distributed + control:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\branches.csv",
+      "sha256": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58"
+    },
+    "original_native_summary": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\summary.csv",
+      "sha256": "459155e4ccb4ea57b1accab8014f6ba5110282b7c1961f7fbb125725880e690a"
+    },
+    "Historical single BESS:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\source.csv",
+      "sha256": "d2ae6272b6ab661a0dfce5753255e737c543a16382b10b6a38803acb6246e379"
+    },
+    "Historical single BESS:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\voltages.csv",
+      "sha256": "e0d9a038f9e411fc478dc485b8f7856ea94e4926b7149f5dbf986e7c7cb4f3d0"
+    },
+    "Historical single BESS:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\exact_profile_pilot\\S4_auto\\branches.csv",
+      "sha256": "7c6eca15b39e1843a2b4bc89ae4dad4c51e41f2645a5ed8c2487f636dee34a0b"
+    },
+    "Distributed, native controls:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\source.csv",
+      "sha256": "3e15fbace737da26fe2cba24fb16745112fc20fba92708759a7beafc1e0913ed"
+    },
+    "Distributed, native controls:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\voltages.csv",
+      "sha256": "92d67d4831d44f2a501abbb3af309343591ea74ff8e134616be53e64aa2afcf3"
+    },
+    "Distributed, native controls:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native\\branches.csv",
+      "sha256": "6a6e087ca5b773e9c879dbe4c3c813a625a92752a617990ef19f142668fb45aa"
+    },
+    "Distributed, changed controls:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\source.csv",
+      "sha256": "224aa5a6a8270be0033be4a227aee51818217ff06865b6d808db4a2d5acf71bb"
+    },
+    "Distributed, changed controls:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\voltages.csv",
+      "sha256": "c39e95a00bc5ab2ebb40d3401e6adfc3a85ed0b785d2018aad482fdc351320b7"
+    },
+    "Distributed, changed controls:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_saved_policy\\branches.csv",
+      "sha256": "9c7395bac33ee09966fae10eba66b8847696ae279ac6444662f193eea51c3e58"
+    },
+    "Distributed, native S0 taps:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\source.csv",
+      "sha256": "6255f5958dfc5469775c07144fa4ff7df3dc0ec07d8a7b10cc33fd4c96f30d03"
+    },
+    "Distributed, native S0 taps:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\voltages.csv",
+      "sha256": "cfb476c1cb506e1e74c1154963bc218c39f63738103e82342e710284c73c471d"
+    },
+    "Distributed, native S0 taps:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_native_frozen\\branches.csv",
+      "sha256": "dffbfb29766b2ec16d5bf071a66e89d88ac4ce1f921c592364a7f0777171a6c2"
+    },
+    "Distributed, changed S0 taps:source": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\source.csv",
+      "sha256": "a844bb63167a81a1b619c7a20c97792270b7fe915291e4341a182311e5777368"
+    },
+    "Distributed, changed S0 taps:voltages": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\voltages.csv",
+      "sha256": "e82e1499672f3f9e53702760666e86801e1e4f8dc3b711c903cbd411cdd4af61"
+    },
+    "Distributed, changed S0 taps:branches": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\distributed_policy_frozen\\branches.csv",
+      "sha256": "4667d8ae85d146eff51a09d14f79cc7bf704b3c4ed463d5da24347c8ec82dd5e"
+    },
+    "V301_verified_summary": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\alternative_controls\\comparison.csv",
+      "sha256": "73a832b6244d11948e597fdbed2feac7dadcd1b88bbf470034e1c9563adfa6e0"
+    },
+    "distributed_bess_budget": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\bess_siting_sizing.csv",
+      "sha256": "3f17ff9dfae3c181f0aa43a00f8eccf7b1fcfafa93f3512279faff48dc501137"
+    },
+    "distributed_vehicle_siting": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\results\\v301_continuacao_ac_segura\\best\\vehicle_dispatch.csv",
+      "sha256": "15d6cfc16cde94e03f7b57ab97a9f039711a9ee68e540190f8333b188e73a8df"
+    },
+    "distributed_S0_S4_replay": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\distributed_s2_s3\\comparison.csv",
+      "sha256": "98cba0113fea195ba6a228b792baaf92c883699418768b81968421d579c6870c"
+    },
+    "historical_S0_S4_native_replay": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\native_s2_s3\\summary.csv",
+      "sha256": "dc89f477bdee481353ce7884d12505a4ff4fcdc8bc0aad07a04a0c7c007cf19a"
+    },
+    "connection_site_requirements": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\connection_costs\\site_requirements.csv",
+      "sha256": "2ec547b2e780ff266087f4445f6d7cf4a421143bd3e18efc1e4f8425e1519031"
+    },
+    "connection_cost_reconciliation": {
+      "path": "<root>\\EVCS-BESS-V2G_v0.1\\EVCS-BESS-V2G-Distributed-Stochastic\\validation_applied_energy_final\\connection_costs\\cost_reconciliation.json",
+      "sha256": "c804bbbf65f5d33d8917847b39440038f24caa562b13254d6598891a83b4a306"
+    }
+  },
+  "tables": {
+    "table_13_opendss_operational_comparison.csv": "9c8baaedc46a04bc41a1bec0f56ae545b9143af04ef34d99b4c3edcc35534737",
+    "table_14_controls_and_frozen_taps.csv": "f1c2a0abb87cf5e4d55c41ef7f353936a47f166f5663893e16e6684a54d1fa12",
+    "table_15_distributed_s0_s4_native.csv": "81a633a0013c35085232cb90c0f14a18cec9aa4e10d8e4f2f2082253168288b3",
+    "table_16_distributed_s0_s4_changed.csv": "2f77fd550210cdb458ab3f8567c16229d8411f5199d0deba011ee586ef697f50",
+    "table_S1_paired_voltage_error.csv": "3dff314501957e0d26d10fe195095da2243426f71d206aaf3cf61df9ecc66b6c",
+    "table_S2_paired_source_losses.csv": "c7854ca4da4b1d14d1213091ed9ce81b7aada724563a2c29ebaaeeeae71ef0f4",
+    "table_S3_distributed_bess_allocation.csv": "14dc8a4f5c443a51194d20f5ca35f277342404c977988d8101835d23cb1f0770",
+    "table_S4_distributed_v2g_allocation.csv": "49beab7ba6b5553be7f9bae31e16680b7b8221c563693c58d404dd83809dd29e",
+    "table_S5_connection_scope_and_missing_costs.csv": "8bec6bcdda6fea94aae1f44d2335528cc25e14595e2b86496737903874330459",
+    "table_S6_historical_s2_s3_native_replay.csv": "b338e3880ea843143d3d8ea98180af11d3d8a29c899ab017d664c0324fc0d68a"
+  },
+  "figures": {
+    "fig10_native_operational_replay.pdf": "45a4c3c2becd96a147c211d790aed47c95181932fe45d0b3df9c3541cb244011",
+    "fig10_native_operational_replay.png": "1dbe1c38ca04f33851f09593f74c5b3390bd3f7cf71f3f6e5699e3f05dcbca38",
+    "fig10_native_operational_replay.tif": "80e5f7dd845a4b06ac19ea18783853e47d18356661aa917f050e89143491169a",
+    "fig11_thermal_voltage_control_tradeoff.pdf": "bfbc5bd536d02ee50ec80113c421cb9ddf4f0f9c681b7b79e65946b0f06b1581",
+    "fig11_thermal_voltage_control_tradeoff.png": "ee7569995c1dd377d02853cadb13e1cf79eb11bc704044c768285ec6350b8a10",
+    "fig11_thermal_voltage_control_tradeoff.tif": "00a19f322227f5d3fe7c390494919d547e7181ea3cdcf51028e7411acf37a6f9",
+    "fig9_model_voltage_discrepancy.pdf": "d8f438a162f1a9a7b47e96d17cdc4aea7f124a32fdf39902649652854b6bbf42",
+    "fig9_model_voltage_discrepancy.png": "75204dbf0234381b1c7ae6408326a28e9ce2d80908c7db6b6a139de613c718c0",
+    "fig9_model_voltage_discrepancy.tif": "a4dc4646b76c3de1b2ae86079deadc3c27770620abd8ebd9bc04ab69ff7fc516"
+  },
+  "assumptions": [
+    "Voltage comparisons use physical node-phase pairs and fixed-tap historical S0.",
+    "Hourly native replay uses the full secondary network, original source and study ampacity.",
+    "The changed-control case differs in regulator setpoints; other comparisons share native controls.",
+    "New overloads compare each line identity against the original native S0 set.",
+    "Absolute thermal, undervoltage and overvoltage excesses are reported separately.",
+    "The three-BESS case is an existing later campaign, not part of the 63 historical paper cases."
+  ]
+}

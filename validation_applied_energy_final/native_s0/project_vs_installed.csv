@@ -1,0 +1,3 @@
+hour,pairs,mae_pu,rmse_pu,max_error_pu,meaning
+3,3820,4.743638958252116e-09,2.0058818419872385e-08,3.7803613928133473e-07,"same DSS engine, two local source datasets; not independent solver validation"
+18,3820,9.016853274215535e-09,3.68725769282096e-08,6.990648582227976e-07,"same DSS engine, two local source datasets; not independent solver validation"
